@@ -2,7 +2,8 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   UtensilsCrossed, PackageOpen, ShoppingCart, Settings,
-  Sparkles, Wrench, Flower2, Dog, CheckSquare, Wallet, HeartPulse
+  Sparkles, Wrench, Flower2, Dog, CheckSquare, Wallet, HeartPulse,
+  FolderArchive
 } from 'lucide-react';
 import { useTranslation } from '../i18n';
 
@@ -17,6 +18,7 @@ export const Sidebar: React.FC = () => {
     { to: '/pets', label: t('nav.pets'), icon: Dog },
     { to: '/chores', label: t('nav.chores'), icon: CheckSquare },
     { to: '/finance', label: t('nav.finances'), icon: Wallet },
+    { to: '/documents', label: t('nav.documents'), icon: FolderArchive },
     { to: '/settings', label: t('nav.settings'), icon: Settings },
   ];
 

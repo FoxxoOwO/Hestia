@@ -11,7 +11,8 @@ import {
   Subscription, SubscriptionCreate, SubscriptionUpdate,
   SavingsGoal, SavingsGoalCreate, SavingsGoalUpdate,
   DebtSettlementResponse, FinanceMonthlySummary,
-  CsvImportPreview, CsvImportConfirm, ReceiptScanResponse, UserFinanceProfile
+  CsvImportPreview, CsvImportConfirm, ReceiptScanResponse, UserFinanceProfile,
+  DocumentItem, DocumentCreate, DocumentUpdate, DocumentStats, DocumentUploadResult
 } from '../types';
 
 const API_BASE = '/api/v1';
@@ -989,6 +990,117 @@ export const api = {
       body: JSON.stringify(data),
     });
     if (!res.ok) throw new Error('Failed to update user finance profile');
+    return res.json();
+  },
+
+  // Documents & Digital Archive
+  async getDocuments(params?: {
+    category?: string;
+    status?: string;
+    search?: string;
+    vault_unlocked?: boolean;
+    sort_by?: string;
+    sort_order?: string;
+  }): Promise<DocumentItem[]> {
+    const searchParams = new URLSearchParams();
+    if (params?.category) searchParams.append('category', params.category);
+    if (params?.status) searchParams.append('status', params.status);
+    if (params?.search) searchParams.append('search', params.search);
+    if (params?.vault_unlocked !== undefined) searchParams.append('vault_unlocked', String(params.vault_unlocked));
+    if (params?.sort_by) searchParams.append('sort_by', params.sort_by);
+    if (params?.sort_order) searchParams.append('sort_order', params.sort_order);
+
+    const res = await fetch(`${API_BASE}/documents?${searchParams.toString()}`, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to fetch documents');
+    return res.json();
+  },
+
+  async getDocumentStats(): Promise<DocumentStats> {
+    const res = await fetch(`${API_BASE}/documents/stats`, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to fetch document stats');
+    return res.json();
+  },
+
+  async getDocument(id: number): Promise<DocumentItem> {
+    const res = await fetch(`${API_BASE}/documents/${id}`, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to fetch document');
+    return res.json();
+  },
+
+  async uploadDocumentFile(file: File, autoAnalyze: boolean = true): Promise<DocumentUploadResult> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('auto_analyze', String(autoAnalyze));
+
+    const res = await fetch(`${API_BASE}/documents/upload`, {
+      method: 'POST',
+      headers: getAuthOnlyHeaders(),
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to upload document file');
+    }
+    return res.json();
+  },
+
+  async createDocument(data: DocumentCreate): Promise<DocumentItem> {
+    const res = await fetch(`${API_BASE}/documents`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to create document');
+    return res.json();
+  },
+
+  async updateDocument(id: number, data: DocumentUpdate): Promise<DocumentItem> {
+    const res = await fetch(`${API_BASE}/documents/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to update document');
+    return res.json();
+  },
+
+  async deleteDocument(id: number): Promise<void> {
+    const res = await fetch(`${API_BASE}/documents/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to delete document');
+  },
+
+  async verifyVaultPin(pin: string): Promise<{ status: string; message: string }> {
+    const res = await fetch(`${API_BASE}/documents/vault/verify`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ pin }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Nesprávný PIN');
+    }
+    return res.json();
+  },
+
+  async setVaultPin(newPin: string, oldPin?: string): Promise<{ status: string; message: string }> {
+    const res = await fetch(`${API_BASE}/documents/vault/pin`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ new_pin: newPin, old_pin: oldPin }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Chyba při změně PIN');
+    }
     return res.json();
   }
 };

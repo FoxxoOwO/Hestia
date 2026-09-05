@@ -7,6 +7,9 @@ from app.models.plant import Plant, PlantTask, PlantLogEntry
 from app.models.pet import Pet, PetMedicalRecord, PetMedication, PetWeightLog, PetTask, PetLogEntry
 from app.models.chore import Chore, ChoreCompletion, ChoreReward, ChoreRewardRedemption
 from app.models.finance import FinanceTransaction, CategoryBudget, Subscription, SavingsGoal, UserFinanceProfile
+from app.models.document import Document, VaultSetting
+from app.config import settings
+import os
 from app.utils.auth import get_password_hash
 import datetime
 import json
@@ -955,7 +958,268 @@ def seed_initial_data(db: Session):
             SavingsGoal(title="Železná finanční rezerva domácnosti (3 měsíce)", target_amount=100000.0, current_amount=65000.0, target_date=None, icon="Shield", color="#10b981")
         ]
         db.add_all(goals)
+        db.commit()
 
+    # 9. Seed Documents & Vault Settings
+    if db.query(VaultSetting).count() == 0:
+        db.add(VaultSetting(pin_hash="1234", is_active=True))
+        db.commit()
+
+    if db.query(Document).count() == 0:
+        # Create a sample text/pdf file in uploads/documents/sample/
+        sample_dir = os.path.join(settings.UPLOAD_DIR, "documents", "sample")
+        os.makedirs(sample_dir, exist_ok=True)
+        sample_file_path = os.path.join(sample_dir, "vzorovy_dokument.txt")
+        if not os.path.exists(sample_file_path):
+            with open(sample_file_path, "w", encoding="utf-8") as f:
+                f.write("Hestia OS - Vzorový dokument pro digitální archiv a šanon domácnosti.\nTento soubor slouží jako ukázka digitalizovaného dokumentu.\n")
+
+        rel_sample = "documents/sample/vzorovy_dokument.txt"
+        u1 = admin_user.id if admin_user else 1
+
+        docs = [
+            Document(
+                title="Záruční list a faktura – Pračka Bosch Série 6 (WAN28262BY)",
+                category="warranty",
+                file_path=rel_sample,
+                file_name="zarucni_list_pracka_bosch.pdf",
+                file_size=245800,
+                file_type="application/pdf",
+                issuer="Alza.cz",
+                document_date="2025-04-10",
+                expiry_date=(today + datetime.timedelta(days=400)).isoformat(),
+                warranty_months=24,
+                contract_number="ALZ-948201948",
+                amount=13990.0,
+                physical_location="Krabice Spotřebiče – šatna v chodbě",
+                is_vault_protected=False,
+                tags="pračka, bosch, záruka, alza, elektro",
+                summary="Záruční list a daňový doklad k automatické pračce Bosch Série 6 zakoupené na Alza.cz se standardní 2letou zárukou.",
+                ocr_fulltext="FAKTURA - DAŇOVÝ DOKLAD č. 2025041019. Alza.cz a.s. Kupující: Rodina Novákova. Položka: Bosch WAN28262BY pračka předem plněná, S/N: BSH9482019482. Záruka 24 měsíců. Celkem k úhradě: 13 990 Kč.",
+                created_by_id=u1
+            ),
+            Document(
+                title="Účtenka a záruka – Kávovar DeLonghi Magnifica S",
+                category="warranty",
+                file_path=rel_sample,
+                file_name="uctenka_delonghi_magnifica.pdf",
+                file_size=184200,
+                file_type="application/pdf",
+                issuer="Datart",
+                document_date="2024-03-20",
+                expiry_date=(today + datetime.timedelta(days=14)).isoformat(),  # Expiring soon! (<= 30 days)
+                warranty_months=24,
+                contract_number="DAT-892019",
+                amount=8490.0,
+                physical_location="Šanon 1 (Zelený) – Spotřebiče, 1. police",
+                is_vault_protected=False,
+                tags="kávovar, delonghi, záruka, datart, kuchyně",
+                summary="Dvouletá záruka na automatický kávovar DeLonghi Magnifica S. Záruka končí za méně než měsíc – zkontrolujte funkčnost!",
+                ocr_fulltext="DATART s.r.o. Prodejka č. 89201. Kávovar DeLonghi Magnifica S ECAM 22.110.B. Sériové číslo DL22110-94812. Cena: 8 490 Kč. Záruční doba: 24 měsíců ode dne prodeje.",
+                created_by_id=u1
+            ),
+            Document(
+                title="Záruční list – Mikrovlnná trouba Samsung",
+                category="warranty",
+                file_path=rel_sample,
+                file_name="zaruka_mikrovlnka_samsung.pdf",
+                file_size=120000,
+                file_type="application/pdf",
+                issuer="Mall.cz",
+                document_date="2023-01-15",
+                expiry_date=(today - datetime.timedelta(days=180)).isoformat(),  # Expired
+                warranty_months=24,
+                contract_number="MAL-4920194",
+                amount=3200.0,
+                physical_location="Krabice Staré účtenky – sklep",
+                is_vault_protected=False,
+                tags="mikrovlnka, samsung, mall, kuchyně",
+                summary="Původní záruční list k mikrovlnné troubě Samsung. Záruka již před 6 měsíci vypršela.",
+                ocr_fulltext="MALL.cz nákupní faktura 4920194. Mikrovlnná trouba Samsung MS23F301TAS. Záruční doba 24 měsíců.",
+                created_by_id=u1
+            ),
+            Document(
+                title="Smlouva o dodávce elektřiny – ČEZ Prodej",
+                category="contract",
+                file_path=rel_sample,
+                file_name="smlouva_cez_elektrina.pdf",
+                file_size=520000,
+                file_type="application/pdf",
+                issuer="ČEZ Prodej, a.s.",
+                document_date="2024-09-01",
+                expiry_date=(today + datetime.timedelta(days=365)).isoformat(),
+                warranty_months=None,
+                contract_number="CEZ-94820194",
+                amount=None,
+                physical_location="Šanon 2 (Modrý) – Energie a Smlouvy",
+                is_vault_protected=False,
+                tags="cez, elektrina, energie, smlouva, fixace",
+                summary="Smlouva o sdružených službách dodávky elektřiny s fixací ceny na 2 roky. Odběrné místo EAN 859182400019284.",
+                ocr_fulltext="ČEZ Prodej a.s. Smlouva o sdružených službách dodávky elektřiny č. CEZ-94820194. Zákazník: Správce Domácnosti. EAN: 859182400019284. Produkt: Elektřina na 2 roky v akci.",
+                created_by_id=u1
+            ),
+            Document(
+                title="Pojistná smlouva – Pojištění majetku a odpovědnosti Bezpečný domov",
+                category="contract",
+                file_path=rel_sample,
+                file_name="pojisteni_domacnosti_kooperativa.pdf",
+                file_size=780000,
+                file_type="application/pdf",
+                issuer="Kooperativa pojišťovna, a.s.",
+                document_date="2025-01-01",
+                expiry_date=(today + datetime.timedelta(days=115)).isoformat(),
+                warranty_months=None,
+                contract_number="KOOP-77492019",
+                amount=3400.0,
+                physical_location="Šanon 2 (Modrý) – Finance a Pojištění",
+                is_vault_protected=False,
+                tags="pojisteni, kooperativa, odpovednost, byt, domacnost",
+                summary="Komplexní pojištění trvale obývaného bytu, vybavení domácnosti a občanské odpovědnosti pro celou rodinu.",
+                ocr_fulltext="Kooperativa pojišťovna a.s., Vienna Insurance Group. Pojistná smlouva č. KOOP-77492019. Pojištění trvale obývaného bytu a domácnosti na částku 2 500 000 Kč. Roční pojistné: 3 400 Kč.",
+                created_by_id=u1
+            ),
+            Document(
+                title="Zpráva o odborné kontrole a čištění spalinové cesty (Kominík)",
+                category="inspection",
+                file_path=rel_sample,
+                file_name="revize_spalinove_cesty_kominik.pdf",
+                file_size=310000,
+                file_type="application/pdf",
+                issuer="Kominictví Jan Dvořák",
+                document_date="2025-10-15",
+                expiry_date=(today + datetime.timedelta(days=22)).isoformat(),  # Expiring soon! (<= 30 days)
+                warranty_months=None,
+                contract_number="KOM-2025-104",
+                amount=850.0,
+                physical_location="Šanon 3 (Žlutý) – Revize a technická správa",
+                is_vault_protected=False,
+                tags="kominik, revize, spalinova cesta, krb, bezpecnost",
+                summary="Pravidelná roční revize komína a kouřovodu dle vyhlášky č. 34/2016 Sb. Blíží se termín další revize!",
+                ocr_fulltext="ZPRÁVA O PROVEDENÍ KONTROLY A ČIŠTĚNÍ SPALINOVÉ CESTY č. 2025/104. Kominictví Jan Dvořák. Spalinová cesta bezpečná a provozuschopná.",
+                created_by_id=u1
+            ),
+            Document(
+                title="Protokol o pravidelném servisu a revizi plynového kotle",
+                category="inspection",
+                file_path=rel_sample,
+                file_name="servisni_protokol_plynovy_kotel.pdf",
+                file_size=420000,
+                file_type="application/pdf",
+                issuer="Vaillant Servis Centrum",
+                document_date="2025-05-12",
+                expiry_date=(today + datetime.timedelta(days=240)).isoformat(),
+                warranty_months=None,
+                contract_number="VAI-89201",
+                amount=2100.0,
+                physical_location="Šanon 3 (Žlutý) – Nástěnka v technické místnosti",
+                is_vault_protected=False,
+                tags="kotel, plyn, revize, vaillant, topeni",
+                summary="Garanční prohlídka kondenzačního kotle Vaillant ecoTEC plus, vyčištění hořáku a měření emisí.",
+                ocr_fulltext="SERVISNÍ PROTOKOL - KONDENZAČNÍ PLYNOVÝ KOTEL. Model: Vaillant ecoTEC plus VUW 246. Vyčištění výměníku, kontrola expanzní nádoby, emise CO2 v normě.",
+                created_by_id=u1
+            ),
+            Document(
+                title="Uživatelská příručka – Myčka nádobí Bosch Série 6 (PDF)",
+                category="manual",
+                file_path=rel_sample,
+                file_name="navod_mycka_bosch_serie6.pdf",
+                file_size=1840000,
+                file_type="application/pdf",
+                issuer="Bosch Home Appliances",
+                document_date="2025-01-01",
+                expiry_date=None,  # Permanent manual
+                warranty_months=None,
+                contract_number="SMS6ZCI00E",
+                amount=None,
+                physical_location="Online PDF v Hestii (papírový recyklován)",
+                is_vault_protected=False,
+                tags="manual, navod, mycka, bosch, udrzba",
+                summary="Kompletní návod k obsluze myčky nádobí, tabulka chybových kódů (E09, E15, E18, E24) a schéma čištění filtrů.",
+                ocr_fulltext="Bosch Návod k použití. Myčka nádobí Serie 6 SMS6ZCI00E. Programy: Eco 50°, Auto 45-65°, Intenzivní 70°. Čištění sítka a sprchovacích ramen každé 2 měsíce. Chybový kód E15: aktivován systém AquaStop.",
+                created_by_id=u1
+            ),
+            Document(
+                title="Kopie cestovního pasu – Petr",
+                category="identity",
+                file_path=rel_sample,
+                file_name="pas_petr_kopie.pdf",
+                file_size=650000,
+                file_type="application/pdf",
+                issuer="Ministerstvo vnitra ČR",
+                document_date="2020-08-10",
+                expiry_date=(today + datetime.timedelta(days=160)).isoformat(),
+                warranty_months=None,
+                contract_number="PAS-89201948",
+                amount=None,
+                physical_location="Ohnivzdorný domácí trezor – ložnice",
+                is_vault_protected=True,  # Locked in vault!
+                tags="pas, doklady, cestovani, trezor, petr",
+                summary="Cestovní pas s biometrickými údaji. Uloženo v zabezpečeném rodinném trezoru (chráněno PINem).",
+                ocr_fulltext="ČESKÁ REPUBLIKA - PAS / PASSPORT. P<CZENOVAK<<PETR<<<<<<<<<<<<<<<<<<<<<<<<<<<.",
+                created_by_id=u1
+            ),
+            Document(
+                title="Očkovací průkaz – Očkování proti klíšťové encefalitidě",
+                category="medical",
+                file_path=rel_sample,
+                file_name="ockovaci_prukaz_kliste.pdf",
+                file_size=290000,
+                file_type="application/pdf",
+                issuer="Centrum očkování Avenier",
+                document_date="2025-06-15",
+                expiry_date=(today + datetime.timedelta(days=720)).isoformat(),
+                warranty_months=None,
+                contract_number="FSME-94820",
+                amount=1250.0,
+                physical_location="Šanon 4 (Červený) – Zdravotní karta rodiny",
+                is_vault_protected=False,
+                tags="ockovani, lekar, zdravi, kliste, fsme",
+                summary="Záznam o přeočkování vakcínou FSME-Immun. Další posilovací dávka (booster) doporučena za 3 roky.",
+                ocr_fulltext="ZÁZNAM O OČKOVÁNÍ. Avenier a.s. Očkovací látka FSME-IMMUN 0.5ml. Aplikováno do m. deltoideus. Šarže: VNR19482. Další revakcinace za 3 roky.",
+                created_by_id=u1
+            ),
+            Document(
+                title="Smlouva o hypotečním úvěru – Komerční banka",
+                category="housing",
+                file_path=rel_sample,
+                file_name="hypotecni_smlouva_kb.pdf",
+                file_size=1420000,
+                file_type="application/pdf",
+                issuer="Komerční banka, a.s.",
+                document_date="2022-04-01",
+                expiry_date=(today + datetime.timedelta(days=1200)).isoformat(),
+                warranty_months=None,
+                contract_number="KB-HYPO-2022-8491",
+                amount=3850000.0,
+                physical_location="Ohnivzdorný domácí trezor – ložnice",
+                is_vault_protected=True,  # Locked in vault!
+                tags="hypoteka, komercni banka, uver, nemovitost, trezor",
+                summary="Smlouva o poskytnutí hypotečního úvěru na nákup rodinného bytu. Fixace úrokové sazby na 5 let.",
+                ocr_fulltext="KOMERČNÍ BANKA a.s. Smlouva o hypotečním úvěru č. KB-HYPO-2022-8491. Úvěrovaná částka: 3 850 000 CZK. Fixace úrokové sazby do 31.03.2027.",
+                created_by_id=u1
+            ),
+            Document(
+                title="Technický průkaz a protokol STK – Škoda Octavia Combi",
+                category="vehicle",
+                file_path=rel_sample,
+                file_name="velky_technicak_stk_octavia.pdf",
+                file_size=890000,
+                file_type="application/pdf",
+                issuer="Ministerstvo dopravy ČR / DEKRA",
+                document_date="2024-06-10",
+                expiry_date=(today + datetime.timedelta(days=280)).isoformat(),
+                warranty_months=None,
+                contract_number="VIN-TMBJJ7NE8K0194820",
+                amount=None,
+                physical_location="Šanon 5 (Černý) – Auto a Garáž",
+                is_vault_protected=False,
+                tags="auto, octavia, skoda, stk, technicak, dekra",
+                summary="Osvědčení o registraci vozidla (Technický průkaz) a protokol o technické prohlídce STK + ME s platností do roku 2026.",
+                ocr_fulltext="OSVĚDČENÍ O REGISTRACI VOZIDLA ČÁST II. Škoda Octavia Combi 2.0 TDI. VIN: TMBJJ7NE8K0194820. STK platná do 06/2026.",
+                created_by_id=u1
+            )
+        ]
+        db.add_all(docs)
         db.commit()
 
 

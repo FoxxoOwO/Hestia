@@ -532,7 +532,109 @@ def run_tests():
     client.delete(f"/api/v1/finance/goals/{test_goal_id}", headers=headers)
     print("12.8 Úklid testovacích dat financí - OK")
 
-    print("\n[SUCCESS] VŠECHNY TESTY ÚSPĚŠNĚ PROŠLY! HESTIA JE PLNĚ PŘIPRAVENA VČETNĚ VŠECH MODULŮ (RECEPTY, KVĚTINY, MAZLÍČCI, DOMÁCÍ PRÁCE, FINANCE).")
+    # ==========================================
+    # 13. DIGITÁLNÍ ARCHIV, ŠANONY A TREZOR (DOCUMENTS & VAULT)
+    # ==========================================
+    print("\n--- TESTOVÁNÍ MODULU DIGITÁLNÍ ARCHIV A ŠANON ---")
+
+    # 13.1 Statistiky dokumentů a načtení seznamu
+    doc_stats_res = client.get("/api/v1/documents/stats", headers=headers)
+    assert doc_stats_res.status_code == 200
+    doc_stats = doc_stats_res.json()
+    assert doc_stats["total_documents"] >= 10
+    assert "warranty" in doc_stats["categories"]
+    assert doc_stats["vault_count"] >= 2
+    print(f"13.1 Statistiky archivu ({doc_stats['total_documents']} dokumentů, {doc_stats['vault_count']} v trezoru) - OK")
+
+    # 13.2 Filtrování zamčeného trezoru a ověření PIN kódu
+    locked_docs_res = client.get("/api/v1/documents?vault_unlocked=false", headers=headers)
+    assert locked_docs_res.status_code == 200
+    locked_docs = locked_docs_res.json()
+    assert all(not d["is_vault_protected"] for d in locked_docs), "V zamčeném trezoru nesmí být citlivé dokumenty"
+
+    # Chybný PIN
+    bad_pin_res = client.post("/api/v1/documents/vault/verify", json={"pin": "9999"}, headers=headers)
+    assert bad_pin_res.status_code == 401
+
+    # Správný PIN (výchozí 1234)
+    good_pin_res = client.post("/api/v1/documents/vault/verify", json={"pin": "1234"}, headers=headers)
+    assert good_pin_res.status_code == 200
+    assert good_pin_res.json()["status"] == "success"
+
+    # Odemčený trezor
+    unlocked_docs_res = client.get("/api/v1/documents?vault_unlocked=true", headers=headers)
+    assert unlocked_docs_res.status_code == 200
+    unlocked_docs = unlocked_docs_res.json()
+    assert any(d["is_vault_protected"] for d in unlocked_docs), "V odemčeném trezoru musí být i citlivé dokumenty"
+    print("13.2 Zabezpečení digitálního trezoru a PIN ověření (1234) - OK")
+
+    # 13.3 Nahrání souboru (Upload)
+    sample_file_bytes = b"%PDF-1.4 Testovaci PDF faktura Hestia\n"
+    upload_res = client.post(
+        "/api/v1/documents/upload?auto_analyze=false",
+        files={"file": ("faktura_test.pdf", sample_file_bytes, "application/pdf")},
+        headers=headers
+    )
+    assert upload_res.status_code == 200
+    upload_data = upload_res.json()
+    assert "file_path" in upload_data
+    assert upload_data["file_name"] == "faktura_test.pdf"
+    print("13.3 Nahrání souboru do archivu (upload) - OK")
+
+    # 13.4 Vytvoření nového dokumentu v archivu
+    new_doc_payload = {
+        "title": "Faktura a záruka Alza Robotický vysavač",
+        "category": "warranty",
+        "file_path": upload_data["file_path"],
+        "file_name": upload_data["file_name"],
+        "file_size": upload_data["file_size"],
+        "file_type": upload_data["file_type"],
+        "issuer": "Alza.cz a.s.",
+        "document_date": "2026-03-01",
+        "expiry_date": "2028-03-01",
+        "warranty_months": 24,
+        "contract_number": "ALZ-998877",
+        "amount": 12990.0,
+        "physical_location": "Šanon 1 (Zelený) - horní police",
+        "is_vault_protected": False,
+        "tags": "spotřebič, elektronika, alza",
+        "summary": "Záruční list k vysavači s 2letou zárukou."
+    }
+    create_doc_res = client.post("/api/v1/documents", json=new_doc_payload, headers=headers)
+    assert create_doc_res.status_code in [200, 201]
+    created_doc = create_doc_res.json()
+    test_doc_id = created_doc["id"]
+    assert created_doc["title"] == new_doc_payload["title"]
+    assert created_doc["status"] == "active"
+    assert created_doc["days_until_expiry"] is not None and created_doc["days_until_expiry"] > 0
+    print(f"13.4 Vytvoření záznamu s hlídačem záruky (zbývá {created_doc['days_until_expiry']} dní) - OK")
+
+    # 13.5 Vyhledávání a filtrace
+    search_res = client.get("/api/v1/documents?search=vysavač", headers=headers)
+    assert search_res.status_code == 200
+    assert any(d["id"] == test_doc_id for d in search_res.json())
+
+    cat_res = client.get("/api/v1/documents?category=warranty", headers=headers)
+    assert cat_res.status_code == 200
+    assert any(d["id"] == test_doc_id for d in cat_res.json())
+    print("13.5 Vyhledávání full-textem a filtrace podle šanonu - OK")
+
+    # 13.6 Úprava dokumentu
+    update_res = client.put(
+        f"/api/v1/documents/{test_doc_id}",
+        json={"physical_location": "Šanon 2 (Modrý) - nová přihrádka"},
+        headers=headers
+    )
+    assert update_res.status_code == 200
+    assert update_res.json()["physical_location"] == "Šanon 2 (Modrý) - nová přihrádka"
+    print("13.6 Aktualizace umístění originálu v domácnosti - OK")
+
+    # 13.7 Smazání testovacího dokumentu
+    del_res = client.delete(f"/api/v1/documents/{test_doc_id}", headers=headers)
+    assert del_res.status_code == 200
+    print("13.7 Smazání testovacího dokumentu - OK")
+
+    print("\n[SUCCESS] VŠECHNY TESTY ÚSPĚŠNĚ PROŠLY! HESTIA JE PLNĚ PŘIPRAVENA VČETNĚ VŠECH MODULŮ (RECEPTY, KVĚTINY, MAZLÍČCI, DOMÁCÍ PRÁCE, FINANCE, DOKUMENTY & ŠANONY).")
 
 if __name__ == "__main__":
     run_tests()
