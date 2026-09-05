@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Settings, Users, Globe, Moon, Sun, Monitor,
-  Sparkles, Check, AlertCircle, Plus, Shield, UserPlus, X
+  Sparkles, Check, AlertCircle, Plus, Shield, UserPlus, X, Palette
 } from 'lucide-react';
 import { api } from '../services/api';
 import { User } from '../types';
@@ -11,7 +11,7 @@ import { useAuth } from '../context/AuthContext';
 
 export const SettingsPage: React.FC = () => {
   const { t, language, setLanguage } = useTranslation();
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, designStyle, setDesignStyle, designOptions, activeDesign } = useTheme();
   const { user } = useAuth();
 
   const [members, setMembers] = useState<User[]>([]);
@@ -226,6 +226,125 @@ export const SettingsPage: React.FC = () => {
               <Monitor className="w-4 h-4" />
               <span>{t('settings.theme_system')}</span>
             </button>
+          </div>
+        </div>
+
+        {/* Design Theme Selection (Alternative Designs) */}
+        <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800/80 space-y-3">
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+                <Palette className="w-3.5 h-3.5 text-orange-500" />
+                <span>{t('settings.design_style')}</span>
+              </label>
+              <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-orange-100 dark:bg-orange-950/60 text-orange-700 dark:text-orange-300 flex items-center gap-1.5">
+                <span
+                  className="w-2 h-2 rounded-full inline-block"
+                  style={{ backgroundColor: activeDesign.primaryColor }}
+                />
+                {language === 'cs' ? activeDesign.name : activeDesign.nameEn}
+              </span>
+            </div>
+            <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+              {t('settings.design_style_desc')}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            {designOptions.map((opt) => {
+              const isSelected = designStyle === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setDesignStyle(opt.id)}
+                  className={`p-3.5 rounded-2xl border text-left transition-all relative overflow-hidden flex flex-col justify-between ${
+                    isSelected
+                      ? 'border-orange-500 bg-orange-50/70 dark:bg-orange-950/30 ring-2 ring-orange-500/30 shadow-md'
+                      : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-800/40'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-3.5 h-3.5 rounded-full shadow-sm ring-1 ring-black/10"
+                          style={{ backgroundColor: opt.primaryColor }}
+                        />
+                        <span className="font-bold text-xs text-zinc-900 dark:text-zinc-100">
+                          {language === 'cs' ? opt.name : opt.nameEn}
+                        </span>
+                      </div>
+                      <span
+                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                          isSelected
+                            ? 'bg-orange-500 text-white'
+                            : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300'
+                        }`}
+                      >
+                        {language === 'cs' ? opt.badge : opt.badgeEn}
+                      </span>
+                    </div>
+
+                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400 line-clamp-2 leading-relaxed mb-3">
+                      {language === 'cs' ? opt.description : opt.descriptionEn}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-zinc-200/60 dark:border-zinc-700/60 mt-auto">
+                    {/* Swatch dots */}
+                    <div className="flex items-center gap-1.5">
+                      {opt.previewColors.map((c, i) => (
+                        <div
+                          key={i}
+                          className="w-3.5 h-3.5 rounded-full border border-black/10 dark:border-white/10 shadow-xs"
+                          style={{ backgroundColor: c }}
+                        />
+                      ))}
+                    </div>
+
+                    {isSelected ? (
+                      <span className="flex items-center gap-1 text-[11px] font-bold text-orange-600 dark:text-orange-400">
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Aktivní</span>
+                      </span>
+                    ) : (
+                      <span className="text-[11px] text-zinc-400 font-medium hover:text-zinc-600 dark:hover:text-zinc-200">
+                        Aktivovat
+                      </span>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Live preview showcase widget */}
+          <div className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200/80 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-3 text-xs mt-2">
+            <div className="flex items-center gap-2">
+              <div
+                className="w-2.5 h-2.5 rounded-full"
+                style={{ backgroundColor: activeDesign.primaryColor }}
+              />
+              <span className="font-semibold text-zinc-700 dark:text-zinc-300">
+                {t('settings.design_preview_title')}:
+              </span>
+              <span className="font-bold text-orange-600 dark:text-orange-400">
+                {language === 'cs' ? activeDesign.name : activeDesign.nameEn}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-1 rounded-xl bg-orange-100 dark:bg-orange-950/60 text-orange-700 dark:text-orange-300 text-[11px] font-bold">
+                {t('settings.design_preview_badge')}
+              </span>
+              <button
+                type="button"
+                className="px-3 py-1.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-semibold text-xs transition shadow-sm"
+              >
+                {t('settings.design_preview_btn')}
+              </button>
+            </div>
           </div>
         </div>
       </div>

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Flame, Moon, Sun, Monitor, Globe, UserCheck, ChevronDown, LogOut, History } from 'lucide-react';
+import { Flame, Moon, Sun, Monitor, Globe, UserCheck, ChevronDown, LogOut, History, Palette } from 'lucide-react';
 import { useTranslation } from '../i18n';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme, DesignStyle } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { User } from '../types';
@@ -10,7 +10,7 @@ import { SwitchUserModal } from './SwitchUserModal';
 
 export const Navbar: React.FC = () => {
   const { t, language, setLanguage } = useTranslation();
-  const { theme, setTheme, isDark } = useTheme();
+  const { theme, setTheme, isDark, designStyle, setDesignStyle, activeDesign, designOptions } = useTheme();
   const { user, logout } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -32,6 +32,13 @@ export const Navbar: React.FC = () => {
     if (theme === 'system') setTheme('light');
     else if (theme === 'light') setTheme('dark');
     else setTheme('system');
+  };
+
+  const cycleDesignStyle = () => {
+    const styles: DesignStyle[] = ['classic', 'nordic', 'cyber', 'glass', 'sunset'];
+    const currentIndex = styles.indexOf(designStyle);
+    const nextStyle = styles[(currentIndex + 1) % styles.length];
+    setDesignStyle(nextStyle);
   };
 
   return (
@@ -82,6 +89,19 @@ export const Navbar: React.FC = () => {
             ) : (
               <Sun className="w-4 h-4 text-orange-500" />
             )}
+          </button>
+
+          {/* Design style quick toggle */}
+          <button
+            onClick={cycleDesignStyle}
+            title={`Designový styl: ${language === 'cs' ? activeDesign.name : activeDesign.nameEn} (klikněte pro přepnutí)`}
+            className="p-2 rounded-lg text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition flex items-center gap-1 group"
+          >
+            <Palette className="w-4 h-4 text-orange-500 group-hover:scale-110 transition-transform" />
+            <span
+              className="w-2 h-2 rounded-full hidden sm:inline-block"
+              style={{ backgroundColor: activeDesign.primaryColor }}
+            />
           </button>
 
           {/* Active User switcher */}

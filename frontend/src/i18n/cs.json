@@ -378,7 +378,22 @@
     "gemini_title": "Integrace Gemini AI",
     "gemini_desc": "Využijte nejnovější modely Google Gemini pro bleskový import receptů z internetu.",
     "gemini_status_ok": "Gemini API je aktivní",
-    "gemini_status_missing": "API klíč nenalezen (nastavte v .env)"
+    "gemini_status_missing": "API klíč nenalezen (nastavte v .env)",
+    "design_style": "Designový styl (Vzhled rozhraní)",
+    "design_style_desc": "Přepněte mezi výchozím designem Hestia a alternativními styly pro celou aplikaci.",
+    "design_classic": "Klasický krb",
+    "design_classic_desc": "Tradiční hřejivý oranžový styl Hestie s domáckou atmosférou",
+    "design_nordic": "Severský les (Nordic Sage)",
+    "design_nordic_desc": "Zklidňující skandinávská šalvějová a smaragdová zeleň pro harmonický domov",
+    "design_cyber": "Midnight Cyber",
+    "design_cyber_desc": "Futuristický temný neon s elektrickou azurovou a pulzující fialovou",
+    "design_glass": "Mléčné sklo (Glassmorphism)",
+    "design_glass_desc": "Translucentní skleněné karty s hloubkou, jemným rozostřením a indigem",
+    "design_sunset": "Útulný západ slunce (Cozy Sunset)",
+    "design_sunset_desc": "Hřejivé pastelové odstíny terakoty, korálové růže a broskve",
+    "design_preview_title": "Živý náhled aktivního designu",
+    "design_preview_btn": "Ukázkové tlačítko",
+    "design_preview_badge": "Aktivní téma"
   },
   "finance": {
     "title": "Rodinné finance a rozpočet",

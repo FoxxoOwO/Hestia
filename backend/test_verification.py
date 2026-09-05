@@ -390,8 +390,9 @@ def run_tests():
     assert del_chore_res.status_code == 200
     print("10.9 Úklid testovacího úkolu - OK")
 
-    # === 11. KONTROLA FRONTEND PRODUKČNÍHO SESTAVENÍ ===
     frontend_dist_index = os.path.join("..", "frontend", "dist", "index.html")
+    if not os.path.exists(frontend_dist_index):
+        frontend_dist_index = os.path.join("frontend", "dist", "index.html")
     assert os.path.exists(frontend_dist_index), f"Frontend build dist not found at {frontend_dist_index}"
     print("\n11. Frontend produkční sestavení (Vite dist index.html) - OK")
 

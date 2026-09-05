@@ -378,7 +378,22 @@
     "gemini_title": "Gemini AI Integration",
     "gemini_desc": "Harness Google Gemini models for lightning-fast recipe extraction and household intelligence.",
     "gemini_status_ok": "Gemini API is active",
-    "gemini_status_missing": "API key missing (set in .env)"
+    "gemini_status_missing": "API key missing (set in .env)",
+    "design_style": "Design Style (UI Theme)",
+    "design_style_desc": "Switch between default Hestia design and alternative visual theme styles across the app.",
+    "design_classic": "Classic Hearth",
+    "design_classic_desc": "Traditional warm orange Hestia style with cozy home atmosphere",
+    "design_nordic": "Nordic Sage & Forest",
+    "design_nordic_desc": "Calming Scandinavian sage & emerald greenery for a serene home",
+    "design_cyber": "Midnight Cyber",
+    "design_cyber_desc": "Futuristic neon noir with electric cyan & glowing violet",
+    "design_glass": "Frosted Glassmorphism",
+    "design_glass_desc": "Translucent frosted glass cards with depth, blur and sapphire indigo",
+    "design_sunset": "Cozy Sunset & Rose",
+    "design_sunset_desc": "Warm pastel terracotta, coral rose and cozy peach shades",
+    "design_preview_title": "Active Design Live Preview",
+    "design_preview_btn": "Sample Action",
+    "design_preview_badge": "Active Theme"
   },
   "finance": {
     "title": "Family Finances & Budget",
