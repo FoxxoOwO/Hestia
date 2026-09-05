@@ -997,7 +997,64 @@ def run_tests():
         assert c_title in check_act["items"][0]["description"]
         print(f"16.7 Automatické zaevidování akce do auditní stopy ('{c_title}') - OK")
 
-    print("\n[SUCCESS] VŠECHNY TESTY ÚSPĚŠNĚ PROŠLY! HESTIA JE PLNĚ PŘIPRAVENA VČETNĚ VŠECH 16 TESTOVACÍCH SEKCE (AUTENTIZACE, AUDIT LOG, RECEPTY, KVĚTINY, MAZLÍČCI, DOMÁCÍ PRÁCE, FINANCE, DOKUMENTY, VOZOVÝ PARK, LÉKÁRNIČKA).")
+    # 16.8 Vytvoření testovacího člena pro test úpravy a smazání
+    import time
+    test_uname = f"karel_{int(time.time() * 1000)}"
+    new_member_payload = {
+        "username": test_uname,
+        "display_name": "Karel Původní",
+        "email": "karel@example.cz",
+        "password": "heslo_karel_123",
+        "role": "member",
+        "avatar_color": "#3b82f6"
+    }
+    create_mem_res = client.post("/api/v1/auth/users", json=new_member_payload, headers=headers)
+    assert create_mem_res.status_code == 200
+    created_member = create_mem_res.json()
+    test_user_id = created_member["id"]
+    assert created_member["display_name"] == "Karel Původní"
+    print(f"16.8 Vytvoření testovacího člena (ID: {test_user_id}, @{test_uname}) - OK")
+
+    # 16.9 Úprava profilu člena domácnosti (PUT /api/v1/auth/users/{id})
+    update_mem_payload = {
+        "display_name": "Karel Novák",
+        "avatar_color": "#10b981",
+        "email": "karel.novak@example.cz",
+        "password": "nove_bezpecne_heslo_456"
+    }
+    update_mem_res = client.put(f"/api/v1/auth/users/{test_user_id}", json=update_mem_payload, headers=headers)
+    assert update_mem_res.status_code == 200
+    updated_data = update_mem_res.json()
+    assert updated_data["display_name"] == "Karel Novák"
+    assert updated_data["avatar_color"] == "#10b981"
+
+    # Ověření, že se Karel přihlásí s novým heslem
+    karel_login = client.post("/api/v1/auth/login", json={"username": test_uname, "password": "nove_bezpecne_heslo_456"})
+    assert karel_login.status_code == 200
+    print("16.9 Úprava profilu člena a přihlášení s novým heslem (PUT /users/{id}) - OK")
+
+    # 16.10 Bezpečnostní pojistka: zákaz smazání vlastního admin účtu
+    del_self_res = client.delete(f"/api/v1/auth/users/{user_id}", headers=headers)
+    assert del_self_res.status_code == 400
+    print("16.10 Bezpečnostní pojistka: zákaz smazání vlastního administrátorského účtu (400) - OK")
+
+    # 16.11 Úspěšné smazání člena domácnosti (DELETE /api/v1/auth/users/{id})
+    del_mem_res = client.delete(f"/api/v1/auth/users/{test_user_id}", headers=headers)
+    assert del_mem_res.status_code == 200
+    del_json = del_mem_res.json()
+    assert del_json["status"] == "success"
+
+    # Ověření, že smazaný člen již není v aktivním seznamu
+    active_users = client.get("/api/v1/auth/users", headers=headers).json()
+    active_ids = [u["id"] for u in active_users]
+    assert test_user_id not in active_ids
+
+    # Ověření, že smazaný člen se již nemůže přihlásit
+    deleted_login = client.post("/api/v1/auth/login", json={"username": test_uname, "password": "nove_bezpecne_heslo_456"})
+    assert deleted_login.status_code in (400, 401, 404)
+    print(f"16.11 Úspěšné smazání člena a ověření zamítnutí přístupu (DELETE /users/{test_user_id}) - OK")
+
+    print("\n[SUCCESS] VŠECHNY TESTY ÚSPĚŠNĚ PROŠLY! HESTIA JE PLNĚ PŘIPRAVENA VČETNĚ VŠECH 16 TESTOVACÍCH SEKCE (SPRÁVA ČLENŮ, AUDIT LOG, RECEPTY, KVĚTINY, MAZLÍČCI, DOMÁCÍ PRÁCE, FINANCE, DOKUMENTY, VOZOVÝ PARK, LÉKÁRNIČKA).")
 
 if __name__ == "__main__":
     run_tests()

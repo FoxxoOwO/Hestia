@@ -393,7 +393,18 @@
     "design_sunset_desc": "Warm pastel terracotta, coral rose and cozy peach shades",
     "design_preview_title": "Active Design Live Preview",
     "design_preview_btn": "Sample Action",
-    "design_preview_badge": "Active Theme"
+    "design_preview_badge": "Active Theme",
+    "edit_member": "Edit Member Profile",
+    "edit_member_title": "Edit Household Member",
+    "delete_member": "Remove Member",
+    "delete_member_title": "Remove Member from Household",
+    "delete_member_confirm": "Are you sure you want to remove member {{name}} (@{{username}}) from the household?",
+    "delete_member_warning": "This member will lose access to the Hestia system. Historical activity and records will remain safely preserved.",
+    "password_optional_hint": "Enter a new password only if you want to change it for this member.",
+    "save_changes": "Save Changes",
+    "cannot_delete_self": "You cannot delete your own administrator account.",
+    "member_updated_success": "Member profile successfully updated",
+    "member_deleted_success": "Household member successfully removed"
   },
   "finance": {
     "title": "Family Finances & Budget",

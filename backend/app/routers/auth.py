@@ -108,10 +108,14 @@ def update_my_profile(
 
 @router.get("/users", response_model=List[UserResponse])
 def get_household_members(
+    include_inactive: bool = False,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    return db.query(User).all()
+    query = db.query(User)
+    if not include_inactive:
+        query = query.filter(User.is_active == True)
+    return query.all()
 
 @router.post("/users", response_model=UserResponse)
 def create_household_member(
@@ -119,7 +123,7 @@ def create_household_member(
     current_user: User = Depends(get_current_active_admin),
     db: Session = Depends(get_db)
 ):
-    existing = db.query(User).filter(User.username == user_data.username).first()
+    existing = db.query(User).filter(User.username == user_data.username.strip()).first()
     if existing:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -127,9 +131,9 @@ def create_household_member(
         )
 
     new_user = User(
-        username=user_data.username,
-        display_name=user_data.display_name,
-        email=user_data.email,
+        username=user_data.username.strip(),
+        display_name=user_data.display_name.strip(),
+        email=user_data.email.strip() if user_data.email else None,
         hashed_password=get_password_hash(user_data.password),
         role=user_data.role or "member",
         avatar_color=user_data.avatar_color or "#f97316",
@@ -155,6 +159,81 @@ def create_household_member(
     db.refresh(new_user)
     return new_user
 
+@router.put("/users/{user_id}", response_model=UserResponse)
+def update_household_member(
+    user_id: int,
+    user_data: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Only admins or the user themselves can update this profile
+    if current_user.role != "admin" and current_user.id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Nemáte oprávnění upravovat profil jiného člena domácnosti"
+        )
+
+    target_user = db.query(User).filter(User.id == user_id).first()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Člen domácnosti nenalezen (User not found)")
+
+    # Check username uniqueness if changed
+    if user_data.username is not None and user_data.username.strip():
+        new_uname = user_data.username.strip()
+        if new_uname != target_user.username:
+            existing = db.query(User).filter(User.username == new_uname, User.id != user_id).first()
+            if existing:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Uživatelské jméno @{new_uname} je již obsazeno."
+                )
+            target_user.username = new_uname
+
+    # Only admins can change roles
+    if user_data.role is not None and user_data.role != target_user.role:
+        if current_user.role != "admin":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Pouze správce může měnit role členů"
+            )
+        # Prevent demoting the last active admin
+        if target_user.role == "admin" and user_data.role != "admin":
+            admin_count = db.query(User).filter(User.role == "admin", User.is_active == True).count()
+            if admin_count <= 1:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Nelze odebrat roli správce jedinému správci domácnosti"
+                )
+        target_user.role = user_data.role
+
+    if user_data.display_name is not None and user_data.display_name.strip():
+        target_user.display_name = user_data.display_name.strip()
+    if user_data.email is not None:
+        target_user.email = user_data.email.strip() if user_data.email else None
+    if user_data.avatar_color is not None:
+        target_user.avatar_color = user_data.avatar_color
+    if user_data.preferred_language is not None:
+        target_user.preferred_language = user_data.preferred_language
+    if user_data.preferred_theme is not None:
+        target_user.preferred_theme = user_data.preferred_theme
+    if user_data.password and user_data.password.strip():
+        target_user.hashed_password = get_password_hash(user_data.password.strip())
+
+    log_activity(
+        db=db,
+        user=current_user,
+        module="auth",
+        action_type="update",
+        title="Úprava profilu člena",
+        description=f"{current_user.display_name} upravil(a) profil člena {target_user.display_name} (@{target_user.username})" + (" (včetně změny hesla)" if user_data.password else ""),
+        entity_type="User",
+        entity_id=target_user.id
+    )
+
+    db.commit()
+    db.refresh(target_user)
+    return target_user
+
 @router.delete("/users/{user_id}")
 def delete_household_member(
     user_id: int,
@@ -168,20 +247,50 @@ def delete_household_member(
         )
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
-        raise HTTPException(status_code=404, detail="Uživatel nenalezen")
+        raise HTTPException(status_code=404, detail="Člen domácnosti nenalezen")
+
+    if user.role == "admin":
+        admin_count = db.query(User).filter(User.role == "admin", User.is_active == True).count()
+        if admin_count <= 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Nelze smazat posledního aktivního správce domácnosti"
+            )
     
     deleted_name = user.display_name
+    deleted_username = user.username
+
+    # Safely unlink pending chores and medication schedules
+    from app.models.chore import Chore
+    from app.models.medicine import Medicine, MedicationSchedule
+    from app.models.finance import UserFinanceProfile
+
+    db.query(Chore).filter(Chore.current_assignee_id == user_id).update({"current_assignee_id": None})
+    db.query(Chore).filter(Chore.last_completed_by_id == user_id).update({"last_completed_by_id": None})
+    db.query(Medicine).filter(Medicine.assigned_user_id == user_id).update({"assigned_user_id": None})
+    db.query(MedicationSchedule).filter(MedicationSchedule.user_id == user_id).delete()
+    db.query(UserFinanceProfile).filter(UserFinanceProfile.user_id == user_id).delete()
+
     log_activity(
         db=db,
         user=current_user,
         module="auth",
         action_type="delete",
         title="Odebrání člena domácnosti",
-        description=f"Správce {current_user.display_name} odebral(a) profil člena {deleted_name}",
+        description=f"Správce {current_user.display_name} odebral(a) profil člena {deleted_name} (@{deleted_username})",
         entity_type="User",
         entity_id=user_id
     )
 
-    db.delete(user)
-    db.commit()
-    return {"status": "success", "message": "Člen domácnosti byl odebrán"}
+    try:
+        db.delete(user)
+        db.commit()
+    except Exception:
+        db.rollback()
+        # Fallback to safe deactivation if foreign key constraint exists
+        target = db.query(User).filter(User.id == user_id).first()
+        if target:
+            target.is_active = False
+            db.commit()
+
+    return {"status": "success", "message": f"Člen domácnosti {deleted_name} byl úspěšně odebrán"}

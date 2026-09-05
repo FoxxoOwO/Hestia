@@ -630,6 +630,40 @@ export const api = {
     return res.json();
   },
 
+  async updateUser(userId: number, data: {
+    username?: string;
+    display_name?: string;
+    email?: string;
+    role?: string;
+    avatar_color?: string;
+    password?: string;
+    preferred_language?: string;
+    preferred_theme?: string;
+  }): Promise<User> {
+    const res = await fetch(`${API_BASE}/auth/users/${userId}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Chyba při úpravě člena' }));
+      throw new Error(err.detail || 'Chyba při úpravě člena');
+    }
+    return res.json();
+  },
+
+  async deleteUser(userId: number): Promise<{ status: string; message: string }> {
+    const res = await fetch(`${API_BASE}/auth/users/${userId}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Chyba při mazání člena' }));
+      throw new Error(err.detail || 'Chyba při mazání člena');
+    }
+    return res.json();
+  },
+
   // Chores & Household Tasks
   async getChores(params?: {
     room?: string;

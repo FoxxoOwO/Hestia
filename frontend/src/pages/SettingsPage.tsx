@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
   Settings, Users, Globe, Moon, Sun, Monitor,
-  Sparkles, Check, AlertCircle, Plus, Shield, UserPlus, X, Palette
+  Sparkles, Check, AlertCircle, Plus, Shield, UserPlus, X, Palette,
+  Pencil, Trash2, AlertTriangle
 } from 'lucide-react';
 import { api } from '../services/api';
 import { User } from '../types';
@@ -24,6 +25,20 @@ export const SettingsPage: React.FC = () => {
   const [newPassword, setNewPassword] = useState('hestia123');
   const [newRole, setNewRole] = useState<'admin' | 'member'>('member');
   const [newAvatarColor, setNewAvatarColor] = useState('#f97316');
+
+  // Edit member modal
+  const [editingMember, setEditingMember] = useState<User | null>(null);
+  const [editUsername, setEditUsername] = useState('');
+  const [editDisplayName, setEditDisplayName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editPassword, setEditPassword] = useState('');
+  const [editRole, setEditRole] = useState<'admin' | 'member'>('member');
+  const [editAvatarColor, setEditAvatarColor] = useState('#f97316');
+  const [editError, setEditError] = useState<string | null>(null);
+
+  // Delete member modal
+  const [deletingMember, setDeletingMember] = useState<User | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const fetchSettingsData = async () => {
     try {
@@ -75,6 +90,53 @@ export const SettingsPage: React.FC = () => {
       }
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const openEditMember = (m: User) => {
+    setEditingMember(m);
+    setEditUsername(m.username);
+    setEditDisplayName(m.display_name);
+    setEditEmail(m.email || '');
+    setEditRole((m.role as 'admin' | 'member') || 'member');
+    setEditAvatarColor(m.avatar_color || '#f97316');
+    setEditPassword('');
+    setEditError(null);
+  };
+
+  const handleUpdateMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingMember) return;
+    if (!editUsername.trim() || !editDisplayName.trim()) return;
+
+    try {
+      const payload: any = {
+        username: editUsername.trim(),
+        display_name: editDisplayName.trim(),
+        email: editEmail.trim() || undefined,
+        role: editRole,
+        avatar_color: editAvatarColor,
+      };
+      if (editPassword.trim()) {
+        payload.password = editPassword.trim();
+      }
+
+      await api.updateUser(editingMember.id, payload);
+      setEditingMember(null);
+      fetchSettingsData();
+    } catch (err: any) {
+      setEditError(err.message || 'Chyba při úpravě člena');
+    }
+  };
+
+  const handleDeleteMember = async () => {
+    if (!deletingMember) return;
+    try {
+      await api.deleteUser(deletingMember.id);
+      setDeletingMember(null);
+      fetchSettingsData();
+    } catch (err: any) {
+      setDeleteError(err.message || 'Chyba při mazání člena');
     }
   };
 
@@ -142,9 +204,45 @@ export const SettingsPage: React.FC = () => {
                 </div>
               </div>
 
-              <span className="text-xs font-medium px-2.5 py-1 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
-                {m.role === 'admin' ? 'Plný přístup' : 'Člen rodiny'}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium px-2.5 py-1 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
+                  {m.role === 'admin' ? 'Správce' : 'Člen'}
+                </span>
+
+                {/* Edit button */}
+                {(user?.role === 'admin' || user?.id === m.id) && (
+                  <button
+                    onClick={() => openEditMember(m)}
+                    title={t('settings.edit_member')}
+                    className="p-1.5 rounded-xl text-zinc-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-950/40 transition"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                )}
+
+                {/* Delete button */}
+                {user?.role === 'admin' && (
+                  m.id === user.id ? (
+                    <span
+                      title={t('settings.cannot_delete_self')}
+                      className="p-1.5 text-zinc-300 dark:text-zinc-700 cursor-not-allowed"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setDeletingMember(m);
+                        setDeleteError(null);
+                      }}
+                      title={t('settings.delete_member')}
+                      className="p-1.5 rounded-xl text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 transition"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -496,6 +594,219 @@ export const SettingsPage: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Member Modal */}
+      {editingMember && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white dark:bg-zinc-900 w-full max-w-md rounded-3xl shadow-2xl border border-zinc-200 dark:border-zinc-800 p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-white font-bold text-xs shadow-sm"
+                  style={{ backgroundColor: editAvatarColor }}
+                >
+                  {editDisplayName.charAt(0).toUpperCase() || 'U'}
+                </div>
+                <h3 className="font-bold text-base text-zinc-900 dark:text-zinc-100">
+                  {t('settings.edit_member_title')}
+                </h3>
+              </div>
+              <button
+                onClick={() => setEditingMember(null)}
+                className="p-1 text-zinc-400 hover:text-zinc-600 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {editError && (
+              <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/40 text-red-600 dark:text-red-400 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{editError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleUpdateMember} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Uživatelské jméno (login) *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editUsername}
+                  onChange={(e) => setEditUsername(e.target.value)}
+                  placeholder="např. tomas"
+                  className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Zobrazované jméno *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editDisplayName}
+                  onChange={(e) => setEditDisplayName(e.target.value)}
+                  placeholder="např. Tomáš"
+                  className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                  E-mail (volitelné)
+                </label>
+                <input
+                  type="email"
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  placeholder="tomas@rodina.cz"
+                  className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                    Nové heslo
+                  </label>
+                  <span className="text-[10px] text-zinc-400">
+                    Ponechte prázdné pro zachování stávajícího
+                  </span>
+                </div>
+                <input
+                  type="password"
+                  value={editPassword}
+                  onChange={(e) => setEditPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none"
+                />
+              </div>
+
+              {/* Role selector: only visible if current user is admin */}
+              {user?.role === 'admin' && (
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                    Role v domácnosti
+                  </label>
+                  <select
+                    value={editRole}
+                    onChange={(e) => setEditRole(e.target.value as any)}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none"
+                  >
+                    <option value="member">Člen domácnosti</option>
+                    <option value="admin">Správce (Admin)</option>
+                  </select>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
+                  Barva profilu
+                </label>
+                <div className="flex items-center gap-2">
+                  {avatarColors.map((color) => (
+                    <button
+                      type="button"
+                      key={color}
+                      onClick={() => setEditAvatarColor(color)}
+                      className={`w-7 h-7 rounded-full transition-transform ${
+                        editAvatarColor === color ? 'scale-125 ring-2 ring-orange-500 ring-offset-2' : ''
+                      }`}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-3 flex gap-2">
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 px-4 rounded-xl font-semibold text-xs bg-orange-500 hover:bg-orange-600 text-white transition"
+                >
+                  {t('settings.save_changes')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingMember(null)}
+                  className="py-2.5 px-4 rounded-xl font-semibold text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
+                >
+                  Zrušit
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Member Confirmation Modal */}
+      {deletingMember && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white dark:bg-zinc-900 w-full max-w-md rounded-3xl shadow-2xl border border-zinc-200 dark:border-zinc-800 p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-2xl bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-zinc-900 dark:text-zinc-100">
+                  {t('settings.delete_member_title')}
+                </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Potvrzení trvalého odebrání člena
+                </p>
+              </div>
+            </div>
+
+            {deleteError && (
+              <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/40 text-red-600 dark:text-red-400 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{deleteError}</span>
+              </div>
+            )}
+
+            <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/80 flex items-center gap-3">
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-sm"
+                style={{ backgroundColor: deletingMember.avatar_color || '#f97316' }}
+              >
+                {deletingMember.display_name.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <h4 className="font-bold text-sm text-zinc-900 dark:text-zinc-100">
+                  {deletingMember.display_name}
+                </h4>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  @{deletingMember.username} • {deletingMember.role === 'admin' ? 'Správce' : 'Člen'}
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+              {t('settings.delete_member_warning')}
+            </p>
+
+            <div className="pt-2 flex gap-2">
+              <button
+                type="button"
+                onClick={handleDeleteMember}
+                className="flex-1 py-2.5 px-4 rounded-xl font-semibold text-xs bg-red-600 hover:bg-red-700 text-white transition shadow-sm"
+              >
+                {t('settings.delete_member')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setDeletingMember(null)}
+                className="py-2.5 px-4 rounded-xl font-semibold text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
+              >
+                Zrušit
+              </button>
+            </div>
           </div>
         </div>
       )}

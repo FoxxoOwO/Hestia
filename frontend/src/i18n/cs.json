@@ -393,7 +393,18 @@
     "design_sunset_desc": "Hřejivé pastelové odstíny terakoty, korálové růže a broskve",
     "design_preview_title": "Živý náhled aktivního designu",
     "design_preview_btn": "Ukázkové tlačítko",
-    "design_preview_badge": "Aktivní téma"
+    "design_preview_badge": "Aktivní téma",
+    "edit_member": "Upravit profil člena",
+    "edit_member_title": "Úprava člena domácnosti",
+    "delete_member": "Odebrat člena",
+    "delete_member_title": "Odebrání člena z domácnosti",
+    "delete_member_confirm": "Opravdu si přejete odebrat člena {{name}} (@{{username}}) z rodinného systému?",
+    "delete_member_warning": "Tento člen ztratí přístup k celému systému Hestia. Historické záznamy zůstanou bezpečně zachovány.",
+    "password_optional_hint": "Zadejte nové heslo pouze v případě, že jej chcete členovi změnit.",
+    "save_changes": "Uložit změny",
+    "cannot_delete_self": "Nemůžete smazat svůj vlastní administrátorský účet.",
+    "member_updated_success": "Profil člena byl úspěšně upraven",
+    "member_deleted_success": "Člen domácnosti byl úspěšně odebrán"
   },
   "finance": {
     "title": "Rodinné finance a rozpočet",
