@@ -21,6 +21,8 @@ import { PetEditPage } from './pages/PetEditPage';
 import { ChoresPage } from './pages/ChoresPage';
 import { FinancePage } from './pages/FinancePage';
 import { DocumentsPage } from './pages/DocumentsPage';
+import { VehiclesPage } from './pages/VehiclesPage';
+import { VehicleDetailPage } from './pages/VehicleDetailPage';
 import { SettingsPage } from './pages/SettingsPage';
 
 export const App: React.FC = () => {
@@ -53,6 +55,8 @@ export const App: React.FC = () => {
                     <Route path="/chores" element={<ChoresPage />} />
                     <Route path="/finance" element={<FinancePage />} />
                     <Route path="/documents" element={<DocumentsPage />} />
+                    <Route path="/vehicles" element={<VehiclesPage />} />
+                    <Route path="/vehicles/:id" element={<VehicleDetailPage />} />
                     <Route path="/settings" element={<SettingsPage />} />
                   </Routes>
                 </main>

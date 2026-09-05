@@ -8,6 +8,7 @@ from app.models.pet import Pet, PetMedicalRecord, PetMedication, PetWeightLog, P
 from app.models.chore import Chore, ChoreCompletion, ChoreReward, ChoreRewardRedemption
 from app.models.finance import FinanceTransaction, CategoryBudget, Subscription, SavingsGoal, UserFinanceProfile
 from app.models.document import Document, VaultSetting
+from app.models.vehicle import Vehicle, VehicleRefueling, VehicleServiceRecord
 from app.config import settings
 import os
 from app.utils.auth import get_password_hash
@@ -1220,6 +1221,199 @@ def seed_initial_data(db: Session):
             )
         ]
         db.add_all(docs)
+        db.commit()
+
+    # 10. Seed Vehicles, Refuelings and Service Records
+    if db.query(Vehicle).count() == 0:
+        all_users = db.query(User).all()
+        u1 = all_users[0].id if len(all_users) > 0 else 1
+
+        # Vehicle 1: Škoda Octavia Combi III
+        v1 = Vehicle(
+            name="Škoda Octavia Combi",
+            make="Škoda",
+            model="Octavia Combi III 2.0 TDI",
+            year=2019,
+            color="Šedá Quartz metalíza",
+            license_plate="1AB 2345",
+            vin="TMBJJ7NE8K0194820",
+            fuel_type="diesel",
+            tank_capacity_l=50.0,
+            engine_power_kw=110,
+            engine_displacement_cc=1968,
+            transmission="automatic",
+            current_mileage=164200,
+            mot_expiry_date=(today + datetime.timedelta(days=180)).isoformat(),
+            vignette_expiry_date=(today + datetime.timedelta(days=95)).isoformat(),
+            vignette_type="1_year",
+            insurance_company="Kooperativa",
+            insurance_policy_number="KOOP-POV-849201",
+            insurance_expiry_date=(today + datetime.timedelta(days=115)).isoformat(),
+            insurance_assistance_phone="+420 1224",
+            first_aid_kit_expiry_date=(today + datetime.timedelta(days=400)).isoformat(),
+            tire_type="winter",
+            tire_dimension="205/55 R16 91H",
+            tire_tread_depth_mm=5.5,
+            tire_storage_location="Pneuservis Barum – regál 4B (letní sada)",
+            tire_last_swapped_date="2025-11-05",
+            oil_change_interval_km=15000,
+            oil_change_interval_months=12,
+            last_oil_change_mileage=155000,
+            last_oil_change_date="2025-08-15",
+            notes="Hlavní rodinné auto na dlouhé trasy a dovolené. Spolehlivý dvoulitr s nízkou spotřebou.",
+            is_favorite=True,
+            created_by_id=u1
+        )
+
+        # Vehicle 2: Škoda Fabia III (Expiring STK in 22 days!)
+        v2 = Vehicle(
+            name="Fabie do města",
+            make="Škoda",
+            model="Fabia III 1.0 TSI",
+            year=2020,
+            color="Modrá Race",
+            license_plate="8A6 7890",
+            vin="TMBAB6NJ3KZ048291",
+            fuel_type="petrol",
+            tank_capacity_l=45.0,
+            engine_power_kw=70,
+            engine_displacement_cc=999,
+            transmission="manual",
+            current_mileage=58400,
+            mot_expiry_date=(today + datetime.timedelta(days=22)).isoformat(),  # Warning! <= 30 days
+            vignette_expiry_date=(today + datetime.timedelta(days=210)).isoformat(),
+            vignette_type="1_year",
+            insurance_company="Generali Česká pojišťovna",
+            insurance_policy_number="GEN-77401928",
+            insurance_expiry_date=(today + datetime.timedelta(days=320)).isoformat(),
+            insurance_assistance_phone="+420 241 114 114",
+            first_aid_kit_expiry_date=(today + datetime.timedelta(days=18)).isoformat(),  # Warning!
+            tire_type="summer",
+            tire_dimension="185/60 R15 84H",
+            tire_tread_depth_mm=4.8,
+            tire_storage_location="Domácí garáž – závěsný držák na zdi (zimní sada)",
+            tire_last_swapped_date="2025-04-10",
+            oil_change_interval_km=15000,
+            oil_change_interval_months=12,
+            last_oil_change_mileage=45000,
+            last_oil_change_date="2024-11-20",
+            notes="Městské vozidlo, nákupy a kroužky dětí. Pozor na blížící se termín STK!",
+            is_favorite=False,
+            created_by_id=u1
+        )
+        db.add_all([v1, v2])
+        db.commit()
+        db.refresh(v1)
+        db.refresh(v2)
+
+        # Seed Refuelings for Octavia (calculating realistic 5.2 - 5.6 l/100 km)
+        r1 = VehicleRefueling(
+            vehicle_id=v1.id,
+            date=(today - datetime.timedelta(days=45)).isoformat(),
+            mileage=162350,
+            fuel_amount_l=46.5,
+            price_per_l=36.90,
+            total_price=1715.85,
+            is_full_tank=True,
+            fuel_brand="Orlen Benzina",
+            calculated_consumption=None,
+            notes="Plná nádrž před cestou na Moravu",
+            created_by_id=u1
+        )
+        r2 = VehicleRefueling(
+            vehicle_id=v1.id,
+            date=(today - datetime.timedelta(days=30)).isoformat(),
+            mileage=163210,
+            fuel_amount_l=45.2,
+            price_per_l=37.20,
+            total_price=1681.44,
+            is_full_tank=True,
+            fuel_brand="MOL",
+            calculated_consumption=5.26,  # 45.2 l / 860 km * 100
+            notes="Dálniční jízda",
+            created_by_id=u1
+        )
+        r3 = VehicleRefueling(
+            vehicle_id=v1.id,
+            date=(today - datetime.timedelta(days=12)).isoformat(),
+            mileage=164050,
+            fuel_amount_l=44.8,
+            price_per_l=36.50,
+            total_price=1635.20,
+            is_full_tank=True,
+            fuel_brand="EuroOil",
+            calculated_consumption=5.33,  # 44.8 l / 840 km * 100
+            notes="Bez biosložky",
+            created_by_id=u1
+        )
+
+        # Refuelings for Fabia (calculating realistic 6.1 l/100 km)
+        r4 = VehicleRefueling(
+            vehicle_id=v2.id,
+            date=(today - datetime.timedelta(days=40)).isoformat(),
+            mileage=57800,
+            fuel_amount_l=38.0,
+            price_per_l=37.90,
+            total_price=1440.20,
+            is_full_tank=True,
+            fuel_brand="Shell",
+            calculated_consumption=None,
+            notes="Plná nádrž V-Power 95",
+            created_by_id=u1
+        )
+        r5 = VehicleRefueling(
+            vehicle_id=v2.id,
+            date=(today - datetime.timedelta(days=15)).isoformat(),
+            mileage=58400,
+            fuel_amount_l=36.6,
+            price_per_l=37.50,
+            total_price=1372.50,
+            is_full_tank=True,
+            fuel_brand="Orlen Benzina",
+            calculated_consumption=6.10,  # 36.6 l / 600 km * 100
+            notes="Městský provoz",
+            created_by_id=u1
+        )
+        db.add_all([r1, r2, r3, r4, r5])
+
+        # Seed Service Records
+        s1 = VehicleServiceRecord(
+            vehicle_id=v1.id,
+            service_type="oil_change",
+            title="Pravidelná výměna oleje a všech filtrů",
+            date="2025-08-15",
+            mileage=155000,
+            cost=4200.0,
+            service_shop="Autoservis Novák & Syn",
+            performed_operations="Olej Castrol Edge 5W-30 LL (4.7 l), olejový filtr Mann, vzduchový filtr, kabinový filtr s aktivním uhlím, kontrola podvozku.",
+            invoice_file_path=None,
+            created_by_id=u1
+        )
+        s2 = VehicleServiceRecord(
+            vehicle_id=v1.id,
+            service_type="brakes",
+            title="Výměna předních brzdových kotoučů a destiček",
+            date="2025-03-10",
+            mileage=148500,
+            cost=6800.0,
+            service_shop="Autoservis Novák & Syn",
+            performed_operations="Nové přední kotouče Brembo 288 mm + brzdové destičky ATE, vyčištění a promazání vodítek, zkouška na brzdové stolici.",
+            invoice_file_path=None,
+            created_by_id=u1
+        )
+        s3 = VehicleServiceRecord(
+            vehicle_id=v2.id,
+            service_type="tires",
+            title="Sezónní přezutí a vyvážení kol",
+            date="2025-11-05",
+            mileage=56200,
+            cost=850.0,
+            service_shop="Pneuservis Barum",
+            performed_operations="Přezutí na zimní sadu, nové ventilky, dynamické vyvážení všech 4 kol, kontrola hloubky dezénu (5.5 mm).",
+            invoice_file_path=None,
+            created_by_id=u1
+        )
+        db.add_all([s1, s2, s3])
         db.commit()
 
 

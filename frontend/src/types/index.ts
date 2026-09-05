@@ -3,6 +3,7 @@ export * from './pet';
 export * from './chore';
 export * from './finance';
 export * from './document';
+export * from './vehicle';
 
 export type Role = 'admin' | 'member';
 

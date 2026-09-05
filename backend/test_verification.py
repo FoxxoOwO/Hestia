@@ -634,7 +634,166 @@ def run_tests():
     assert del_res.status_code == 200
     print("13.7 Smazání testovacího dokumentu - OK")
 
-    print("\n[SUCCESS] VŠECHNY TESTY ÚSPĚŠNĚ PROŠLY! HESTIA JE PLNĚ PŘIPRAVENA VČETNĚ VŠECH MODULŮ (RECEPTY, KVĚTINY, MAZLÍČCI, DOMÁCÍ PRÁCE, FINANCE, DOKUMENTY & ŠANONY).")
+    # ==========================================
+    # 14. VOZOVÝ PARK A RODINNÁ GARÁŽ (FLEET & GARAGE)
+    # ==========================================
+    print("\n--- TESTOVÁNÍ MODULU VOZOVÝ PARK A GARÁŽ ---")
+
+    # 14.1 Načtení seznamu vozidel a ověření seed dat
+    vehicles_res = client.get("/api/v1/vehicles", headers=headers)
+    assert vehicles_res.status_code == 200
+    v_list = vehicles_res.json()
+    assert len(v_list) >= 2
+    octavia = next((v for v in v_list if "Octavia" in v["name"] or "Octavia" in v["model"]), None)
+    fabia = next((v for v in v_list if "Fabia" in v["model"] or "Fabie" in v["name"]), None)
+    assert octavia is not None, "Škoda Octavia musí být v seed datech"
+    assert fabia is not None, "Škoda Fabia musí být v seed datech"
+    print(f"14.1 Seznam vozidel v garáži (nalezeno {len(v_list)} vozidel: {octavia['name']}, {fabia['name']}) - OK")
+
+    # 14.2 Ověření odpočtu STK, dálniční známky a semaforu
+    assert octavia["mot_status"] == "ok"
+    assert octavia["mot_days_remaining"] is not None and octavia["mot_days_remaining"] > 30
+    assert octavia["vignette_status"] == "ok"
+    assert octavia["average_consumption"] is not None and 5.0 <= octavia["average_consumption"] <= 6.0
+    # Fabia má STK za 22 dní -> status warning!
+    assert fabia["mot_status"] == "warning", "Fabia musí mít varování STK <= 30 dní"
+    assert fabia["overall_status"] in ["warning", "critical"]
+    print("14.2 Hlídač termínů STK a dálniční známky ČR (semafor warning pro Fabii) - OK")
+
+    # 14.3 Založení nového testovacího vozidla
+    new_vehicle_payload = {
+        "name": "Hyundai i30 Fastback",
+        "make": "Hyundai",
+        "model": "i30 Fastback 1.5 T-GDI",
+        "year": 2022,
+        "color": "Červená Sunset",
+        "license_plate": "7B8 9988",
+        "vin": "TMAH381BALJ019284",
+        "fuel_type": "petrol",
+        "tank_capacity_l": 50.0,
+        "engine_power_kw": 117,
+        "engine_displacement_cc": 1482,
+        "transmission": "manual",
+        "current_mileage": 35000,
+        "mot_expiry_date": "2026-11-15",
+        "vignette_expiry_date": "2027-02-01",
+        "vignette_type": "1_year",
+        "insurance_company": "Allianz",
+        "insurance_policy_number": "ALZ-948201",
+        "insurance_expiry_date": "2027-01-01",
+        "insurance_assistance_phone": "+420 1224",
+        "first_aid_kit_expiry_date": "2028-05-01",
+        "tire_type": "summer",
+        "tire_dimension": "225/45 R17 91W",
+        "tire_tread_depth_mm": 6.2,
+        "tire_storage_location": "Pneuservis BestDrive – box 12",
+        "oil_change_interval_km": 15000,
+        "oil_change_interval_months": 12,
+        "last_oil_change_mileage": 30000,
+        "last_oil_change_date": "2025-06-10",
+        "notes": "Testovací vozidlo pro Hestia Fleet",
+        "is_favorite": True
+    }
+    create_v_res = client.post("/api/v1/vehicles", json=new_vehicle_payload, headers=headers)
+    assert create_v_res.status_code == 201
+    created_v = create_v_res.json()
+    test_v_id = created_v["id"]
+    assert created_v["license_plate"] == "7B8 9988"
+    assert created_v["oil_change_km_remaining"] == 10000  # 30000 + 15000 - 35000 = 10000
+    print("14.3 Registrace nového vozidla a výpočet olejového intervalu - OK")
+
+    # 14.4 Rychlá aktualizace tachometru
+    mileage_res = client.post(f"/api/v1/vehicles/{test_v_id}/mileage", json={"mileage": 35850}, headers=headers)
+    assert mileage_res.status_code == 200
+    assert mileage_res.json()["current_mileage"] == 35850
+    assert mileage_res.json()["oil_change_km_remaining"] == 9150  # 45000 - 35850
+    print("14.4 Rychlá aktualizace tachometru (35 000 -> 35 850 km) - OK")
+
+    # 14.5 Kniha tankování a automatický výpočet spotřeby (l/100 km)
+    # První plná nádrž
+    r1_res = client.post(
+        f"/api/v1/vehicles/{test_v_id}/refuelings",
+        json={
+            "date": "2026-03-01",
+            "mileage": 35850,
+            "fuel_amount_l": 45.0,
+            "price_per_l": 37.50,
+            "total_price": 1687.50,
+            "is_full_tank": True,
+            "fuel_brand": "Orlen Benzina",
+            "notes": "První plná",
+            "record_to_finance": True
+        },
+        headers=headers
+    )
+    assert r1_res.status_code == 201
+    r1_data = r1_res.json()
+    assert r1_data["calculated_consumption"] is None  # První nádrž nemá předchůdce
+
+    # Druhá plná nádrž po 750 km s 43.5 l (43.5 / 750 * 100 = 5.8 l/100 km)
+    r2_res = client.post(
+        f"/api/v1/vehicles/{test_v_id}/refuelings",
+        json={
+            "date": "2026-03-15",
+            "mileage": 36600,
+            "fuel_amount_l": 43.5,
+            "price_per_l": 36.90,
+            "total_price": 1605.15,
+            "is_full_tank": True,
+            "fuel_brand": "MOL",
+            "notes": "Druhá plná - ověření spotřeby",
+            "record_to_finance": False
+        },
+        headers=headers
+    )
+    assert r2_res.status_code == 201
+    r2_data = r2_res.json()
+    assert r2_data["calculated_consumption"] == 5.8
+    print(f"14.5 Automatický výpočet průměrné spotřeby paliva ({r2_data['calculated_consumption']} l/100 km) - OK")
+
+    # 14.6 Digitální servisní knížka (Výměna oleje)
+    srv_res = client.post(
+        f"/api/v1/vehicles/{test_v_id}/services",
+        json={
+            "service_type": "oil_change",
+            "title": "Garanční servis a výměna oleje",
+            "date": "2026-03-16",
+            "mileage": 36650,
+            "cost": 4800.0,
+            "service_shop": "Hyundai Centrum Praha",
+            "performed_operations": "Olej Shell Helix Ultra 0W-20, olejový filtr, kabinový filtr",
+            "record_to_finance": True
+        },
+        headers=headers
+    )
+    assert srv_res.status_code == 201
+    srv_data = srv_res.json()
+    assert srv_data["cost"] == 4800.0
+
+    # Ověření, že se posunula značka poslední výměny oleje
+    v_updated_res = client.get(f"/api/v1/vehicles/{test_v_id}", headers=headers)
+    assert v_updated_res.status_code == 200
+    v_updated = v_updated_res.json()
+    assert v_updated["last_oil_change_mileage"] == 36650
+    assert v_updated["current_mileage"] == 36650
+    print("14.6 Záznam do servisní knížky a posun intervalu výměny oleje - OK")
+
+    # 14.7 Statistiky celé flotily
+    stats_res = client.get("/api/v1/vehicles/stats", headers=headers)
+    assert stats_res.status_code == 200
+    fleet_stats = stats_res.json()
+    assert fleet_stats["total_vehicles"] >= 3
+    assert fleet_stats["total_spent_fuel_all"] > 0
+    assert fleet_stats["total_spent_service_all"] > 0
+    assert fleet_stats["fleet_average_consumption"] is not None
+    print(f"14.7 Statistiky flotily ({fleet_stats['total_vehicles']} vozidel, průměr {fleet_stats['fleet_average_consumption']} l/100 km) - OK")
+
+    # 14.8 Smazání testovacího vozidla
+    del_v_res = client.delete(f"/api/v1/vehicles/{test_v_id}", headers=headers)
+    assert del_v_res.status_code == 200
+    print("14.8 Úklid testovacího vozidla - OK")
+
+    print("\n[SUCCESS] VŠECHNY TESTY ÚSPĚŠNĚ PROŠLY! HESTIA JE PLNĚ PŘIPRAVENA VČETNĚ VŠECH MODULŮ (RECEPTY, KVĚTINY, MAZLÍČCI, DOMÁCÍ PRÁCE, FINANCE, DOKUMENTY, VOZOVÝ PARK).")
 
 if __name__ == "__main__":
     run_tests()

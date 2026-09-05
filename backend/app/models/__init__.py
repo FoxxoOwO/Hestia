@@ -7,6 +7,7 @@ from app.models.pet import Pet, PetMedicalRecord, PetMedication, PetWeightLog, P
 from app.models.chore import Chore, ChoreCompletion, ChoreReward, ChoreRewardRedemption
 from app.models.finance import FinanceTransaction, CategoryBudget, Subscription, SavingsGoal, UserFinanceProfile
 from app.models.document import Document, VaultSetting
+from app.models.vehicle import Vehicle, VehicleRefueling, VehicleServiceRecord
 
 __all__ = [
     "User", "Recipe", "PantryItem", "ShoppingItem",
@@ -14,5 +15,6 @@ __all__ = [
     "Pet", "PetMedicalRecord", "PetMedication", "PetWeightLog", "PetTask", "PetLogEntry",
     "Chore", "ChoreCompletion", "ChoreReward", "ChoreRewardRedemption",
     "FinanceTransaction", "CategoryBudget", "Subscription", "SavingsGoal", "UserFinanceProfile",
-    "Document", "VaultSetting"
+    "Document", "VaultSetting",
+    "Vehicle", "VehicleRefueling", "VehicleServiceRecord"
 ]

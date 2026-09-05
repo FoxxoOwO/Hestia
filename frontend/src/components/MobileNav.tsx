@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { UtensilsCrossed, PackageOpen, ShoppingCart, Flower2, Dog, CheckSquare, Wallet, FolderArchive, Settings } from 'lucide-react';
+import { UtensilsCrossed, PackageOpen, ShoppingCart, Flower2, Dog, CheckSquare, Wallet, FolderArchive, Car, Settings } from 'lucide-react';
 import { useTranslation } from '../i18n';
 
 export const MobileNav: React.FC = () => {
@@ -15,6 +15,7 @@ export const MobileNav: React.FC = () => {
     { to: '/chores', label: t('nav.chores'), icon: CheckSquare },
     { to: '/finance', label: t('nav.finances'), icon: Wallet },
     { to: '/documents', label: t('nav.documents'), icon: FolderArchive },
+    { to: '/vehicles', label: t('nav.vehicles'), icon: Car },
     { to: '/settings', label: t('nav.settings'), icon: Settings },
   ];
 
