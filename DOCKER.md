@@ -4,12 +4,37 @@ Tento průvodce popisuje možnosti spuštění a provozu systému **Hestia** v p
 
 ---
 
-## 🚀 1. Rychlé spuštění (Dvě možnosti)
+## 🚀 1. Rychlé spuštění
 
-Máte na výběr ze dvou oficiálních způsobů nasazení podle vašich preferencí:
+Máte na výběr z oficiálních způsobů nasazení podle vašich potřeb:
 
-### Možnost A: Docker Compose (Doporučeno pro většinu uživatelů)
-Oddělený backend (FastAPI) a frontend (Nginx reverse proxy) propojené interní sítí.
+### Možnost A: Docker Compose s hotovým obrazem z GitHubu (Doporučeno)
+Nemusíte nic kompilovat ani instalovat Node.js a Python – stačí stáhnout hotový optimalizovaný All-in-One obraz přímo z **GitHub Container Registry (GHCR)**:
+
+1. Stáhněte soubor `docker-compose.ghcr.yml`:
+   ```bash
+   # Na Linuxu / NAS:
+   curl -fSL https://raw.githubusercontent.com/FoxxoOwO/Hestia/main/docker-compose.ghcr.yml -o docker-compose.yml
+   ```
+   *(nebo pokud máte naklonovaný repozitář, použijte přímo soubor `docker-compose.ghcr.yml`)*
+
+2. Spusťte kontejner:
+   ```bash
+   docker compose up -d
+   # nebo v repozitáři:
+   docker compose -f docker-compose.ghcr.yml up -d
+   ```
+
+3. Otevřete aplikaci v prohlížeči na:
+   ```
+   http://localhost:8000
+   ```
+   *(Případnou změnu portu z 8000 na jiný provedete v proměnné `HESTIA_PORT`, např. `HESTIA_PORT=8080 docker compose up -d`)*
+
+---
+
+### Možnost B: Lokální sestavení ze zdrojových kódů (Docker Compose s Nginx)
+Oddělený backend (FastAPI) a frontend (Nginx reverse proxy) sestavený přímo z repozitáře.
 
 1. Naklonujte repozitář:
    ```bash
@@ -28,19 +53,15 @@ Oddělený backend (FastAPI) a frontend (Nginx reverse proxy) propojené intern�
    docker compose up -d
    ```
 
-4. Otevřete webový prohlížeč na:
-   ```
-   http://localhost:3000
-   ```
-   *(nebo na IP adrese vašeho serveru, např. `http://192.168.1.50:3000`)*
+4. Otevřete webový prohlížeč na `http://localhost:3000`.
 
 ---
 
-### Možnost B: All-in-One samostatný kontejner (Vhodné pro NAS & Portainer)
-Jeden jediný kontejner spojující zkompilovaný frontend i backend na jediném portu s jedním svazkem pro data.
+### Možnost C: All-in-One samostatný kontejner přes `docker run`
+Jeden jediný kontejner spojující zkompilovaný frontend i backend na jediném portu s jedním svazkem pro data:
 
 ```bash
-# Sestavení All-in-One obrazu
+# Sestavení All-in-One obrazu lokálně
 docker build -t hestia:latest .
 
 # Spuštění kontejneru s perzistentními daty

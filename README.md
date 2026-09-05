@@ -192,11 +192,20 @@ Podrobný průvodce se všemi možnostmi nasazení, Synology / Portainer šablon
 
 ### 1. Spuštění v Dockeru (Doporučeno pro produkci / NAS / Raspberry Pi)
 
-Máte k dispozici dvě možnosti (viz podrobný návod v [DOCKER.md](DOCKER.md)):
-- **Docker Compose (Microservices)**: Samostatný backend a Nginx frontend na portu `3000`.
+Máte k dispozici tyto možnosti (viz podrobný návod v [DOCKER.md](DOCKER.md)):
+- **Hotový obraz z GitHub Container Registry (nejrychlejší)**: Spuštění předpřipraveného obrazu bez nutnosti cokoliv kompilovat přes `docker-compose.ghcr.yml`.
+- **Docker Compose (Microservices ze zdrojáků)**: Samostatný backend a Nginx frontend na portu `3000`.
 - **All-in-One kontejner**: Jediný kontejner spojující frontend i backend na portu `8000` (ideální pro Synology Container Manager a Portainer).
 
-Rychlý start přes Docker Compose:
+#### Rychlý start s hotovým obrazem z GitHubu:
+```bash
+# Stažení docker-compose a spuštění:
+curl -fSL https://raw.githubusercontent.com/FoxxoOwO/Hestia/main/docker-compose.ghcr.yml -o docker-compose.yml
+docker compose up -d
+```
+Aplikace ihned běží na `http://localhost:8000`.
+
+#### Nebo sestavení z naklonovaného repozitáře:
 1. Zkopírujte konfigurační soubor:
    ```bash
    cp .env.example .env
@@ -205,9 +214,11 @@ Rychlý start přes Docker Compose:
 3. Spusťte kontejnery:
    ```bash
    docker compose up -d
+   # nebo pro GitHub image:
+   docker compose -f docker-compose.ghcr.yml up -d
    ```
 4. Aplikace je dostupná na:
-   - **Frontend**: `http://localhost:3000` (nebo IP vašeho serveru)
+   - **Frontend**: `http://localhost:3000` (při sestavení) nebo `http://localhost:8000` (při GHCR)
    - **Backend API Docs (Swagger)**: `http://localhost:8000/docs`
 
 ---

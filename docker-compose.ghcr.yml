@@ -1,0 +1,46 @@
+# ==============================================================================
+# Hestia Smart Home OS - Production Docker Compose (GitHub Container Registry)
+# ==============================================================================
+# Použití:
+#   1. Rychlé spuštění:
+#        docker compose -f docker-compose.ghcr.yml up -d
+#
+#   2. Změna portu na např. 8080:
+#        HESTIA_PORT=8080 docker compose -f docker-compose.ghcr.yml up -d
+#
+#   3. Aktualizace na nejnovější verzi:
+#        docker compose -f docker-compose.ghcr.yml pull
+#        docker compose -f docker-compose.ghcr.yml up -d
+#
+#   4. Pokud tento soubor používáte na NAS / v samostatné složce bez repozitáře,
+#      můžete jej jednoduše přejmenovat na 'docker-compose.yml' a spustit:
+#        docker compose up -d
+# ==============================================================================
+
+services:
+  hestia:
+    image: ghcr.io/foxxoowo/hestia:latest
+    container_name: hestia
+    restart: unless-stopped
+    ports:
+      - "${HESTIA_PORT:-8000}:8000"
+    environment:
+      # Bezpečnostní klíč pro JWT tokeny (doporučujeme nastavit vlastní řetězec)
+      - SECRET_KEY=${SECRET_KEY:-hestia-super-secret-key-change-in-production-123456789}
+      # Volitelný klíč pro AI funkce Google Gemini (OCR účtenek, recepty z webu, kytky atd.)
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      # Cesta k interní databázi a souborům
+      - DATABASE_URL=sqlite:////app/data/hestia.db
+      - UPLOAD_DIR=/app/uploads
+      - FRONTEND_DIST_DIR=/app/frontend/dist
+    volumes:
+      # Trvalé uložení SQLite databáze (recepty, finance, úkoly, garáž, lékárnička...)
+      - ./data/db:/app/data
+      # Trvalé uložení nahraných souborů (skeny faktur, záruční listy, fotky...)
+      - ./data/uploads:/app/uploads
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
