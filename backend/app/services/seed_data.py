@@ -9,6 +9,7 @@ from app.models.chore import Chore, ChoreCompletion, ChoreReward, ChoreRewardRed
 from app.models.finance import FinanceTransaction, CategoryBudget, Subscription, SavingsGoal, UserFinanceProfile
 from app.models.document import Document, VaultSetting
 from app.models.vehicle import Vehicle, VehicleRefueling, VehicleServiceRecord
+from app.models.medicine import Medicine, MedicationSchedule, MedicationLog
 from app.config import settings
 import os
 from app.utils.auth import get_password_hash
@@ -1415,5 +1416,233 @@ def seed_initial_data(db: Session):
         )
         db.add_all([s1, s2, s3])
         db.commit()
+
+    # 12. Seed Medicines, First Aid items and Schedules if none exist
+    if db.query(Medicine).count() == 0:
+        u1 = admin_user.id if admin_user else 1
+        u_anna = user_anna.id if user_anna else u1
+
+        exp_ok_future = (today + datetime.timedelta(days=450)).isoformat()
+        exp_soon = (today + datetime.timedelta(days=22)).isoformat()  # Warning: expires in 22 days!
+        exp_past = (today - datetime.timedelta(days=40)).isoformat()  # Expired!
+
+        meds = [
+            Medicine(
+                name="Paralen 500",
+                active_substance="Paracetamolum (500 mg)",
+                form="tablets",
+                category="pain_fever",
+                location="bathroom",
+                package_size="24 tablet",
+                current_quantity=18.0,
+                unit="tablety",
+                min_quantity_warning=6.0,
+                expiration_date=exp_ok_future,
+                is_prescription=False,
+                requires_refrigeration=False,
+                age_group="adults_only",
+                dosage_instructions="Dospělí 1-2 tablety dle potřeby, odstup min. 4 hodiny, max. 8 tablet denně. Nepřekračovat dávkování!",
+                storage_instructions="Uchovávejte při teplotě do 25 °C v původním obalu.",
+                sukl_code_or_url="https://www.sukl.cz/leciva/paralen-500",
+                notes="Základní analgetikum a antipyretikum pro dospělé."
+            ),
+            Medicine(
+                name="Ibalgin 400",
+                active_substance="Ibuprofenum (400 mg)",
+                form="tablets",
+                category="pain_fever",
+                location="bathroom",
+                package_size="24 potahovaných tablet",
+                current_quantity=12.0,
+                unit="tablety",
+                min_quantity_warning=4.0,
+                expiration_date=exp_ok_future,
+                is_prescription=False,
+                requires_refrigeration=False,
+                age_group="kids_from_12yo",
+                dosage_instructions="1 tableta 3x denně po jídle, zapít dostatečným množstvím vody.",
+                storage_instructions="Uchovávejte při teplotě do 25 °C v suchu.",
+                sukl_code_or_url="https://www.sukl.cz/leciva/ibalgin-400",
+                notes="Protizánětlivý lék, tlumí bolest kloubů, zubů a hlavy. Vždy užívat po jídle."
+            ),
+            Medicine(
+                name="Olynth 0,1% nosní sprej",
+                active_substance="Xylometazolini hydrochloridum (1 mg/ml)",
+                form="spray",
+                category="cold_cough",
+                location="bedroom",
+                package_size="10 ml",
+                current_quantity=1.0,
+                unit="ks",
+                min_quantity_warning=1.0,
+                expiration_date=exp_ok_future,
+                opened_date=(today - datetime.timedelta(days=15)).isoformat(),
+                validity_months_after_opening=12,
+                is_prescription=False,
+                requires_refrigeration=False,
+                age_group="kids_from_6yo",
+                dosage_instructions="1 vstřik do každé nosní dírky max 3x denně. Neužívat déle než 7 po sobě jdoucích dní!",
+                notes="Uvolňuje ucpaný nos při rýmě. Pozor na vznik návyku (medikamentózní rýma)."
+            ),
+            Medicine(
+                name="Nurofen pro děti Jahoda 4%",
+                active_substance="Ibuprofenum (40 mg/ml – 200 mg v 5 ml)",
+                form="syrup",
+                category="pain_fever",
+                location="kitchen",
+                package_size="100 ml",
+                current_quantity=60.0,
+                unit="ml",
+                min_quantity_warning=30.0,
+                expiration_date=exp_ok_future,
+                opened_date=(today - datetime.timedelta(days=45)).isoformat(),
+                validity_months_after_opening=6,
+                is_prescription=False,
+                requires_refrigeration=False,
+                age_group="infants",
+                dosage_instructions="Dávkování dle váhy: cca 5-10 mg/kg na dávku. Pozor na 4% sílu – poloviční dávka v ml oproti 2% sirupu!",
+                notes="Dětský sirup na horečku s dávkovací stříkačkou."
+            ),
+            Medicine(
+                name="Fenistil gel",
+                active_substance="Dimetindeni maleas (1 mg/g)",
+                form="ointment",
+                category="allergy",
+                location="travel_kit",
+                package_size="30 g",
+                current_quantity=1.0,
+                unit="tuba",
+                min_quantity_warning=1.0,
+                expiration_date=exp_ok_future,
+                is_prescription=False,
+                requires_refrigeration=False,
+                age_group="all",
+                dosage_instructions="Nanášet tenkou vrstvu 2-4x denně na postižené svědící místo.",
+                notes="Vhodné na poštípání hmyzem, kopřivku a mírné spáleniny od slunce. V cestovní lékárničce."
+            ),
+            Medicine(
+                name="Smecta",
+                active_substance="Diosmectitum (3 g)",
+                form="other",
+                category="digestion",
+                location="kitchen",
+                package_size="10 sáčků",
+                current_quantity=2.0,  # LOW STOCK!
+                unit="sáčky",
+                min_quantity_warning=4.0,
+                expiration_date=exp_ok_future,
+                is_prescription=False,
+                requires_refrigeration=False,
+                age_group="all",
+                dosage_instructions="Obsah sáčku rozpustit v 50 ml vody nebo rozmíchat v přesnídávce. 1 sáček 3x denně.",
+                notes="Přírodní jíl na akutní průjem a zažívací potíže. Zásoba dochází – koupit nové balení!"
+            ),
+            Medicine(
+                name="Framykoin mast",
+                active_substance="Bacitracinum zincum, Neomycini sulfas",
+                form="ointment",
+                category="injury_disinfection",
+                location="bathroom",
+                package_size="10 g",
+                current_quantity=1.0,
+                unit="tuba",
+                min_quantity_warning=1.0,
+                expiration_date=exp_soon,  # Expirace za 22 dní!
+                is_prescription=True,
+                requires_refrigeration=False,
+                age_group="all",
+                dosage_instructions="Nanést v tenké vrstvě na infikovanou ránu 1-3x denně.",
+                notes="Antibiotická mast na hnisající oděrky a infikované ranky. Pozor – brzy expiruje!"
+            ),
+            Medicine(
+                name="Visine Classic oční kapky",
+                active_substance="Tetryzolini hydrochloridum (0,5 mg/ml)",
+                form="drops",
+                category="eyes_ears",
+                location="bathroom",
+                package_size="15 ml",
+                current_quantity=1.0,
+                unit="lahvička",
+                min_quantity_warning=1.0,
+                expiration_date=exp_ok_future,
+                opened_date=(today - datetime.timedelta(days=45)).isoformat(),
+                validity_months_after_opening=1,  # Expired after opening!
+                is_prescription=False,
+                requires_refrigeration=False,
+                age_group="adults_only",
+                dosage_instructions="1-2 kapky do postiženého oka 2-3x denně.",
+                notes="Otevřeno před 45 dny, použitelnost po otevření je jen 1 měsíc – vyhodit/odevzdat v lékárně!"
+            ),
+            Medicine(
+                name="Prenessa 4 mg",
+                active_substance="Perindoprilum erbumenum (4 mg)",
+                form="tablets",
+                category="chronic_rx",
+                location="bedroom",
+                package_size="30 tablet",
+                current_quantity=22.0,
+                unit="tablety",
+                min_quantity_warning=7.0,
+                expiration_date=exp_ok_future,
+                is_prescription=True,
+                requires_refrigeration=False,
+                age_group="adults_only",
+                dosage_instructions="1 tableta ráno nalačno, zapít sklenicí vody.",
+                notes="Pravidelný lék na snížení vysokého krevního tlaku. Užívat nepřetržitě.",
+                assigned_user_id=u1
+            ),
+            Medicine(
+                name="Sterilní obvaz č. 3 s jedním polštářkem",
+                active_substance=None,
+                form="dressing",
+                category="first_aid_material",
+                location="car",
+                package_size="1 ks",
+                current_quantity=2.0,
+                unit="ks",
+                min_quantity_warning=2.0,
+                expiration_date=exp_ok_future,
+                is_prescription=False,
+                requires_refrigeration=False,
+                age_group="all",
+                notes="Součást povinné výbavy autolékárničky. Šířka polštářku 8 cm."
+            )
+        ]
+        db.add_all(meds)
+        db.commit()
+
+        # Seed Medication Schedule for chronic blood pressure medication
+        prenessa = db.query(Medicine).filter(Medicine.name == "Prenessa 4 mg").first()
+        if prenessa:
+            sched = MedicationSchedule(
+                medicine_id=prenessa.id,
+                user_id=u1,
+                schedule_type="chronic",
+                start_date=(today - datetime.timedelta(days=60)).isoformat(),
+                times_per_day=1,
+                time_slots=json.dumps(["morning"]),
+                food_relation="before_food",
+                dosage_per_take="1 tableta (4 mg)",
+                is_active=True,
+                notes="Užívat každé ráno ihned po probuzení před snídaní."
+            )
+            db.add(sched)
+            db.commit()
+            db.refresh(sched)
+
+            # Log today's morning dose as taken
+            log_today = MedicationLog(
+                schedule_id=sched.id,
+                medicine_id=prenessa.id,
+                user_id=u1,
+                taken_at=datetime.datetime.utcnow().replace(hour=7, minute=30),
+                time_slot="morning",
+                dose_taken="1 tableta (4 mg)",
+                status="taken",
+                notes="Užito včas se sklenicí vody."
+            )
+            db.add(log_today)
+            db.commit()
+
 
 

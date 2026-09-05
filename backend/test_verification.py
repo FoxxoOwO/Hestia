@@ -1,4 +1,5 @@
 import os
+import datetime
 from fastapi.testclient import TestClient
 from app.main import app
 from app.database import engine, Base, SessionLocal
@@ -793,8 +794,139 @@ def run_tests():
     assert del_v_res.status_code == 200
     print("14.8 Úklid testovacího vozidla - OK")
 
-    print("\n[SUCCESS] VŠECHNY TESTY ÚSPĚŠNĚ PROŠLY! HESTIA JE PLNĚ PŘIPRAVENA VČETNĚ VŠECH MODULŮ (RECEPTY, KVĚTINY, MAZLÍČCI, DOMÁCÍ PRÁCE, FINANCE, DOKUMENTY, VOZOVÝ PARK).")
+    print("\n--- TESTOVÁNÍ MODULU DOMÁCÍ LÉKÁRNIČKA (MEDICINES, FIRST AID & PEDIATRIC DOSAGE) ---")
+    today = datetime.date.today()
+    
+    # 15.1 Statistiky lékárničky
+    med_stats_res = client.get("/api/v1/medicines/stats", headers=headers)
+    assert med_stats_res.status_code == 200
+    med_stats = med_stats_res.json()
+    assert med_stats["total_items"] >= 5
+    assert "bathroom" in med_stats["locations_count"]
+    print(f"15.1 Statistiky lékárničky ({med_stats['total_items']} položek celkem, {med_stats['expiring_soon_count']} expiruje brzy, {med_stats['low_stock_count']} dochází) - OK")
+
+    # 15.2 SOS Průvodce první pomocí
+    fa_guides_res = client.get("/api/v1/medicines/first-aid/guides", headers=headers)
+    assert fa_guides_res.status_code == 200
+    guides = fa_guides_res.json()
+    assert len(guides) >= 5
+    burns_guide = next((g for g in guides if g["id"] == "burns"), None)
+    assert burns_guide is not None
+    assert "chlazení" in burns_guide["summary"].lower()
+    print(f"15.2 SOS Průvodce první pomocí ({len(guides)} krizových manuálů) - OK")
+
+    # 15.3 Bezpečná kalkulačka dětského dávkování
+    ped_paralen_res = client.get("/api/v1/medicines/first-aid/pediatric-dosage?weight_kg=12.0&drug=paracetamol", headers=headers)
+    assert ped_paralen_res.status_code == 200
+    p_data = ped_paralen_res.json()
+    assert p_data["single_dose_mg_min"] == 120.0  # 12 * 10 mg
+    assert p_data["single_dose_mg_max"] == 180.0  # 12 * 15 mg
+    assert p_data["interval_hours"] == 6
+
+    ped_nurofen_res = client.get("/api/v1/medicines/first-aid/pediatric-dosage?weight_kg=12.0&drug=ibuprofen", headers=headers)
+    assert ped_nurofen_res.status_code == 200
+    n_data = ped_nurofen_res.json()
+    assert n_data["single_dose_mg_min"] == 60.0  # 12 * 5 mg
+    assert n_data["single_dose_mg_max"] == 120.0  # 12 * 10 mg
+    assert len(n_data["preparations"]) >= 2
+    print(f"15.3 Kalkulačka dětského dávkování (12 kg -> Paracetamol 120-180 mg / Ibuprofen 60-120 mg) - OK")
+
+    # 15.4 Vytvoření nového léku v lékárničce
+    new_med_payload = {
+        "name": "Muconasal Plus",
+        "active_substance": "Tramazolini hydrochloridum (1,18 mg/ml)",
+        "form": "spray",
+        "category": "cold_cough",
+        "location": "travel_kit",
+        "package_size": "10 ml",
+        "current_quantity": 1.0,
+        "unit": "ks",
+        "min_quantity_warning": 1.0,
+        "expiration_date": (today + datetime.timedelta(days=365)).isoformat(),
+        "validity_months_after_opening": 12,
+        "is_prescription": False,
+        "age_group": "kids_from_6yo",
+        "dosage_instructions": "1 vstřik do každé nosní dírky max 4x denně po dobu max 7 dní.",
+        "notes": "Obsahuje eukalyptus a mátovou silici."
+    }
+    create_med_res = client.post("/api/v1/medicines", json=new_med_payload, headers=headers)
+    assert create_med_res.status_code == 201
+    created_med = create_med_res.json()
+    test_med_id = created_med["id"]
+    assert created_med["name"] == new_med_payload["name"]
+    assert created_med["expiration_status"] == "ok"
+    print(f"15.4 Vytvoření nového léku v lékárničce ({created_med['name']}) - OK")
+
+    # 15.5 Označení otevření balení
+    opened_res = client.post(f"/api/v1/medicines/{test_med_id}/mark-opened", headers=headers)
+    assert opened_res.status_code == 200
+    opened_med = opened_res.json()
+    assert opened_med["opened_date"] == today.isoformat()
+    assert opened_med["after_opening_expired"] == False
+    print("15.5 Označení data otevření balení a kontrola trvanlivosti - OK")
+
+    # 15.6 1-kliknutí pro přidání na nákupní seznam
+    shop_res = client.post(f"/api/v1/medicines/{test_med_id}/add-to-shopping", headers=headers)
+    assert shop_res.status_code == 200
+    shop_data = shop_res.json()
+    assert shop_data["success"] is True
+    print(f"15.6 Přidání docházejícího léku do Nákupního seznamu ('{shop_data['name']}') - OK")
+
+    # 15.7 Nastavení rozvrhu užívání (Schedule)
+    me_res = client.get("/api/v1/auth/me", headers=headers)
+    assert me_res.status_code == 200
+    current_user_id = me_res.json()["id"]
+
+    sched_payload = {
+        "medicine_id": test_med_id,
+        "user_id": current_user_id,
+        "schedule_type": "acute_course",
+        "start_date": today.isoformat(),
+        "end_date": (today + datetime.timedelta(days=5)).isoformat(),
+        "times_per_day": 2,
+        "time_slots": ["morning", "evening"],
+        "food_relation": "after_food",
+        "dosage_per_take": "1 vstřik",
+        "is_active": True,
+        "notes": "Užívat pouze 5 dní při akutním zánětu dutin."
+    }
+    sched_res = client.post("/api/v1/medicines/schedules", json=sched_payload, headers=headers)
+    assert sched_res.status_code == 201
+    created_sched = sched_res.json()
+    test_sched_id = created_sched["id"]
+    assert created_sched["medicine_name"] == created_med["name"]
+    print(f"15.7 Nastavení dávkovacího rozvrhu (5denní akutní kúra, 2x denně) - OK")
+
+    # 15.8 Záznam o užití dávky se snížením skladové zásoby
+    initial_qty = opened_med["current_quantity"]
+    log_payload = {
+        "schedule_id": test_sched_id,
+        "medicine_id": test_med_id,
+        "user_id": current_user_id,
+        "time_slot": "morning",
+        "dose_taken": "1 vstřik",
+        "status": "taken",
+        "decrement_stock": True,
+        "notes": "Ranní dávka aplikována."
+    }
+    log_res = client.post("/api/v1/medicines/logs", json=log_payload, headers=headers)
+    assert log_res.status_code == 201
+
+    # Ověření snížení zásoby
+    med_check_res = client.get(f"/api/v1/medicines/{test_med_id}", headers=headers)
+    assert med_check_res.status_code == 200
+    med_check = med_check_res.json()
+    assert med_check["current_quantity"] == max(0.0, initial_qty - 1.0)
+    print("15.8 Záznam o užití dávky a automatické odečtení ze skladu - OK")
+
+    # 15.9 Úklid testovacího léku
+    del_med_res = client.delete(f"/api/v1/medicines/{test_med_id}", headers=headers)
+    assert del_med_res.status_code in [200, 204]
+    print("15.9 Úklid testovacího léku a navázaných rozvrhů - OK")
+
+    print("\n[SUCCESS] VŠECHNY TESTY ÚSPĚŠNĚ PROŠLY! HESTIA JE PLNĚ PŘIPRAVENA VČETNĚ VŠECH MODULŮ (RECEPTY, KVĚTINY, MAZLÍČCI, DOMÁCÍ PRÁCE, FINANCE, DOKUMENTY, VOZOVÝ PARK, LÉKÁRNIČKA).")
 
 if __name__ == "__main__":
     run_tests()
+
 
