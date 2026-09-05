@@ -14,6 +14,7 @@ from app.schemas.vehicle import (
     VehicleFleetStatsResponse
 )
 from app.utils.auth import get_current_user
+from app.services.activity_service import log_activity
 
 router = APIRouter(prefix="/vehicles", tags=["Vehicles & Fleet"])
 
@@ -285,7 +286,21 @@ def update_vehicle_mileage(
     if payload.mileage < (vehicle.current_mileage or 0):
         raise HTTPException(status_code=400, detail="Nový stav tachometru nemůže být nižší než stávající")
 
+    old_mileage = vehicle.current_mileage or 0
     vehicle.current_mileage = payload.mileage
+    db.flush()
+
+    log_activity(
+        db=db,
+        user=current_user,
+        module="vehicles",
+        action_type="mileage",
+        title="Změna stavu tachometru",
+        description=f"{current_user.display_name} aktualizoval(a) tachometr vozidla {vehicle.name} na {payload.mileage:,} km (předchozí: {old_mileage:,} km)",
+        entity_type="Vehicle",
+        entity_id=vehicle.id
+    )
+
     db.commit()
     db.refresh(vehicle)
     return _format_vehicle_response(vehicle)
@@ -358,9 +373,23 @@ def add_refueling(
         )
         db.add(finance_tx)
 
+    db.flush()
+
+    log_activity(
+        db=db,
+        user=current_user,
+        module="vehicles",
+        action_type="refuel",
+        title="Záznam tankování",
+        description=f"{current_user.display_name} zaznamenal(a) tankování {payload.fuel_amount_l} l ({payload.total_price:,.0f} Kč) u {vehicle.name}",
+        entity_type="VehicleRefueling",
+        entity_id=refueling.id
+    )
+
     db.commit()
     db.refresh(refueling)
     return refueling
+
 
 
 @router.get("/{id}/refuelings", response_model=List[VehicleRefuelingResponse])
@@ -447,6 +476,19 @@ def add_service_record(
             notes=f"Servis: {payload.service_shop or 'Nezadáno'} | Stav km: {payload.mileage}"
         )
         db.add(finance_tx)
+
+    db.flush()
+
+    log_activity(
+        db=db,
+        user=current_user,
+        module="vehicles",
+        action_type="service",
+        title="Záznam o servisu vozidla",
+        description=f"{current_user.display_name} zapsal(a) servis pro {vehicle.name}: {payload.title} ({payload.cost:,.0f} Kč)",
+        entity_type="VehicleServiceRecord",
+        entity_id=service.id
+    )
 
     db.commit()
     db.refresh(service)

@@ -16,6 +16,7 @@
     "vehicles": "Fleet & Garage",
     "first_aid": "Medicine Cabinet",
     "medicines": "Medicine Cabinet",
+    "activity": "Activity History",
     "logout": "Log Out"
   },
   "plants": {
@@ -670,6 +671,20 @@
     "form_dressing": "Bandage / Plaster",
     "form_device": "Medical Device",
     "form_other": "Other Form"
+  },
+  "activity": {
+    "title": "Activity History",
+    "subtitle": "Household audit trail: who configured, completed, or recorded changes",
+    "total": "Total Activities",
+    "today": "Done Today",
+    "most_active": "Most Active Member",
+    "refresh": "Refresh",
+    "clean_old": "Clean old (>30 days)",
+    "filter_all": "All Modules",
+    "search_placeholder": "Search activity descriptions...",
+    "load_more": "Load more activities",
+    "empty_title": "No activities found",
+    "empty_desc": "No activities match the selected filters."
   },
   "common": {
     "loading": "Loading...",

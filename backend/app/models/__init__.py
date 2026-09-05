@@ -9,6 +9,7 @@ from app.models.finance import FinanceTransaction, CategoryBudget, Subscription,
 from app.models.document import Document, VaultSetting
 from app.models.vehicle import Vehicle, VehicleRefueling, VehicleServiceRecord
 from app.models.medicine import Medicine, MedicationSchedule, MedicationLog
+from app.models.activity import ActivityLog
 
 __all__ = [
     "User", "Recipe", "PantryItem", "ShoppingItem",
@@ -18,6 +19,7 @@ __all__ = [
     "FinanceTransaction", "CategoryBudget", "Subscription", "SavingsGoal", "UserFinanceProfile",
     "Document", "VaultSetting",
     "Vehicle", "VehicleRefueling", "VehicleServiceRecord",
-    "Medicine", "MedicationSchedule", "MedicationLog"
+    "Medicine", "MedicationSchedule", "MedicationLog",
+    "ActivityLog"
 ]
 

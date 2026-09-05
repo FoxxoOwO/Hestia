@@ -922,11 +922,84 @@ def run_tests():
     # 15.9 Úklid testovacího léku
     del_med_res = client.delete(f"/api/v1/medicines/{test_med_id}", headers=headers)
     assert del_med_res.status_code in [200, 204]
-    print("15.9 Úklid testovacího léku a navázaných rozvrhů - OK")
+    # ==========================================
+    # SEKCE 16: Autentizace, bezpečné přihlašování & Historie aktivit (Audit Log)
+    # ==========================================
+    print("\n--- SEKCE 16: Autentizace & Historie aktivit (Audit Log) ---")
 
-    print("\n[SUCCESS] VŠECHNY TESTY ÚSPĚŠNĚ PROŠLY! HESTIA JE PLNĚ PŘIPRAVENA VČETNĚ VŠECH MODULŮ (RECEPTY, KVĚTINY, MAZLÍČCI, DOMÁCÍ PRÁCE, FINANCE, DOKUMENTY, VOZOVÝ PARK, LÉKÁRNIČKA).")
+    # 16.1 Veřejný seznam členů pro přihlašovací obrazovku (bez nutnosti tokenu)
+    public_res = client.get("/api/v1/auth/public-members")
+    assert public_res.status_code == 200
+    public_members = public_res.json()
+    assert len(public_members) >= 3
+    for pm in public_members:
+        assert "username" in pm and "display_name" in pm and "avatar_color" in pm
+        assert "hashed_password" not in pm  # Bezpečnost: nesmí obsahovat heslo
+    print(f"16.1 Veřejný seznam členů ({len(public_members)} profilů pro rychlý výběr na přihlašovací obrazovce) - OK")
+
+    # 16.2 Ověření neplatného hesla (zamítnutí vstupu)
+    bad_login_res = client.post("/api/v1/auth/login", json={"username": "admin", "password": "wrong_password_123"})
+    assert bad_login_res.status_code == 401
+    print("16.2 Neplatné heslo správně zamítnuto (401 Unauthorized) - OK")
+
+    # 16.3 Úspěšné přihlášení a vytvoření relace
+    good_login_res = client.post("/api/v1/auth/login", json={"username": "admin", "password": "hestia123"})
+    assert good_login_res.status_code == 200
+    auth_data = good_login_res.json()
+    assert "access_token" in auth_data
+    assert auth_data["user"]["username"] == "admin"
+    print("16.3 Platné přihlášení s vygenerováním bezpečného JWT tokenu - OK")
+
+    # 16.4 Kontrola zaznamenání události přihlášení v ActivityLog
+    act_res = client.get("/api/v1/activities?module=auth&action_type=login", headers=headers)
+    assert act_res.status_code == 200
+    act_data = act_res.json()
+    assert act_data["total"] >= 1
+    latest_login = act_data["items"][0]
+    assert latest_login["module"] == "auth"
+    assert latest_login["action_type"] == "login"
+    print(f"16.4 Auditní stopa přihlášení zaznamenána ({latest_login['title']}: {latest_login['user_name']}) - OK")
+
+    # 16.5 Statistiky historie aktivit
+    stats_res = client.get("/api/v1/activities/stats", headers=headers)
+    assert stats_res.status_code == 200
+    stats_data = stats_res.json()
+    assert stats_data["total_activities"] >= 10
+    assert "module_counts" in stats_data
+    assert stats_data["most_active_member"] is not None
+    print(f"16.5 Statistiky aktivit (celkem: {stats_data['total_activities']}, nejaktivnější: {stats_data['most_active_member']}) - OK")
+
+    # 16.6 Filtrace historie aktivit dle modulu a vyhledávání
+    filtered_res = client.get("/api/v1/activities?module=chores", headers=headers)
+    assert filtered_res.status_code == 200
+    chores_acts = filtered_res.json()
+    assert chores_acts["total"] >= 1
+    for item in chores_acts["items"]:
+        assert item["module"] == "chores"
+
+    search_res = client.get("/api/v1/activities?search=myčk", headers=headers)
+    assert search_res.status_code == 200
+    search_acts = search_res.json()
+    assert search_acts["total"] >= 1
+    print("16.6 Filtrace aktivit podle modulu a full-textové vyhledávání - OK")
+
+    # 16.7 Automatické zalogování při provedení akce v modulu Úkoly
+    all_chores = client.get("/api/v1/chores", headers=headers).json()
+    if len(all_chores) > 0:
+        c_id = all_chores[0]["id"]
+        c_title = all_chores[0]["title"]
+        client.post(f"/api/v1/chores/{c_id}/complete", json={"notes": "Test auditu"}, headers=headers)
+        
+        # Ověření, že se akce propsala do ActivityLog
+        check_act = client.get("/api/v1/activities?module=chores&action_type=complete", headers=headers).json()
+        assert check_act["total"] >= 1
+        assert c_title in check_act["items"][0]["description"]
+        print(f"16.7 Automatické zaevidování akce do auditní stopy ('{c_title}') - OK")
+
+    print("\n[SUCCESS] VŠECHNY TESTY ÚSPĚŠNĚ PROŠLY! HESTIA JE PLNĚ PŘIPRAVENA VČETNĚ VŠECH 16 TESTOVACÍCH SEKCE (AUTENTIZACE, AUDIT LOG, RECEPTY, KVĚTINY, MAZLÍČCI, DOMÁCÍ PRÁCE, FINANCE, DOKUMENTY, VOZOVÝ PARK, LÉKÁRNIČKA).")
 
 if __name__ == "__main__":
     run_tests()
+
 
 

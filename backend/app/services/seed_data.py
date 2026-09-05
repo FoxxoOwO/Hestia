@@ -10,6 +10,7 @@ from app.models.finance import FinanceTransaction, CategoryBudget, Subscription,
 from app.models.document import Document, VaultSetting
 from app.models.vehicle import Vehicle, VehicleRefueling, VehicleServiceRecord
 from app.models.medicine import Medicine, MedicationSchedule, MedicationLog
+from app.models.activity import ActivityLog
 from app.config import settings
 import os
 from app.utils.auth import get_password_hash
@@ -1643,6 +1644,143 @@ def seed_initial_data(db: Session):
             )
             db.add(log_today)
             db.commit()
+
+    # 16. Seed Initial Activity Logs
+    if db.query(ActivityLog).count() == 0:
+        now = datetime.datetime.utcnow()
+        admin = db.query(User).filter(User.username == "admin").first()
+        anna = db.query(User).filter(User.username == "anna").first()
+        petr = db.query(User).filter(User.username == "petr").first()
+
+        u_admin_id = admin.id if admin else 1
+        u_anna_id = anna.id if anna else 2
+        u_petr_id = petr.id if petr else 3
+
+        activities = [
+            ActivityLog(
+                user_id=u_admin_id,
+                user_name=admin.display_name if admin else "Admin",
+                user_avatar_color="#f97316",
+                module="auth",
+                action_type="login",
+                title="Přihlášení do systému",
+                description="Správce domácnosti se přihlásil do systému Hestia",
+                created_at=now - datetime.timedelta(minutes=15)
+            ),
+            ActivityLog(
+                user_id=u_anna_id,
+                user_name=anna.display_name if anna else "Anna",
+                user_avatar_color="#ec4899",
+                module="chores",
+                action_type="complete",
+                title="Splnění úkolu",
+                description="Anna splnila úkol: Vyklidit a zapnout myčku nádobí (+15 b.)",
+                created_at=now - datetime.timedelta(hours=2, minutes=10)
+            ),
+            ActivityLog(
+                user_id=u_petr_id,
+                user_name=petr.display_name if petr else "Petr",
+                user_avatar_color="#3b82f6",
+                module="vehicles",
+                action_type="refuel",
+                title="Záznam tankování",
+                description="Petr zaznamenal tankování 48.2 l (1 850 Kč) u Škoda Octavia Combi",
+                created_at=now - datetime.timedelta(hours=4, minutes=30)
+            ),
+            ActivityLog(
+                user_id=u_admin_id,
+                user_name=admin.display_name if admin else "Admin",
+                user_avatar_color="#f97316",
+                module="vehicles",
+                action_type="mileage",
+                title="Změna stavu tachometru",
+                description="Admin aktualizoval tachometr vozidla Fabie do města na 35 850 km",
+                created_at=now - datetime.timedelta(hours=6)
+            ),
+            ActivityLog(
+                user_id=u_anna_id,
+                user_name=anna.display_name if anna else "Anna",
+                user_avatar_color="#ec4899",
+                module="finance",
+                action_type="create",
+                title="Nová platba",
+                description="Anna zaevidovala nákup v Lidlu za 1 450 Kč v kategorii Potraviny",
+                created_at=now - datetime.timedelta(hours=8, minutes=20)
+            ),
+            ActivityLog(
+                user_id=u_petr_id,
+                user_name=petr.display_name if petr else "Petr",
+                user_avatar_color="#3b82f6",
+                module="finance",
+                action_type="savings",
+                title="Příspěvek na cíl spoření",
+                description="Petr přidal 2 000 Kč do spořicího prasátka: Letní rodinná dovolená u moře",
+                created_at=now - datetime.timedelta(days=1, hours=2)
+            ),
+            ActivityLog(
+                user_id=u_anna_id,
+                user_name=anna.display_name if anna else "Anna",
+                user_avatar_color="#ec4899",
+                module="documents",
+                action_type="create",
+                title="Nový doklad v archivu",
+                description="Anna nahrála dokument: Záruční list – Myčka nádobí Bosch Série 6 (šanon: Záruky)",
+                created_at=now - datetime.timedelta(days=1, hours=5)
+            ),
+            ActivityLog(
+                user_id=u_admin_id,
+                user_name=admin.display_name if admin else "Admin",
+                user_avatar_color="#f97316",
+                module="medicines",
+                action_type="dose",
+                title="Užití dávky léku",
+                description="Admin zaznamenal ranní dávku léku Prenessa 4 mg (1 tableta)",
+                created_at=now - datetime.timedelta(days=1, hours=9)
+            ),
+            ActivityLog(
+                user_id=u_admin_id,
+                user_name=admin.display_name if admin else "Admin",
+                user_avatar_color="#f97316",
+                module="chores",
+                action_type="reward",
+                title="Uplatnění rodinné odměny",
+                description="Admin uplatnil rodinnou odměnu: Výběr pátečního filmu (-50 b.)",
+                created_at=now - datetime.timedelta(days=2, hours=3)
+            ),
+            ActivityLog(
+                user_id=u_anna_id,
+                user_name=anna.display_name if anna else "Anna",
+                user_avatar_color="#ec4899",
+                module="finance",
+                action_type="budget",
+                title="Úprava limitu rozpočtu",
+                description="Anna upravila měsíční limit kategorie Potraviny a drogerie na 13 500 Kč",
+                created_at=now - datetime.timedelta(days=2, hours=7)
+            ),
+            ActivityLog(
+                user_id=u_admin_id,
+                user_name=admin.display_name if admin else "Admin",
+                user_avatar_color="#f97316",
+                module="documents",
+                action_type="update",
+                title="Úprava dokumentu",
+                description="Admin aktualizoval umístění originálu: Kupní smlouva k bytu (nové umístění: Domácí ohnivzdorný trezor – ložnice)",
+                created_at=now - datetime.timedelta(days=3, hours=1)
+            ),
+            ActivityLog(
+                user_id=u_petr_id,
+                user_name=petr.display_name if petr else "Petr",
+                user_avatar_color="#3b82f6",
+                module="plants",
+                action_type="water",
+                title="Zálivka rostlin",
+                description="Petr zalil pokojové rostliny v obývacím pokoji (Monstera Deliciosa, Fíkus Lyra)",
+                created_at=now - datetime.timedelta(days=3, hours=4)
+            )
+        ]
+        db.add_all(activities)
+        db.commit()
+
 
 
 

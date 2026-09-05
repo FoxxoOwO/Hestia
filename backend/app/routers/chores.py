@@ -15,6 +15,7 @@ from app.schemas.chore import (
     ChoreRewardResponse, ChoreRedemptionResponse, LeaderboardMember, UserSimple
 )
 from app.utils.auth import get_current_user
+from app.services.activity_service import log_activity
 
 router = APIRouter(prefix="/chores", tags=["Household Chores & Maintenance"])
 
@@ -150,9 +151,23 @@ def create_chore(
         is_active=True
     )
     db.add(chore)
+    db.flush()
+
+    log_activity(
+        db=db,
+        user=current_user,
+        module="chores",
+        action_type="create",
+        title="Nový domácí úkol",
+        description=f"{current_user.display_name} vytvořil(a) úkol: {chore.title} ({chore.room or 'celá domácnost'})",
+        entity_type="Chore",
+        entity_id=chore.id
+    )
+
     db.commit()
     db.refresh(chore)
     return _format_chore_response(chore)
+
 
 
 @router.get("/leaderboard", response_model=List[LeaderboardMember])
@@ -269,9 +284,23 @@ def redeem_reward(
         status="pending"
     )
     db.add(redemption)
+    db.flush()
+
+    log_activity(
+        db=db,
+        user=current_user,
+        module="chores",
+        action_type="reward",
+        title="Uplatnění rodinné odměny",
+        description=f"{current_user.display_name} uplatnil(a) odměnu: {reward.title} (-{reward.cost_points} b.)",
+        entity_type="ChoreReward",
+        entity_id=reward.id
+    )
+
     db.commit()
     db.refresh(redemption)
     return redemption
+
 
 
 @router.get("/{chore_id}", response_model=ChoreResponse)
@@ -371,9 +400,21 @@ def complete_chore(
             else:
                 chore.current_assignee_id = members[0]
 
+    log_activity(
+        db=db,
+        user=current_user,
+        module="chores",
+        action_type="complete",
+        title="Splnění úkolu",
+        description=f"{current_user.display_name} splnil(a) úkol: {chore.title} (+{points_to_award} b.)",
+        entity_type="Chore",
+        entity_id=chore.id
+    )
+
     db.commit()
     db.refresh(chore)
     return _format_chore_response(chore)
+
 
 
 @router.post("/{chore_id}/reassign", response_model=ChoreResponse)

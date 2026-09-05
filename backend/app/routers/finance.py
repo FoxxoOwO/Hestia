@@ -26,6 +26,7 @@ from app.schemas.finance import (
 from app.utils.auth import get_current_user
 from app.services.spayd_service import generate_spayd_string, czech_account_to_iban
 from app.services.gemini_finance_service import GeminiFinanceService
+from app.services.activity_service import log_activity
 
 router = APIRouter(prefix="/finance", tags=["Family Finance & Budget"])
 
@@ -205,6 +206,19 @@ def set_category_budget(
             b.icon = payload.icon
         if payload.color:
             b.color = payload.color
+    db.flush()
+
+    log_activity(
+        db=db,
+        user=current_user,
+        module="finance",
+        action_type="budget",
+        title="Úprava limitu rozpočtu",
+        description=f"{current_user.display_name} nastavil(a) měsíční limit kategorie {b.category} na {b.monthly_limit:,.0f} Kč",
+        entity_type="CategoryBudget",
+        entity_id=b.id
+    )
+
     db.commit()
     db.refresh(b)
     return b
@@ -264,9 +278,23 @@ def create_transaction(
         notes=payload.notes
     )
     db.add(tx)
+    db.flush()
+
+    log_activity(
+        db=db,
+        user=current_user,
+        module="finance",
+        action_type="create",
+        title="Nová platba",
+        description=f"{current_user.display_name} zaevidoval(a) {tx.amount:,.0f} Kč ({tx.title}) v kategorii {tx.category}",
+        entity_type="FinanceTransaction",
+        entity_id=tx.id
+    )
+
     db.commit()
     db.refresh(tx)
     return tx
+
 
 
 @router.put("/transactions/{id}", response_model=TransactionResponse)
@@ -429,10 +457,22 @@ def mark_all_settled(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    db.query(FinanceTransaction).filter(
+    count = db.query(FinanceTransaction).filter(
         FinanceTransaction.is_shared == True,
         FinanceTransaction.is_settled == False
     ).update({"is_settled": True})
+
+    log_activity(
+        db=db,
+        user=current_user,
+        module="finance",
+        action_type="settle",
+        title="Vyrovnání sdílených nákladů",
+        description=f"{current_user.display_name} označil(a) {count} sdílených rodinných plateb jako vyrovnané",
+        entity_type="FinanceTransaction",
+        entity_id=None
+    )
+
     db.commit()
     return {"status": "success", "message": "Všechny sdílené platby byly označeny jako vyrovnané."}
 
@@ -579,6 +619,17 @@ def add_savings_to_goal(
     goal.current_amount += payload.amount
     if goal.current_amount >= goal.target_amount:
         goal.is_completed = True
+
+    log_activity(
+        db=db,
+        user=current_user,
+        module="finance",
+        action_type="savings",
+        title="Příspěvek na cíl spoření",
+        description=f"{current_user.display_name} přidal(a) {payload.amount:,.0f} Kč do spořicího cíle: {goal.title} ({goal.current_amount:,.0f} / {goal.target_amount:,.0f} Kč)",
+        entity_type="SavingsGoal",
+        entity_id=goal.id
+    )
 
     db.commit()
     db.refresh(goal)

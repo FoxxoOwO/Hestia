@@ -4,7 +4,7 @@ import { User } from '../types';
 interface AuthContextType {
   user: User | null;
   token: string | null;
-  login: (username: string, password?: string) => Promise<boolean>;
+  login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
   refreshUser: () => Promise<void>;
@@ -17,7 +17,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('hestia_token'));
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const fetchProfile = async (authToken: string) => {
+  const fetchProfile = async (authToken: string): Promise<boolean> => {
     try {
       const res = await fetch('/api/v1/auth/me', {
         headers: { Authorization: `Bearer ${authToken}` },
@@ -33,31 +33,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
     } catch {
+      setToken(null);
+      setUser(null);
+      localStorage.removeItem('hestia_token');
       return false;
     }
   };
 
   useEffect(() => {
     const initAuth = async () => {
-      if (token) {
-        await fetchProfile(token);
+      const savedToken = localStorage.getItem('hestia_token');
+      if (savedToken) {
+        await fetchProfile(savedToken);
       } else {
-        // Auto-login with default admin for seamless self-hosted initial experience
-        try {
-          const res = await fetch('/api/v1/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: 'admin', password: 'hestia123' }),
-          });
-          if (res.ok) {
-            const data = await res.json();
-            setToken(data.access_token);
-            setUser(data.user);
-            localStorage.setItem('hestia_token', data.access_token);
-          }
-        } catch (e) {
-          console.error('Auto-login failed', e);
-        }
+        setToken(null);
+        setUser(null);
       }
       setIsLoading(false);
     };
@@ -65,7 +55,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initAuth();
   }, []);
 
-  const login = async (username: string, password = 'hestia123'): Promise<boolean> => {
+  const login = async (username: string, password: string): Promise<boolean> => {
     try {
       const res = await fetch('/api/v1/auth/login', {
         method: 'POST',
@@ -81,7 +71,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       return false;
     } catch (e) {
-      console.error(e);
+      console.error('Login request failed', e);
       return false;
     }
   };
@@ -93,8 +83,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const refreshUser = async () => {
-    if (token) {
-      await fetchProfile(token);
+    const currentToken = token || localStorage.getItem('hestia_token');
+    if (currentToken) {
+      await fetchProfile(currentToken);
     }
   };
 

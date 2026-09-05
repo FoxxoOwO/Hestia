@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { UtensilsCrossed, PackageOpen, ShoppingCart, Flower2, Dog, CheckSquare, Wallet, FolderArchive, Car, HeartPulse, Settings } from 'lucide-react';
+import { UtensilsCrossed, PackageOpen, ShoppingCart, Flower2, Dog, CheckSquare, Wallet, FolderArchive, Car, HeartPulse, History, Settings } from 'lucide-react';
 import { useTranslation } from '../i18n';
 
 export const MobileNav: React.FC = () => {
@@ -17,12 +17,14 @@ export const MobileNav: React.FC = () => {
     { to: '/documents', label: t('nav.documents'), icon: FolderArchive },
     { to: '/vehicles', label: t('nav.vehicles'), icon: Car },
     { to: '/medicines', label: t('nav.first_aid'), icon: HeartPulse },
+    { to: '/activity', label: t('nav.activity'), icon: History },
     { to: '/settings', label: t('nav.settings'), icon: Settings },
   ];
 
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-lg border-t border-zinc-200 dark:border-zinc-800 px-2 py-1.5 safe-area-pb">
-      <div className="flex items-center justify-around">
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-lg border-t border-zinc-200 dark:border-zinc-800 px-2 py-1 safe-area-pb">
+      <div className="flex items-center justify-between overflow-x-auto no-scrollbar gap-1">
+
         {navItems.map((item) => {
           const Icon = item.icon;
           return (

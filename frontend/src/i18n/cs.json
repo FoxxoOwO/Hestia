@@ -16,6 +16,7 @@
     "vehicles": "Vozový park a garáž",
     "first_aid": "Domácí lékárnička",
     "medicines": "Domácí lékárnička",
+    "activity": "Historie aktivit",
     "logout": "Odhlásit se"
   },
   "plants": {
@@ -670,6 +671,20 @@
     "form_dressing": "Obvaz / Náplast",
     "form_device": "Zdravotnická pomůcka",
     "form_other": "Jiná forma"
+  },
+  "activity": {
+    "title": "Historie aktivit",
+    "subtitle": "Auditní stopa: přehled toho, kdo v rodině co nastavil, splnil či zaevidoval",
+    "total": "Celkem událostí",
+    "today": "Dnes provedeno",
+    "most_active": "Nejaktivnější člen",
+    "refresh": "Obnovit",
+    "clean_old": "Úklid (>30 dní)",
+    "filter_all": "Všechny moduly",
+    "search_placeholder": "Hledat v popisu akcí...",
+    "load_more": "Načíst další aktivity",
+    "empty_title": "Žádné aktivity nenalezeny",
+    "empty_desc": "Pro zvolené filtry nebyly zaznamenány žádné události."
   },
   "common": {
     "loading": "Načítání...",

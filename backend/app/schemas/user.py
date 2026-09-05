@@ -42,3 +42,14 @@ class TokenPayload(BaseModel):
 class LoginRequest(BaseModel):
     username: str
     password: str
+
+class PublicMember(BaseModel):
+    id: int
+    username: str
+    display_name: str
+    avatar_color: Optional[str] = "#f97316"
+    role: str
+
+    class Config:
+        from_attributes = True
+

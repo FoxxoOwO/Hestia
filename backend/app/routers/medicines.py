@@ -17,6 +17,7 @@ from app.schemas.medicine import (
     FirstAidGuideItem
 )
 from app.utils.auth import get_current_user
+from app.services.activity_service import log_activity
 
 router = APIRouter(prefix="/medicines", tags=["Medicines & First Aid"])
 
@@ -527,6 +528,19 @@ def create_medicine(
         assigned_user_id=med_in.assigned_user_id
     )
     db.add(med)
+    db.flush()
+
+    log_activity(
+        db=db,
+        user=current_user,
+        module="medicines",
+        action_type="create",
+        title="Nový lék v lékárničce",
+        description=f"{current_user.display_name} přidal(a) do lékárničky: {med.name} ({med.package_size or ''})",
+        entity_type="Medicine",
+        entity_id=med.id
+    )
+
     db.commit()
     db.refresh(med)
     return _format_medicine_response(med, db)
@@ -766,6 +780,19 @@ def create_medication_log(
     if log_in.status == "taken" and log_in.decrement_stock:
         if medicine.current_quantity > 0:
             medicine.current_quantity = max(0.0, medicine.current_quantity - 1.0)
+
+    db.flush()
+
+    log_activity(
+        db=db,
+        user=current_user,
+        module="medicines",
+        action_type="dose",
+        title="Užití dávky léku",
+        description=f"{current_user.display_name} zaznamenal(a) užití léku {medicine.name} ({log.dose_taken})",
+        entity_type="MedicationLog",
+        entity_id=log.id
+    )
 
     db.commit()
     db.refresh(log)

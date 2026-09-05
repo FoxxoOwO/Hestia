@@ -1,17 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { Flame, Moon, Sun, Monitor, Globe, UserCheck, ChevronDown, LogOut } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Flame, Moon, Sun, Monitor, Globe, UserCheck, ChevronDown, LogOut, History } from 'lucide-react';
 import { useTranslation } from '../i18n';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { User } from '../types';
+import { SwitchUserModal } from './SwitchUserModal';
 
 export const Navbar: React.FC = () => {
   const { t, language, setLanguage } = useTranslation();
   const { theme, setTheme, isDark } = useTheme();
-  const { user, logout, login } = useAuth();
+  const { user, logout } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [switchModalOpen, setSwitchModalOpen] = useState(false);
+  const [targetUser, setTargetUser] = useState<User | null>(null);
+
 
   useEffect(() => {
     if (user) {
@@ -117,10 +122,13 @@ export const Navbar: React.FC = () => {
                       <button
                         key={u.id}
                         onClick={() => {
-                          login(u.username, 'hestia123');
+                          if (u.id !== user.id) {
+                            setTargetUser(u);
+                            setSwitchModalOpen(true);
+                          }
                           setUserMenuOpen(false);
                         }}
-                        className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left hover:bg-orange-50 dark:hover:bg-orange-950/40 transition ${
+                        className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left hover:bg-orange-50 dark:hover:bg-orange-950/40 transition cursor-pointer ${
                           u.id === user.id ? 'font-semibold text-orange-600 dark:text-orange-400' : 'text-zinc-700 dark:text-zinc-300'
                         }`}
                       >
@@ -137,12 +145,21 @@ export const Navbar: React.FC = () => {
                   </div>
 
                   <div className="pt-1 border-t border-zinc-100 dark:border-zinc-800">
+                    <Link
+                      to="/activity"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="w-full flex items-center gap-2 px-4 py-2 text-xs text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
+                    >
+                      <History className="w-3.5 h-3.5 text-orange-500" />
+                      <span>{language === 'cs' ? 'Historie aktivit' : 'Activity History'}</span>
+                    </Link>
+
                     <button
                       onClick={() => {
-                        logout();
                         setUserMenuOpen(false);
+                        logout();
                       }}
-                      className="w-full flex items-center gap-2 px-4 py-2 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition"
+                      className="w-full flex items-center gap-2 px-4 py-2 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition cursor-pointer"
                     >
                       <LogOut className="w-3.5 h-3.5" />
                       <span>{t('nav.logout')}</span>
@@ -154,6 +171,12 @@ export const Navbar: React.FC = () => {
           )}
         </div>
       </div>
+
+      <SwitchUserModal
+        isOpen={switchModalOpen}
+        onClose={() => setSwitchModalOpen(false)}
+        targetUser={targetUser}
+      />
     </header>
   );
 };

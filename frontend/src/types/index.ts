@@ -5,6 +5,7 @@ export * from './finance';
 export * from './document';
 export * from './vehicle';
 export * from './medicine';
+export * from './activity';
 
 export type Role = 'admin' | 'member';
 

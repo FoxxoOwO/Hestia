@@ -17,8 +17,11 @@ from app.schemas.document import (
 )
 from app.utils.auth import get_current_user
 from app.services.gemini_document_service import GeminiDocumentService
+from app.services.activity_service import log_activity
+
 
 router = APIRouter(prefix="/documents", tags=["Digital Archive & Documents"])
+
 
 def _compute_document_status(doc: Document) -> tuple[Optional[int], str]:
     if not doc.expiry_date:
@@ -232,6 +235,19 @@ def create_document(
         created_by_id=current_user.id
     )
     db.add(doc)
+    db.flush()
+
+    log_activity(
+        db=db,
+        user=current_user,
+        module="documents",
+        action_type="create",
+        title="Nový doklad v archivu",
+        description=f"{current_user.display_name} nahrál(a) dokument: {doc.title} (kategorie: {doc.category})",
+        entity_type="Document",
+        entity_id=doc.id
+    )
+
     db.commit()
     db.refresh(doc)
     return _format_document_response(doc)
@@ -248,12 +264,30 @@ def update_document(
     if not doc:
         raise HTTPException(status_code=404, detail="Dokument nebyl nalezen")
 
+    old_loc = doc.physical_location
     for k, v in payload.model_dump(exclude_unset=True).items():
         setattr(doc, k, v)
+    db.flush()
+
+    desc = f"{current_user.display_name} upravil(a) dokument: {doc.title}"
+    if payload.physical_location and payload.physical_location != old_loc:
+        desc += f" (nové umístění: {payload.physical_location})"
+
+    log_activity(
+        db=db,
+        user=current_user,
+        module="documents",
+        action_type="update",
+        title="Úprava dokumentu",
+        description=desc,
+        entity_type="Document",
+        entity_id=doc.id
+    )
 
     db.commit()
     db.refresh(doc)
     return _format_document_response(doc)
+
 
 
 @router.delete("/{id}")
