@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 export type Theme = 'light' | 'dark' | 'system';
-export type DesignStyle = 'classic' | 'nordic' | 'cyber' | 'glass' | 'sunset';
+export type DesignStyle = 'classic' | 'nordic' | 'cyber' | 'glass' | 'sunset' | 'material' | 'oneui' | 'oxygen';
 
 export interface DesignStyleOption {
   id: DesignStyle;
@@ -70,6 +70,39 @@ export const DESIGN_STYLES: DesignStyleOption[] = [
     badgeEn: 'Cozy',
     primaryColor: '#f43f5e',
     previewColors: ['#f43f5e', '#fb923c', '#fda4af', '#fff1f2'],
+  },
+  {
+    id: 'material',
+    name: 'Material Expressive',
+    nameEn: 'Material Expressive',
+    description: 'Styl Google Material Design 3 Expressive s tonálními barvami a oblými tvary',
+    descriptionEn: 'Google Material 3 Expressive style with tonal palettes and dynamic pill shapes',
+    badge: 'Google M3',
+    badgeEn: 'Google M3',
+    primaryColor: '#7c3aed',
+    previewColors: ['#7c3aed', '#ec4899', '#ede9fe', '#2e1065'],
+  },
+  {
+    id: 'oneui',
+    name: 'Samsung One UI',
+    nameEn: 'Samsung One UI',
+    description: 'Styl Samsung One UI s charakteristickými zaoblenými kartami a královskou modří',
+    descriptionEn: 'Samsung One UI style with signature squircle cards and royal blue accents',
+    badge: 'One UI',
+    badgeEn: 'One UI',
+    primaryColor: '#2563eb',
+    previewColors: ['#2563eb', '#7c3aed', '#dbeafe', '#151a24'],
+  },
+  {
+    id: 'oxygen',
+    name: 'OnePlus OxygenOS',
+    nameEn: 'OnePlus OxygenOS',
+    description: 'Rychlý aquamorphic styl OnePlus s ikonickou karmínovou červení Never Settle',
+    descriptionEn: 'Fast OnePlus Aquamorphic aesthetic with iconic Never Settle crimson red',
+    badge: 'OxygenOS',
+    badgeEn: 'OxygenOS',
+    primaryColor: '#eb0028',
+    previewColors: ['#eb0028', '#ff5238', '#ffe4e6', '#16171d'],
   },
 ];
 
