@@ -7,6 +7,7 @@ import {
 import { api } from '../services/api';
 import { RoomType, LightRequirement, PetToxicity, HealthStatus } from '../types';
 import { useTranslation } from '../i18n';
+import { UiSwitch } from '../components/UiSwitch';
 
 export const PlantEditPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -332,38 +333,26 @@ export const PlantEditPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Checkboxes for misting & winter mode */}
+            {/* Checkboxes for misting & winter mode using authentic UiSwitch */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-              <label className="flex items-center gap-3 p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={mistingRequired}
-                  onChange={(e) => setMistingRequired(e.target.checked)}
-                  className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
-                />
-                <div>
-                  <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 block">
-                    Vyžaduje rosení listů
-                  </span>
-                  <span className="text-[11px] text-zinc-500">Vyšší vzdušná vlhkost</span>
-                </div>
-              </label>
+              <UiSwitch
+                checked={mistingRequired}
+                onChange={setMistingRequired}
+                label="Vyžaduje rosení listů"
+                description="Vyšší vzdušná vlhkost"
+              />
 
-              <label className="flex items-center gap-3 p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={isWinterMode}
-                  onChange={(e) => setIsWinterMode(e.target.checked)}
-                  className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
-                />
-                <div>
-                  <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 block flex items-center gap-1.5">
+              <UiSwitch
+                checked={isWinterMode}
+                onChange={setIsWinterMode}
+                label={
+                  <span className="flex items-center gap-1.5">
                     <Snowflake className="w-3.5 h-3.5 text-blue-500" />
                     Zimní klidový režim aktivní
                   </span>
-                  <span className="text-[11px] text-zinc-500">Používá zimní interval zálivky</span>
-                </div>
-              </label>
+                }
+                description="Používá zimní interval zálivky"
+              />
             </div>
           </div>
 

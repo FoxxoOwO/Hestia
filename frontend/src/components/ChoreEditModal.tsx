@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Wrench, RefreshCw, Users, Sparkles, Clock, Calendar } from 'lucide-react';
 import { Chore, ChoreCreateInput, User } from '../types';
 import { useTranslation } from '../i18n';
+import { UiSwitch } from './UiSwitch';
 
 interface ChoreEditModalProps {
   isOpen: boolean;
@@ -305,11 +306,9 @@ export const ChoreEditModal: React.FC<ChoreEditModalProps> = ({
                   </p>
                 </div>
               </div>
-              <input
-                type="checkbox"
+              <UiSwitch
                 checked={isRotationEnabled}
-                onChange={e => setIsRotationEnabled(e.target.checked)}
-                className="w-4 h-4 rounded text-primary-600 focus:ring-primary-500"
+                onChange={setIsRotationEnabled}
               />
             </div>
 
@@ -374,11 +373,9 @@ export const ChoreEditModal: React.FC<ChoreEditModalProps> = ({
                   Péče o domácí spotřebič (Servisní knížka)
                 </span>
               </div>
-              <input
-                type="checkbox"
+              <UiSwitch
                 checked={isApplianceMaintenance}
-                onChange={e => setIsApplianceMaintenance(e.target.checked)}
-                className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                onChange={setIsApplianceMaintenance}
               />
             </div>
             {isApplianceMaintenance && (

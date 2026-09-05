@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import {
   Settings, Users, Globe, Moon, Sun, Monitor,
   Sparkles, Check, AlertCircle, Plus, Shield, UserPlus, X, Palette,
-  Pencil, Trash2, AlertTriangle
+  Pencil, Trash2, AlertTriangle, Layers, ToggleLeft, Sliders, Zap
 } from 'lucide-react';
 import { api } from '../services/api';
 import { User } from '../types';
 import { useTranslation } from '../i18n';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { UiSwitch } from '../components/UiSwitch';
 
 export const SettingsPage: React.FC = () => {
   const { t, language, setLanguage } = useTranslation();
@@ -17,6 +18,12 @@ export const SettingsPage: React.FC = () => {
 
   const [members, setMembers] = useState<User[]>([]);
   const [aiStatus, setAiStatus] = useState<{ gemini_configured: boolean; model: string } | null>(null);
+
+  // Native superstructure showcase states
+  const [hapticToggle, setHapticToggle] = useState(true);
+  const [compactToggle, setCompactToggle] = useState(false);
+  const [glowToggle, setGlowToggle] = useState(true);
+  const [showcaseTab, setShowcaseTab] = useState<'all' | 'priority' | 'archive'>('all');
 
   // New member modal
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
@@ -442,6 +449,165 @@ export const SettingsPage: React.FC = () => {
               >
                 {t('settings.design_preview_btn')}
               </button>
+            </div>
+          </div>
+
+          {/* Superstructure Native Elements Interactive Showcase */}
+          <div className="pt-6 border-t border-zinc-200/80 dark:border-zinc-800/80 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-orange-500" />
+                  <span>{t('settings.native_elements_title')}</span>
+                </h4>
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+                  {t('settings.native_elements_desc')}
+                </p>
+              </div>
+              <span
+                className="text-[10px] font-bold px-2.5 py-1 rounded-full shadow-xs"
+                style={{
+                  backgroundColor: activeDesign.previewColors[2],
+                  color: activeDesign.primaryColor,
+                }}
+              >
+                {language === 'cs' ? activeDesign.badge : activeDesign.badgeEn}
+              </span>
+            </div>
+
+            {/* Interactive Grid: Toggles, Buttons, Menu */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* 1. Nativní přepínače (Toggles / Switche) */}
+              <div className="p-4 rounded-3xl bg-zinc-50/80 dark:bg-zinc-800/40 border border-zinc-200/70 dark:border-zinc-800 space-y-3">
+                <div className="flex items-center justify-between border-b border-zinc-200/60 dark:border-zinc-700/60 pb-2">
+                  <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+                    <ToggleLeft className="w-3.5 h-3.5 text-orange-500" />
+                    <span>{t('settings.native_toggles')}</span>
+                  </span>
+                  <span className="text-[10px] text-zinc-400 font-mono font-semibold">
+                    {designStyle === 'material'
+                      ? 'MD3 Expressive Pill'
+                      : designStyle === 'oneui'
+                      ? 'Samsung One UI Oval'
+                      : designStyle === 'oxygen'
+                      ? 'Aquamorphic Glow'
+                      : 'Hestia Adaptive'}
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  <UiSwitch
+                    checked={hapticToggle}
+                    onChange={setHapticToggle}
+                    label={t('settings.toggle_animations')}
+                    description={t('settings.toggle_animations_desc')}
+                  />
+                  <UiSwitch
+                    checked={compactToggle}
+                    onChange={setCompactToggle}
+                    label={t('settings.toggle_compact')}
+                    description={t('settings.toggle_compact_desc')}
+                  />
+                  <UiSwitch
+                    checked={glowToggle}
+                    onChange={setGlowToggle}
+                    label={t('settings.toggle_glow')}
+                    description={t('settings.toggle_glow_desc')}
+                  />
+                </div>
+              </div>
+
+              {/* 2. Nativní tlačítka a Záložky (Buttons & Segmented Menu) */}
+              <div className="p-4 rounded-3xl bg-zinc-50/80 dark:bg-zinc-800/40 border border-zinc-200/70 dark:border-zinc-800 space-y-3 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between border-b border-zinc-200/60 dark:border-zinc-700/60 pb-2 mb-3">
+                    <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+                      <Sliders className="w-3.5 h-3.5 text-orange-500" />
+                      <span>{t('settings.native_buttons')}</span>
+                    </span>
+                    <span className="text-[10px] text-zinc-400 font-mono font-semibold">
+                      {designStyle === 'material'
+                        ? 'Pill & Tonal'
+                        : designStyle === 'oneui'
+                        ? 'Squircle Press'
+                        : designStyle === 'oxygen'
+                        ? 'Precision Glow'
+                        : 'Default'}
+                    </span>
+                  </div>
+
+                  <div className="space-y-3">
+                    {/* Primary, Secondary, Action Buttons */}
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <button
+                        type="button"
+                        className="px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs shadow-md flex items-center gap-2 transition"
+                      >
+                        <Zap className="w-3.5 h-3.5" />
+                        <span>{t('settings.btn_primary')}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="px-4 py-2.5 bg-orange-100 dark:bg-orange-950/60 text-orange-800 dark:text-orange-200 font-bold text-xs hover:bg-orange-200 dark:hover:bg-orange-900/60 transition"
+                      >
+                        <span>{t('settings.btn_secondary')}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="px-3.5 py-2 border border-orange-400 dark:border-orange-600 text-orange-600 dark:text-orange-400 font-bold text-xs hover:bg-orange-50/50 dark:hover:bg-orange-950/30 transition flex items-center gap-1.5"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>{t('settings.btn_fab')}</span>
+                      </button>
+                    </div>
+
+                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                      {designStyle === 'material' &&
+                        'Google M3 Expressive: zaoblená pilulková tlačítka (Pill) s tonálními barvami.'}
+                      {designStyle === 'oneui' &&
+                        'Samsung One UI: squircle zaoblení tlačítek s haptickým stlačením (press scale).'}
+                      {designStyle === 'oxygen' &&
+                        'OnePlus OxygenOS: precizně broušené hrany s Never Settle červenou září.'}
+                      {['classic', 'nordic', 'cyber', 'glass', 'sunset'].includes(designStyle) &&
+                        'Adaptivní tlačítka a prvky sladěné s vybranou paletou.'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* 3. Nativní segmentované menu (Tabs) */}
+                <div className="pt-3 border-t border-zinc-200/60 dark:border-zinc-700/60">
+                  <div className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 mb-2">
+                    {t('settings.native_menu')}
+                  </div>
+                  <div className="inline-flex p-1 rounded-2xl bg-zinc-200/70 dark:bg-zinc-800/80 border border-zinc-300/50 dark:border-zinc-700/50 w-full justify-between">
+                    {(['all', 'priority', 'archive'] as const).map((tab) => {
+                      const isTabActive = showcaseTab === tab;
+                      const tabLabel =
+                        tab === 'all'
+                          ? t('settings.tab_all')
+                          : tab === 'priority'
+                          ? t('settings.tab_priority')
+                          : t('settings.tab_archive');
+                      return (
+                        <button
+                          key={tab}
+                          type="button"
+                          onClick={() => setShowcaseTab(tab)}
+                          className={`flex-1 py-1.5 px-3 text-xs font-bold transition text-center ${
+                            isTabActive
+                              ? 'bg-orange-500 text-white shadow-xs'
+                              : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+                          }`}
+                        >
+                          {tabLabel}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
