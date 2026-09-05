@@ -1,0 +1,40 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: hestia-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - SECRET_KEY=${SECRET_KEY:-hestia-super-secret-key-change-in-production-123456789}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - DATABASE_URL=sqlite:////app/data/hestia.db
+      - UPLOAD_DIR=/app/uploads
+    volumes:
+      - ./data/db:/app/data
+      - ./data/uploads:/app/uploads
+    networks:
+      - hestia-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: hestia-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - hestia-network
+
+volumes:
+  hestia-db:
+  hestia-uploads:
+
+networks:
+  hestia-network:
+    driver: bridge
