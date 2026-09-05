@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
     
     UPLOAD_DIR: str = os.getenv("UPLOAD_DIR", "./uploads")
+    FRONTEND_DIST_DIR: str = os.getenv("FRONTEND_DIST_DIR", "")
     
     class Config:
         case_sensitive = True

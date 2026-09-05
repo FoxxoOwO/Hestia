@@ -68,8 +68,31 @@ def health_check():
         "status": "healthy",
         "app": "Hestia Smart Home OS",
         "version": "1.0.0",
-        "modules": ["recipes", "pantry", "shopping", "auth", "gemini-ai"]
+        "modules": ["recipes", "pantry", "shopping", "auth", "gemini-ai", "plants", "pets", "chores", "finance", "documents", "vehicles", "medicines"]
     }
+
+# Optional frontend SPA serving for single-container Docker deployments
+if getattr(settings, "FRONTEND_DIST_DIR", None) and os.path.exists(settings.FRONTEND_DIST_DIR):
+    from fastapi.responses import FileResponse
+    from fastapi import HTTPException
+    
+    assets_path = os.path.join(settings.FRONTEND_DIST_DIR, "assets")
+    if os.path.exists(assets_path):
+        app.mount("/assets", StaticFiles(directory=assets_path), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_spa_frontend(full_path: str):
+        # Don't intercept API or upload routes
+        if full_path.startswith("api/") or full_path.startswith("uploads/"):
+            raise HTTPException(status_code=404, detail="Not Found")
+        
+        file_path = os.path.join(settings.FRONTEND_DIST_DIR, full_path)
+        if os.path.isfile(file_path):
+            return FileResponse(file_path)
+        index_file = os.path.join(settings.FRONTEND_DIST_DIR, "index.html")
+        if os.path.exists(index_file):
+            return FileResponse(index_file)
+        raise HTTPException(status_code=404, detail="Index file not found")
 
 if __name__ == "__main__":
     import uvicorn

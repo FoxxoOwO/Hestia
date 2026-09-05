@@ -127,21 +127,76 @@ Chytré plánování, férová rotace prací v rodině, servisní knížka spot�
 
 ---
 
+---
+
+## 💰 Modul 5: Rodinné finance a rozpočet (Family Finance & Budget)
+
+Kompletní správa rodinných peněz bezpečně pod vaší střechou.
+- **Měsíční rozpočet a obálková metoda**: 10 rodinných kategorií s barevnými semafory čerpání (zelená / žlutá / červená) a rychlou úpravou limitů.
+- **Kdo komu dluží? & České SPAYD QR kódy**: Automatické vyrovnání sdílených výdajů s generováním standardních QR kódů pro české bankovní aplikace (Air Bank, ČSOB, KB, Spořitelna, Fio atd.).
+- **Dlouhodobý průměr útraty**: Srovnání aktuálního měsíce s historickým průměrem ze všech evidovaných měsíců.
+- **Hlídač předplatných**: Evidence Netflixu, Spotify, energií a pojištění s přepočtem na měsíc/rok a odpočtem dnů do platby.
+- **Virtuální prasátka (Spořicí cíle)**: Nastavení cílů a 1-klikové přisypávání peněz.
+- **Import bankovních výpisů (CSV / XLSX)**: Auto-detekce českých bank a chytrá auto-kategorizace plateb.
+- **Gemini Flash AI Skener účtenek**: Vytěžení částky, obchodu, položek a kategorie z fotografie účtenky.
+
+---
+
+## 📑 Modul 6: Digitální archiv a šanony (Documents, Warranty & Vault)
+
+Digitalizace papírových složek s hlídačem záruk a ochranou citlivých smluv.
+- **9 virtuálních šanonů**: Záruky, smlouvy, technické revize, manuály, osobní doklady, zdraví, bydlení, vozidla a ostatní.
+- **Hlídač expirací & záruk**: Barevné semafory (zelená / žlutá / červená) s odpočtem dnů do konce záruky či platnosti revize.
+- **Fyzické umístění originálu („Kde leží papír?“)**: Záznam přesného místa uložení papírového dokumentu v domácnosti.
+- **Rodinný digitální trezor (Family Vault)**: Ochrana citlivých dokumentů 4místným PIN kódem.
+- **Gemini 2.5 Flash AI OCR**: Automatické rozpoznání parametrů z PDF a fotografií (prodejce, záruční doba, cena, S/N, shrnutí a full-text).
+
+---
+
+## 🚗 Modul 7: Vozový park a rodinná garáž (Fleet & Garage)
+
+Péče o rodinná auta a motocykly s hlídáním české legislativy.
+- **Karty vozidel & Tachometr**: Přehled aut s českou SPZ, fotkou a rychlou aktualizací stavu kilometrů.
+- **Hlídač legislativy ČR**: Odpočty do STK a měření emisí, elektronická dálniční známka ČR (edalnice.cz), výročí pojištění (POV/HAV) a autolékárnička.
+- **Pneu & Sezónní přezouvání**: Sledování dezénu (zákonný limit 4 mm / 1.6 mm) a místa uskladnění druhé sady.
+- **Digitální servisní knížka**: Interval výměny oleje (km / měsíce) s odpočtem a propojením do financí.
+- **Kniha tankování & Reálná spotřeba**: Výpočet průměrné spotřeby (l/100 km) a nákladů na 1 km.
+- **SOS Asistence při nehodě**: Přímé volání asistence, Linky pomoci řidičům (1224), tísňových linek a interaktivní průvodce nehodou.
+
+---
+
+## 💊 Modul 8: Domácí lékárnička a první pomoc (Medicine Cabinet & First Aid)
+
+Bezpečné léky, hlídání expirací a krizový průvodce pro rodinu.
+- **Evidence zásob a účinných látek**: Prevence předávkování sledováním účinné látky (Paracetamol, Ibuprofen atd.), evidence umístění (koupelna, lednice, chata, cestovní).
+- **Expirace a použitelnost po otevření**: Semafor expirace a hlídač otevřených kapek, sirupů a mastí.
+- **Dávkovací plány & Denní tracker**: Rozvrhy pro členy rodiny s tlačítkem „Vzít dávku“ a odečtem ze skladu.
+- **Dětská kalkulačka antipyretik**: Bezpečný výpočet dávky Paracetamolu a Ibuprofenu na kg váhy dítěte (včetně varování před koncentrovaným Nurofenem 4%).
+- **SOS První pomoc a krizový rádce**: Rychlé volání na ZZS (155) i Toxikologické středisko TIS (224 91 92 93), návody první pomoci krok za krokem.
+- **1-klik do nákupního seznamu**: Přidání docházejících léků přímo do nákupů.
+
+---
+
 ## 🗺️ Roadmapa budoucích modulů
 
 Hestia je připravena pro postupné zapínání dalších modulů:
-- 🔧 **Asset management**: Evidence spotřebičů, záruk, sériových čísel a PDF návodů.
-- 💰 **Rodinné finance**: Rozpočet, pravidelná předplatná a rozdělení nákladů.
-- 💊 **Domácí lékárnička**: Expirace léků a dávkování při nemoci.
-- ⚡ **Měřiče energií**: Odečty elektřiny, plynu a vody se spotřebními grafy.
-- 📦 **QR Sklad a krabice**: Evidence úložných boxů ve sklepě a na půdě s QR kódy.
+- ⚡ **Měřiče energií**: Odečty elektřiny, plynu a vody se spotřebními grafy a výpočtem nákladů.
+- 📦 **QR Sklad a krabice**: Evidence úložných boxů ve sklepě a na půdě s tištěnými QR štítky.
+- 🏠 **Smart Home integrace**: Obousměrná integrace s Home Assistant a MQTT.
 
 ---
 
 ## 🚀 Jak aplikaci spustit
 
+Podrobný průvodce se všemi možnostmi nasazení, Synology / Portainer šablonami a zálohováním naleznete v samostatném dokumentu **[DOCKER.md](DOCKER.md)**.
+
 ### 1. Spuštění v Dockeru (Doporučeno pro produkci / NAS / Raspberry Pi)
 
+Máte k dispozici dvě možnosti (viz podrobný návod v [DOCKER.md](DOCKER.md)):
+- **Docker Compose (Microservices)**: Samostatný backend a Nginx frontend na portu `3000`.
+- **All-in-One kontejner**: Jediný kontejner spojující frontend i backend na portu `8000` (ideální pro Synology Container Manager a Portainer).
+
+Rychlý start přes Docker Compose:
 1. Zkopírujte konfigurační soubor:
    ```bash
    cp .env.example .env
