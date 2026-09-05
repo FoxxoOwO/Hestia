@@ -30,7 +30,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.PROJECT_NAME,
     description="Komplexní modulární self-hosted systém pro chytrou domácnost Hestia",
-    version="1.0.0",
+    version="1.1.0",
     lifespan=lifespan
 )
 
@@ -68,8 +68,8 @@ def health_check():
     return {
         "status": "healthy",
         "app": "Hestia Smart Home OS",
-        "version": "1.0.0",
-        "modules": ["recipes", "pantry", "shopping", "auth", "gemini-ai", "plants", "pets", "chores", "finance", "documents", "vehicles", "medicines"]
+        "version": "1.1.0",
+        "modules": ["recipes", "pantry", "shopping", "auth", "gemini-ai", "plants", "pets", "chores", "finance", "documents", "vehicles", "medicines", "activities"]
     }
 
 # Optional frontend SPA serving for single-container Docker deployments

@@ -315,7 +315,7 @@ export const LoginPage: React.FC = () => {
               )}
 
               <span className="text-[11px] text-zinc-400 font-mono">
-                v1.0.0
+                v1.1.0
               </span>
             </div>
           </div>

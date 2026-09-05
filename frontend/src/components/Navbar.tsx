@@ -35,7 +35,7 @@ export const Navbar: React.FC = () => {
   };
 
   const cycleDesignStyle = () => {
-    const styles = designOptions.map((o) => o.id);
+    const styles: DesignStyle[] = ['classic', 'nordic', 'cyber', 'glass', 'sunset'];
     const currentIndex = styles.indexOf(designStyle);
     const nextStyle = styles[(currentIndex + 1) % styles.length];
     setDesignStyle(nextStyle);
@@ -55,7 +55,7 @@ export const Navbar: React.FC = () => {
                 {t('app_name')}
               </span>
               <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded-full bg-orange-100 dark:bg-orange-950/60 text-orange-700 dark:text-orange-300">
-                v1.0
+                v1.1
               </span>
             </div>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 hidden sm:block">
