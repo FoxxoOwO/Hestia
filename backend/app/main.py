@@ -8,7 +8,7 @@ from app.config import settings
 import app.models  # Ensure all SQLAlchemy models are registered
 from app.database import engine, Base, SessionLocal
 from app.services.seed_data import seed_initial_data
-from app.routers import auth, recipes, pantry, shopping, ai, plants, pets
+from app.routers import auth, recipes, pantry, shopping, ai, plants, pets, chores
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -56,6 +56,7 @@ app.include_router(shopping.router, prefix=api_prefix)
 app.include_router(ai.router, prefix=api_prefix)
 app.include_router(plants.router, prefix=api_prefix)
 app.include_router(pets.router, prefix=api_prefix)
+app.include_router(chores.router, prefix=api_prefix)
 
 @app.get("/api/health")
 def health_check():

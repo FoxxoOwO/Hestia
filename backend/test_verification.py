@@ -296,12 +296,100 @@ def run_tests():
     assert del_pet_res.status_code == 200
     print("9.13 Úklid testovacího mazlíčka - OK")
 
-    # 10. Check Frontend Build
+    # === 10. TESTY MODULU: DOMÁCÍ PRÁCE A ÚKLID (CHORES TRACKER) ===
+    print("\n=== TESTY MODULU: DOMÁCÍ PRÁCE A ÚKLID ===")
+
+    # 10.1 Seznam úkolů
+    chores_res = client.get("/api/v1/chores", headers=headers)
+    assert chores_res.status_code == 200, f"Chores list failed: {chores_res.text}"
+    chores_list = chores_res.json()
+    assert len(chores_list) >= 8, f"Expected at least 8 seeded chores, got {len(chores_list)}"
+    print(f"10.1 Výpis domácích prací (načteno {len(chores_list)} úkolů s rotací a termíny) - OK")
+
+    # 10.2 Vytvoření nového rotujícího úkolu
+    new_chore_payload = {
+        "title": "Vytřít terasu a vyčistit zahradní gril",
+        "description": "Omýt rošt grilu a zamést dlažbu na terase.",
+        "room": "garden",
+        "category": "routine",
+        "frequency": "weekly",
+        "interval_days": 7,
+        "points": 25,
+        "estimated_minutes": 20,
+        "is_rotation_enabled": True,
+        "rotation_member_ids": [1, 2, 3],
+        "current_assignee_id": 1,
+        "cleaning_supplies_needed": "Čistič grilu a kartáč Weber"
+    }
+    create_chore_res = client.post("/api/v1/chores", json=new_chore_payload, headers=headers)
+    assert create_chore_res.status_code == 201, f"Create chore failed: {create_chore_res.text}"
+    created_chore = create_chore_res.json()
+    test_chore_id = created_chore["id"]
+    assert created_chore["points"] == 25
+    assert created_chore["current_assignee_id"] == 1
+    print(f"10.2 Vytvoření nového rotujícího úkolu: '{created_chore['title']}' (+{created_chore['points']} b.) - OK")
+
+    # 10.3 Splnění úkolu, ověření bodů a posunu rotace
+    comp_res = client.post(f"/api/v1/chores/{test_chore_id}/complete", json={"notes": "Gril je nablýskaný"}, headers=headers)
+    assert comp_res.status_code == 200
+    comp_data = comp_res.json()
+    assert comp_data["last_completed_at"] is not None
+    # Rotation: [1, 2, 3] -> was 1, should now be 2
+    assert comp_data["current_assignee_id"] == 2, f"Expected next assignee 2, got {comp_data['current_assignee_id']}"
+    print(f"10.3 Splnění úkolu ('Splněno mnou'): Posun rotace na člena ID {comp_data['current_assignee_id']} - OK")
+
+    # 10.4 Ruční předání úkolu (Reassign)
+    reassign_res = client.post(f"/api/v1/chores/{test_chore_id}/reassign", json={"new_assignee_id": 3}, headers=headers)
+    assert reassign_res.status_code == 200
+    assert reassign_res.json()["current_assignee_id"] == 3
+    print("10.4 Ruční předání úkolu jinému členovi (Reassign na člena ID 3) - OK")
+
+    # 10.5 Rodinný žebříček a body
+    lb_res = client.get("/api/v1/chores/leaderboard", headers=headers)
+    assert lb_res.status_code == 200
+    leaderboard = lb_res.json()
+    assert len(leaderboard) >= 2
+    top_user = leaderboard[0]
+    print(f"10.5 Rodinný žebříček (Síň slávy): 1. místo '{top_user['display_name']}' se {top_user['weekly_points']} b. tento týden - OK")
+
+    # 10.6 Bleskový úklid (Panic Mode Tasks)
+    panic_res = client.get("/api/v1/chores/panic-mode-tasks", headers=headers)
+    assert panic_res.status_code == 200
+    panic_tasks = panic_res.json()
+    assert len(panic_tasks) >= 4
+    print(f"10.6 Panic Mode (vygenerováno {len(panic_tasks)} bleskových úkolů pro 15min sprint) - OK")
+
+    # 10.7 Obchod s odměnami a uplatnění za body
+    rewards_res = client.get("/api/v1/chores/rewards", headers=headers)
+    assert rewards_res.status_code == 200
+    rewards_list = rewards_res.json()
+    assert len(rewards_list) >= 4
+
+    first_reward_id = rewards_list[0]["id"]
+    redeem_res = client.post(f"/api/v1/chores/rewards/{first_reward_id}/redeem", headers=headers)
+    assert redeem_res.status_code == 200
+    redeem_data = redeem_res.json()
+    assert redeem_data["points_spent"] > 0
+    print(f"10.7 Obchod s odměnami (úspěšně uplatněna odměna za {redeem_data['points_spent']} b.) - OK")
+
+    # 10.8 Propojení s nákupním seznamem
+    supply_res = client.post(f"/api/v1/chores/{test_chore_id}/add-supply-to-shopping", headers=headers)
+    assert supply_res.status_code == 200
+    supply_shop_id = supply_res.json()["shopping_item_id"]
+    client.delete(f"/api/v1/shopping/{supply_shop_id}", headers=headers)
+    print("10.8 Propojení s rodinným nákupem ('Čisticí prostředky do nákupu') - OK")
+
+    # 10.9 Úklid testovacího úkolu
+    del_chore_res = client.delete(f"/api/v1/chores/{test_chore_id}", headers=headers)
+    assert del_chore_res.status_code == 200
+    print("10.9 Úklid testovacího úkolu - OK")
+
+    # === 11. KONTROLA FRONTEND PRODUKČNÍHO SESTAVENÍ ===
     frontend_dist_index = os.path.join("..", "frontend", "dist", "index.html")
     assert os.path.exists(frontend_dist_index), f"Frontend build dist not found at {frontend_dist_index}"
-    print("10. Frontend produkční sestavení (Vite dist index.html) - OK")
+    print("\n11. Frontend produkční sestavení (Vite dist index.html) - OK")
 
-    print("\n[SUCCESS] VŠECHNY TESTY ÚSPĚŠNĚ PROŠLY! HESTIA JE PLNĚ PŘIPRAVENA VČETNĚ MODULŮ RECEPTŮ, KVĚTIN I MAZLÍČKŮ.")
+    print("\n[SUCCESS] VŠECHNY TESTY ÚSPĚŠNĚ PROŠLY! HESTIA JE PLNĚ PŘIPRAVENA VČETNĚ MODULŮ RECEPTŮ, KVĚTIN, MAZLÍČKŮ I DOMÁCÍCH PRACÍ.")
 
 if __name__ == "__main__":
     run_tests()

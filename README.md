@@ -100,11 +100,37 @@ Zdraví, péče a každodenní rutina pro všechna zvířata v rodině.
 
 ---
 
+## 🧹 Modul 4: Domácí práce a úklid (Household Chores)
+
+Chytré plánování, férová rotace prací v rodině, servisní knížka spotřebičů a gamifikace.
+
+### 1. Férové střídání („Kdo je na řadě?“) & Zóny
+- Evidence rutinních úkolů (*kuchyň, koupelna, obývák, ložnice, předsíň, dětský pokoj, zahrada, celý dům*).
+- **Automatická rotace (Round-robin)**: Při splnění úkolu se automaticky střídá další člen rodiny v kolečku.
+- Možnost ručního předání / výměny úkolu jedním kliknutím.
+- Rychlé tlačítko **„Splněno mnou“** s okamžitým připsáním bodů a výpočtem dalšího termínu.
+
+### 2. Servisní knížka spotřebičů & Periodická péče
+- Evidence technické údržby domácí techniky (*odvápnění kávovaru, čištění filtrů myčky, filtru pračky, odmaštění filtrů digestoře*).
+- Odpočet dnů do příštího servisu a historie provedených údržeb.
+
+### 3. Gamifikace, Chore Points & Rodinná síň slávy
+- Bodové ohodnocení úkolů (5–100 b. podle náročnosti a času).
+- **Týdenní a celkový žebříček**: Přehled největších dříčů v rodině a ukazatel férovosti.
+- **Obchod s rodinnými odměnami**: Možnost směnit nasbírané body za reálné výhody (např. *výběr pátečního filmu, večeře na přání z Receptáře, zmrzlinový pohár, žolík bez úklidu*).
+
+### 4. Akční režimy úklidu
+- 🌪️ **Panic Mode („Návštěva zvoní za 15 minut!“)**: Bleskový úklidový sprint s 15minutovým odpočtem a sadou top prioritních zón.
+- 🎡 **Kolo štěstí (Fair Wheel of Chores)**: Interaktivní animované kolo osudu pro spravedlivé vylosování neoblíbeného úkolu.
+- 🧽 **Generální úklid**: Zónové checklisty s progress bary dokončení jednotlivých místností.
+- 🛒 **1-klik do nákupního seznamu**: Přidání tablet do myčky, pytlů do koše nebo čističů přímo do rodinného nákupu.
+
+---
+
 ## 🗺️ Roadmapa budoucích modulů
 
 Hestia je připravena pro postupné zapínání dalších modulů:
 - 🔧 **Asset management**: Evidence spotřebičů, záruk, sériových čísel a PDF návodů.
-- 🧹 **Domácí práce a úkoly**: Rotující úkoly mezi členy rodiny, body a harmonogram úklidu.
 - 💰 **Rodinné finance**: Rozpočet, pravidelná předplatná a rozdělení nákladů.
 - 💊 **Domácí lékárnička**: Expirace léků a dávkování při nemoci.
 - ⚡ **Měřiče energií**: Odečty elektřiny, plynu a vody se spotřebními grafy.

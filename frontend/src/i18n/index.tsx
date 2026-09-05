@@ -8,7 +8,7 @@ type Translations = typeof cs;
 interface I18nContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
-  t: (path: string) => string;
+  t: (path: string, params?: Record<string, any>) => string;
 }
 
 const translations: Record<Language, any> = { cs, en };
@@ -27,7 +27,7 @@ export const I18nProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('hestia_lang', lang);
   };
 
-  const t = (path: string): string => {
+  const t = (path: string, params?: Record<string, any>): string => {
     const keys = path.split('.');
     let current = translations[language];
     for (const key of keys) {
@@ -43,10 +43,17 @@ export const I18nProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return path;
           }
         }
-        return typeof fallback === 'string' ? fallback : path;
+        current = typeof fallback === 'string' ? fallback : path;
+        break;
       }
     }
-    return typeof current === 'string' ? current : path;
+    let res = typeof current === 'string' ? current : path;
+    if (params) {
+      Object.entries(params).forEach(([k, v]) => {
+        res = res.replace(new RegExp(`{{${k}}}`, 'g'), String(v));
+      });
+    }
+    return res;
   };
 
   return (

@@ -15,12 +15,12 @@ export const Sidebar: React.FC = () => {
     { to: '/shopping', label: t('nav.shopping'), icon: ShoppingCart },
     { to: '/plants', label: t('nav.plants'), icon: Flower2 },
     { to: '/pets', label: t('nav.pets'), icon: Dog },
+    { to: '/chores', label: t('nav.chores'), icon: CheckSquare },
     { to: '/settings', label: t('nav.settings'), icon: Settings },
   ];
 
   const futureModules = [
     { label: t('nav.assets'), icon: Wrench },
-    { label: t('nav.chores'), icon: CheckSquare },
     { label: t('nav.finances'), icon: Wallet },
     { label: t('nav.first_aid'), icon: HeartPulse },
   ];

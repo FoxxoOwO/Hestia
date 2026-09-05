@@ -4,9 +4,11 @@ from app.models.pantry import PantryItem
 from app.models.shopping import ShoppingItem
 from app.models.plant import Plant, PlantTask, PlantLogEntry
 from app.models.pet import Pet, PetMedicalRecord, PetMedication, PetWeightLog, PetTask, PetLogEntry
+from app.models.chore import Chore, ChoreCompletion, ChoreReward, ChoreRewardRedemption
 
 __all__ = [
     "User", "Recipe", "PantryItem", "ShoppingItem",
     "Plant", "PlantTask", "PlantLogEntry",
-    "Pet", "PetMedicalRecord", "PetMedication", "PetWeightLog", "PetTask", "PetLogEntry"
+    "Pet", "PetMedicalRecord", "PetMedication", "PetWeightLog", "PetTask", "PetLogEntry",
+    "Chore", "ChoreCompletion", "ChoreReward", "ChoreRewardRedemption"
 ]

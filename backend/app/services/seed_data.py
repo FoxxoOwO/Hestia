@@ -5,8 +5,10 @@ from app.models.pantry import PantryItem
 from app.models.shopping import ShoppingItem
 from app.models.plant import Plant, PlantTask, PlantLogEntry
 from app.models.pet import Pet, PetMedicalRecord, PetMedication, PetWeightLog, PetTask, PetLogEntry
+from app.models.chore import Chore, ChoreCompletion, ChoreReward, ChoreRewardRedemption
 from app.utils.auth import get_password_hash
 import datetime
+import json
 
 def seed_initial_data(db: Session):
     today = datetime.date.today()
@@ -560,6 +562,301 @@ def seed_initial_data(db: Session):
         ]
 
         db.add_all(medical + weights + meds + pet_tasks + pet_logs)
+        db.commit()
+
+    # 6. Seed Chores & Household Tasks if none exist
+    if db.query(Chore).count() == 0:
+        all_users = db.query(User).all()
+        user_ids = [u.id for u in all_users] if all_users else [1]
+        rotation_json = json.dumps(user_ids)
+
+        u1 = user_ids[0] if len(user_ids) > 0 else 1
+        u2 = user_ids[1] if len(user_ids) > 1 else u1
+        u3 = user_ids[2] if len(user_ids) > 2 else u1
+
+        # Routine chores
+        c1 = Chore(
+            title="Vyklidit myčku a roztřídit nádobí",
+            description="Vyskládat čisté nádobí z myčky a uložit talíře, sklenice a příbory na svá místa.",
+            room="kitchen",
+            category="routine",
+            frequency="daily",
+            interval_days=1,
+            points=10,
+            estimated_minutes=5,
+            is_rotation_enabled=True,
+            rotation_member_ids=rotation_json,
+            current_assignee_id=u1,
+            due_date=today.isoformat(),
+            cleaning_supplies_needed="Tablety do myčky Jar Platinum, leštidlo Somat",
+            is_appliance_maintenance=False,
+            is_active=True
+        )
+        c2 = Chore(
+            title="Vynést tříděný odpad (plast, papír, bio)",
+            description="Zkontrolovat koše pod dřezem a odnést plné pytle do venkovních popelnic.",
+            room="kitchen",
+            category="routine",
+            frequency="daily",
+            interval_days=2,
+            points=15,
+            estimated_minutes=8,
+            is_rotation_enabled=True,
+            rotation_member_ids=rotation_json,
+            current_assignee_id=u2,
+            due_date=today.isoformat(),
+            cleaning_supplies_needed="Pytle do koše 60 l se zatahovací páskou",
+            is_appliance_maintenance=False,
+            is_active=True
+        )
+        c3 = Chore(
+            title="Vyluxovat a vytřít obývací pokoj a chodbu",
+            description="Vysát drobky a zvířecí chlupy a setřít podlahu mopem s kapkou vonného čističe.",
+            room="living_room",
+            category="routine",
+            frequency="weekly",
+            interval_days=7,
+            points=25,
+            estimated_minutes=20,
+            is_rotation_enabled=True,
+            rotation_member_ids=rotation_json,
+            current_assignee_id=u3,
+            due_date=(today + datetime.timedelta(days=1)).isoformat(),
+            cleaning_supplies_needed="Univerzální vonný čistič na podlahy Sanytol",
+            is_appliance_maintenance=False,
+            is_active=True
+        )
+        c4 = Chore(
+            title="Důkladně vyčistit koupelnu, zrcadlo a toaletu",
+            description="Vydezinfikovat mísu, setřít umyvadlo a baterie a vyleštit zrcadlo.",
+            room="bathroom",
+            category="routine",
+            frequency="weekly",
+            interval_days=7,
+            points=35,
+            estimated_minutes=25,
+            is_rotation_enabled=True,
+            rotation_member_ids=rotation_json,
+            current_assignee_id=u1,
+            due_date=(today + datetime.timedelta(days=2)).isoformat(),
+            cleaning_supplies_needed="WC gel Bref, čistič koupelny Cillit Bang, utěrka z mikrovlákna",
+            is_appliance_maintenance=False,
+            is_active=True
+        )
+        c5 = Chore(
+            title="Převléknout ložní prádlo a vyvětrat matrace",
+            description="Svléknout povlečení, dát prát na 60°C a navléknout čerstvé voňavé povlečení.",
+            room="bedroom",
+            category="routine",
+            frequency="biweekly",
+            interval_days=14,
+            points=30,
+            estimated_minutes=15,
+            is_rotation_enabled=True,
+            rotation_member_ids=rotation_json,
+            current_assignee_id=u2,
+            due_date=(today + datetime.timedelta(days=4)).isoformat(),
+            cleaning_supplies_needed="Prací gel na bílé a barevné prádlo Ariel",
+            is_appliance_maintenance=False,
+            is_active=True
+        )
+
+        # Appliance Maintenance (Servisní knížka spotřebičů)
+        m1 = Chore(
+            title="Odvápnit kávovar a vyčistit trysku na mléko",
+            description="Spustit odvápňovací cyklus s originálním roztokem a propláchnout napěňovač mléka.",
+            room="kitchen",
+            category="maintenance",
+            frequency="monthly",
+            interval_days=30,
+            points=20,
+            estimated_minutes=20,
+            is_rotation_enabled=False,
+            rotation_member_ids=rotation_json,
+            current_assignee_id=u1,
+            due_date=(today + datetime.timedelta(days=6)).isoformat(),
+            cleaning_supplies_needed="Odvápňovací roztok DeLonghi EcoDecalk",
+            is_appliance_maintenance=True,
+            appliance_name="Kávovar DeLonghi Magnifica S",
+            is_active=True
+        )
+        m2 = Chore(
+            title="Vyčistit filtr a ostřikovací ramena myčky",
+            description="Vyšroubovat spodní sítko, opláchnout mastnotu teplou vodou a spustit mycí cyklus naprázdno.",
+            room="kitchen",
+            category="maintenance",
+            frequency="monthly",
+            interval_days=30,
+            points=25,
+            estimated_minutes=15,
+            is_rotation_enabled=False,
+            rotation_member_ids=rotation_json,
+            current_assignee_id=u3,
+            due_date=(today + datetime.timedelta(days=12)).isoformat(),
+            cleaning_supplies_needed="Čistič myčky nádobí Somat Duo",
+            is_appliance_maintenance=True,
+            appliance_name="Myčka nádobí Bosch Série 6",
+            is_active=True
+        )
+        m3 = Chore(
+            title="Vyčistit filtr pračky a gumové těsnění bubnu",
+            description="Otevřít spodní kryt, vypustit zbytkem hadičky vodu, vyčistit zachycené nečistoty a otřít gumu octem.",
+            room="bathroom",
+            category="maintenance",
+            frequency="monthly",
+            interval_days=60,
+            points=30,
+            estimated_minutes=15,
+            is_rotation_enabled=False,
+            rotation_member_ids=rotation_json,
+            current_assignee_id=u1,
+            due_date=(today + datetime.timedelta(days=20)).isoformat(),
+            is_appliance_maintenance=True,
+            appliance_name="Automatická pračka LG AI DD",
+            is_active=True
+        )
+
+        # Panic mode quick sprint tasks
+        p1 = Chore(
+            title="Sklidit boty, bundy a tašky v předsíni",
+            description="Všechny rozházené boty do botníku, bundy na věšáky, ať je chodba vzdušná.",
+            room="hallway",
+            category="panic_mode",
+            frequency="as_needed",
+            interval_days=1,
+            points=10,
+            estimated_minutes=4,
+            is_rotation_enabled=False,
+            rotation_member_ids=rotation_json,
+            current_assignee_id=u2,
+            due_date=today.isoformat(),
+            is_active=True
+        )
+        p2 = Chore(
+            title="Vyklidit kuchyňský dřez a setřít linku",
+            description="Schovat špinavé nádobí do myčky a otřít drobečky a skvrny z pracovní plochy.",
+            room="kitchen",
+            category="panic_mode",
+            frequency="as_needed",
+            interval_days=1,
+            points=10,
+            estimated_minutes=5,
+            is_rotation_enabled=False,
+            rotation_member_ids=rotation_json,
+            current_assignee_id=u1,
+            due_date=today.isoformat(),
+            is_active=True
+        )
+        p3 = Chore(
+            title="Zkontrolovat toaletu, čistý ručník a vůni",
+            description="Rychle přejet WC štětkou, pověsit čistý ručník na ruce a stříknout osvěžovač.",
+            room="bathroom",
+            category="panic_mode",
+            frequency="as_needed",
+            interval_days=1,
+            points=10,
+            estimated_minutes=4,
+            is_rotation_enabled=False,
+            rotation_member_ids=rotation_json,
+            current_assignee_id=u3,
+            due_date=today.isoformat(),
+            is_active=True
+        )
+        p4 = Chore(
+            title="Srovnat polštáře a deky na pohovce v obýváku",
+            description="Naklepat polštáře, složit deku a odnést prázdné hrnky z konferenčního stolku.",
+            room="living_room",
+            category="panic_mode",
+            frequency="as_needed",
+            interval_days=1,
+            points=10,
+            estimated_minutes=3,
+            is_rotation_enabled=False,
+            rotation_member_ids=rotation_json,
+            current_assignee_id=u2,
+            due_date=today.isoformat(),
+            is_active=True
+        )
+
+        # Deep cleaning (Generální úklid)
+        d1 = Chore(
+            title="Umýt a vyleštit okna a parapety v bytě",
+            description="Omýt rámy teplou vodou, skla vyleštit stěrkou a otřít parapety.",
+            room="general",
+            category="deep_clean",
+            frequency="seasonal",
+            interval_days=120,
+            points=80,
+            estimated_minutes=90,
+            is_rotation_enabled=True,
+            rotation_member_ids=rotation_json,
+            current_assignee_id=u1,
+            due_date=(today + datetime.timedelta(days=25)).isoformat(),
+            cleaning_supplies_needed="Clin na okna se stěrkou, utěrky z mikrovlákna",
+            is_active=True
+        )
+        d2 = Chore(
+            title="Hloubkově odmastit troubu a plechy na pečení",
+            description="Nastříkat pěnu do trouby, nechat působit 30 minut a setřít napečenou mastnotu.",
+            room="kitchen",
+            category="deep_clean",
+            frequency="monthly",
+            interval_days=45,
+            points=50,
+            estimated_minutes=45,
+            is_rotation_enabled=True,
+            rotation_member_ids=rotation_json,
+            current_assignee_id=u3,
+            due_date=(today + datetime.timedelta(days=15)).isoformat(),
+            cleaning_supplies_needed="Aktivní pěna na trouby Dr. Beckmann",
+            is_active=True
+        )
+
+        all_chores = [c1, c2, c3, c4, c5, m1, m2, m3, p1, p2, p3, p4, d1, d2]
+        db.add_all(all_chores)
+        db.commit()
+
+        # Seed Rewards
+        r1 = ChoreReward(
+            title="Výběr rodinného filmu na páteční večer",
+            description="Získáš plné právo vybrat film na společný filmový večer + velkou mísu popcornu.",
+            cost_points=50,
+            icon="Film",
+            is_active=True
+        )
+        r2 = ChoreReward(
+            title="Výběr sobotního oběda z rodinné kuchařky",
+            description="Uvaříme tvé nejoblíbenější jídlo z Hestia receptáře přesně podle tvého přání.",
+            cost_points=75,
+            icon="Utensils",
+            is_active=True
+        )
+        r3 = ChoreReward(
+            title="Velký zmrzlinový pohár se šlehačkou",
+            description="Poctivá sladká odměna za vzornou pomoc a aktivitu v domácnosti.",
+            cost_points=100,
+            icon="IceCream",
+            is_active=True
+        )
+        r4 = ChoreReward(
+            title="Žolík: Den bez domácích prací",
+            description="Celých 24 hodin máš imunitu před jakýmkoliv úklidem a povinnostmi.",
+            cost_points=150,
+            icon="Shield",
+            is_active=True
+        )
+        db.add_all([r1, r2, r3, r4])
+        db.commit()
+
+        # Seed sample completions for leaderboard
+        now = datetime.datetime.utcnow()
+        comp1 = ChoreCompletion(chore_id=c1.id, user_id=u1, points_awarded=10, completed_at=now - datetime.timedelta(days=1), notes="Rychlé vyklizení ráno")
+        comp2 = ChoreCompletion(chore_id=c2.id, user_id=u2, points_awarded=15, completed_at=now - datetime.timedelta(days=2), notes="Odnesen i starý karton")
+        comp3 = ChoreCompletion(chore_id=c3.id, user_id=u3, points_awarded=25, completed_at=now - datetime.timedelta(days=3), notes="Vytřeno s novou vůní")
+        comp4 = ChoreCompletion(chore_id=c4.id, user_id=u1, points_awarded=35, completed_at=now - datetime.timedelta(days=4), notes="Kompletní očista")
+        comp5 = ChoreCompletion(chore_id=c5.id, user_id=u2, points_awarded=30, completed_at=now - datetime.timedelta(days=5), notes="Nové damaškové povlečení")
+        comp6 = ChoreCompletion(chore_id=m1.id, user_id=u1, points_awarded=20, completed_at=now - datetime.timedelta(days=6), notes="Kávovar hlásil odvápnění")
+        db.add_all([comp1, comp2, comp3, comp4, comp5, comp6])
         db.commit()
 
 

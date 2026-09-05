@@ -18,6 +18,7 @@ import { PlantEditPage } from './pages/PlantEditPage';
 import { PetsPage } from './pages/PetsPage';
 import { PetDetailPage } from './pages/PetDetailPage';
 import { PetEditPage } from './pages/PetEditPage';
+import { ChoresPage } from './pages/ChoresPage';
 import { SettingsPage } from './pages/SettingsPage';
 
 export const App: React.FC = () => {
@@ -47,6 +48,7 @@ export const App: React.FC = () => {
                     <Route path="/pets/new" element={<PetEditPage />} />
                     <Route path="/pets/:id" element={<PetDetailPage />} />
                     <Route path="/pets/:id/edit" element={<PetEditPage />} />
+                    <Route path="/chores" element={<ChoresPage />} />
                     <Route path="/settings" element={<SettingsPage />} />
                   </Routes>
                 </main>

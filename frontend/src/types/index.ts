@@ -1,5 +1,6 @@
 export * from './plant';
 export * from './pet';
+export * from './chore';
 
 export type Role = 'admin' | 'member';
 
