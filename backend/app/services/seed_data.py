@@ -6,6 +6,7 @@ from app.models.shopping import ShoppingItem
 from app.models.plant import Plant, PlantTask, PlantLogEntry
 from app.models.pet import Pet, PetMedicalRecord, PetMedication, PetWeightLog, PetTask, PetLogEntry
 from app.models.chore import Chore, ChoreCompletion, ChoreReward, ChoreRewardRedemption
+from app.models.finance import FinanceTransaction, CategoryBudget, Subscription, SavingsGoal, UserFinanceProfile
 from app.utils.auth import get_password_hash
 import datetime
 import json
@@ -857,6 +858,104 @@ def seed_initial_data(db: Session):
         comp5 = ChoreCompletion(chore_id=c5.id, user_id=u2, points_awarded=30, completed_at=now - datetime.timedelta(days=5), notes="Nové damaškové povlečení")
         comp6 = ChoreCompletion(chore_id=m1.id, user_id=u1, points_awarded=20, completed_at=now - datetime.timedelta(days=6), notes="Kávovar hlásil odvápnění")
         db.add_all([comp1, comp2, comp3, comp4, comp5, comp6])
+        db.commit()
+
+    # 7. Seed Finance Data if none exists
+    if db.query(FinanceTransaction).count() == 0:
+        all_users = db.query(User).all()
+        u1 = all_users[0].id if len(all_users) > 0 else 1
+        u2 = all_users[1].id if len(all_users) > 1 else u1
+        u3 = all_users[2].id if len(all_users) > 2 else u1
+
+        # Finance Profiles with bank accounts & IBANs for QR payments
+        p1 = UserFinanceProfile(user_id=u1, bank_account="123456789/0800", iban="CZ7508000000000123456789")
+        p2 = UserFinanceProfile(user_id=u2, bank_account="987654321/2010", iban="CZ2420100000000987654321")
+        p3 = UserFinanceProfile(user_id=u3, bank_account="555444333/0300", iban="CZ6803000000000555444333")
+        db.add_all([p1, p2, p3])
+
+        # Category Budgets
+        budgets = [
+            CategoryBudget(category="groceries", monthly_limit=12000.0, icon="ShoppingCart", color="#f97316"),
+            CategoryBudget(category="housing", monthly_limit=18000.0, icon="Home", color="#3b82f6"),
+            CategoryBudget(category="utilities", monthly_limit=5000.0, icon="Zap", color="#eab308"),
+            CategoryBudget(category="transport", monthly_limit=4500.0, icon="Car", color="#06b6d4"),
+            CategoryBudget(category="pets", monthly_limit=3000.0, icon="Dog", color="#8b5cf6"),
+            CategoryBudget(category="health", monthly_limit=2000.0, icon="HeartPulse", color="#ef4444"),
+            CategoryBudget(category="entertainment", monthly_limit=3500.0, icon="Film", color="#ec4899"),
+            CategoryBudget(category="kids", monthly_limit=4000.0, icon="Baby", color="#10b981"),
+            CategoryBudget(category="shopping", monthly_limit=4000.0, icon="ShoppingBag", color="#6366f1"),
+            CategoryBudget(category="other", monthly_limit=3000.0, icon="Tag", color="#64748b"),
+        ]
+        db.add_all(budgets)
+
+        # Multi-month history for accurate average monthly spending calculations
+        # Month -2 (e.g. July)
+        m2_date = today - datetime.timedelta(days=60)
+        m2_str = m2_date.strftime("%Y-%m")
+        # Month -1 (e.g. August)
+        m1_date = today - datetime.timedelta(days=30)
+        m1_str = m1_date.strftime("%Y-%m")
+        # Current month
+        m0_str = today.strftime("%Y-%m")
+
+        txs = [
+            # Incomes
+            FinanceTransaction(title="Výplata - Hlavní příjem", amount=48000.0, transaction_type="income", category="income", date=f"{m2_str}-10", payer_id=u1, is_shared=True),
+            FinanceTransaction(title="Výplata - Příjem Anna", amount=42000.0, transaction_type="income", category="income", date=f"{m2_str}-12", payer_id=u2, is_shared=True),
+            FinanceTransaction(title="Výplata - Hlavní příjem", amount=48000.0, transaction_type="income", category="income", date=f"{m1_str}-10", payer_id=u1, is_shared=True),
+            FinanceTransaction(title="Výplata - Příjem Anna", amount=42000.0, transaction_type="income", category="income", date=f"{m1_str}-12", payer_id=u2, is_shared=True),
+            FinanceTransaction(title="Výplata - Hlavní příjem", amount=48000.0, transaction_type="income", category="income", date=f"{m0_str}-01", payer_id=u1, is_shared=True),
+            FinanceTransaction(title="Výplata - Příjem Anna", amount=42000.0, transaction_type="income", category="income", date=f"{m0_str}-02", payer_id=u2, is_shared=True),
+
+            # Month -2 Expenses
+            FinanceTransaction(title="Nájem a poplatky za byt", amount=16500.0, transaction_type="expense", category="housing", date=f"{m2_str}-05", payer_id=u1, is_shared=True),
+            FinanceTransaction(title="Zálohy ČEZ elektřina a plyn", amount=4200.0, transaction_type="expense", category="utilities", date=f"{m2_str}-08", payer_id=u1, is_shared=True),
+            FinanceTransaction(title="Velký nákup Albert", amount=3650.0, transaction_type="expense", category="groceries", date=f"{m2_str}-06", payer_id=u2, is_shared=True),
+            FinanceTransaction(title="Týdenní nákup Kaufland", amount=2850.0, transaction_type="expense", category="groceries", date=f"{m2_str}-14", payer_id=u1, is_shared=True),
+            FinanceTransaction(title="Nákup Rohlík.cz", amount=3120.0, transaction_type="expense", category="groceries", date=f"{m2_str}-22", payer_id=u2, is_shared=True),
+            FinanceTransaction(title="Plná nádrž Benzina Orlen", amount=2150.0, transaction_type="expense", category="transport", date=f"{m2_str}-11", payer_id=u3, is_shared=True),
+            FinanceTransaction(title="Granule a pamlsky Zoohit (Baddy & Mia)", amount=2450.0, transaction_type="expense", category="pets", date=f"{m2_str}-15", payer_id=u1, is_shared=True),
+            FinanceTransaction(title="Rodinná večeře v pizzerii", amount=1680.0, transaction_type="expense", category="entertainment", date=f"{m2_str}-18", payer_id=u2, is_shared=True),
+
+            # Month -1 Expenses
+            FinanceTransaction(title="Nájem a poplatky za byt", amount=16500.0, transaction_type="expense", category="housing", date=f"{m1_str}-05", payer_id=u1, is_shared=True),
+            FinanceTransaction(title="Zálohy ČEZ elektřina a plyn", amount=4200.0, transaction_type="expense", category="utilities", date=f"{m1_str}-08", payer_id=u1, is_shared=True),
+            FinanceTransaction(title="Velký nákup Lidl", amount=3420.0, transaction_type="expense", category="groceries", date=f"{m1_str}-04", payer_id=u1, is_shared=True),
+            FinanceTransaction(title="Týdenní nákup Albert", amount=2950.0, transaction_type="expense", category="groceries", date=f"{m1_str}-12", payer_id=u2, is_shared=True),
+            FinanceTransaction(title="Drogerie dm nákup", amount=1540.0, transaction_type="expense", category="groceries", date=f"{m1_str}-19", payer_id=u2, is_shared=True),
+            FinanceTransaction(title="Tankování Shell V-Power", amount=1980.0, transaction_type="expense", category="transport", date=f"{m1_str}-09", payer_id=u1, is_shared=True),
+            FinanceTransaction(title="Veterinární klinika U Lesa (očkování Baddy)", amount=1850.0, transaction_type="expense", category="pets", date=f"{m1_str}-16", payer_id=u2, is_shared=True),
+            FinanceTransaction(title="Lékárna Dr. Max vitamíny", amount=980.0, transaction_type="expense", category="health", date=f"{m1_str}-20", payer_id=u1, is_shared=True),
+            FinanceTransaction(title="Lístky do kina IMAX a občerstvení", amount=1150.0, transaction_type="expense", category="entertainment", date=f"{m1_str}-23", payer_id=u3, is_shared=True),
+
+            # Current Month Expenses
+            FinanceTransaction(title="Nájem a poplatky za byt", amount=16500.0, transaction_type="expense", category="housing", date=f"{m0_str}-01", payer_id=u1, is_shared=True),
+            FinanceTransaction(title="Zálohy ČEZ elektřina a plyn", amount=4200.0, transaction_type="expense", category="utilities", date=f"{m0_str}-02", payer_id=u1, is_shared=True),
+            FinanceTransaction(title="Velký víkendový nákup Kaufland", amount=3750.0, transaction_type="expense", category="groceries", date=f"{m0_str}-03", payer_id=u2, is_shared=True),
+            FinanceTransaction(title="Pohonné hmoty OMV", amount=2240.0, transaction_type="expense", category="transport", date=f"{m0_str}-04", payer_id=u3, is_shared=True),
+            FinanceTransaction(title="Krmivo a stelivo KočkaVET", amount=1620.0, transaction_type="expense", category="pets", date=f"{m0_str}-04", payer_id=u1, is_shared=True),
+            FinanceTransaction(title="Předplatné Netflix Premium", amount=379.0, transaction_type="expense", category="entertainment", date=f"{m0_str}-05", payer_id=u1, is_shared=True)
+        ]
+        db.add_all(txs)
+
+        # Subscriptions
+        subs = [
+            Subscription(name="Netflix Premium 4K", amount=379.0, billing_cycle="monthly", next_billing_date=(today + datetime.timedelta(days=12)).isoformat(), category="entertainment", payer_id=u1),
+            Subscription(name="Spotify Family", amount=269.0, billing_cycle="monthly", next_billing_date=(today + datetime.timedelta(days=18)).isoformat(), category="entertainment", payer_id=u2),
+            Subscription(name="Vysokorychlostní internet Vodafone", amount=590.0, billing_cycle="monthly", next_billing_date=(today + datetime.timedelta(days=7)).isoformat(), category="utilities", payer_id=u1),
+            Subscription(name="Pojištění domácnosti a odpovědnosti Kooperativa", amount=3400.0, billing_cycle="yearly", next_billing_date=(today + datetime.timedelta(days=95)).isoformat(), category="housing", payer_id=u1),
+            Subscription(name="Poplatek za svoz komunálního odpadu", amount=1200.0, billing_cycle="yearly", next_billing_date=(today + datetime.timedelta(days=140)).isoformat(), category="utilities", payer_id=u2)
+        ]
+        db.add_all(subs)
+
+        # Savings Goals
+        goals = [
+            SavingsGoal(title="Letní dovolená u moře v Řecku", target_amount=45000.0, current_amount=28500.0, target_date=(today + datetime.timedelta(days=180)).isoformat(), icon="Palmtree", color="#06b6d4"),
+            SavingsGoal(title="Nová sedací souprava do obývacího pokoje", target_amount=30000.0, current_amount=14200.0, target_date=(today + datetime.timedelta(days=90)).isoformat(), icon="Sofa", color="#f97316"),
+            SavingsGoal(title="Železná finanční rezerva domácnosti (3 měsíce)", target_amount=100000.0, current_amount=65000.0, target_date=None, icon="Shield", color="#10b981")
+        ]
+        db.add_all(goals)
+
         db.commit()
 
 
