@@ -19,7 +19,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.hestia.theme.HestiaOrange
-import com.example.hestia.ui.components.HestiaBottomNav
 import com.example.hestia.ui.components.HestiaTopBar
 import com.example.hestia.ui.navigation.Screen
 import com.example.hestia.ui.navigation.drawerModuleScreens
@@ -263,14 +262,6 @@ fun MainNavigation() {
                         onSettingsClick = { currentScreen = Screen.Settings },
                         onUserClick = { currentScreen = Screen.Settings }
                     )
-                },
-                bottomBar = {
-                    if (currentScreen != Screen.Settings && currentScreen != Screen.ServerConfig) {
-                        HestiaBottomNav(
-                            currentRoute = currentScreen.route,
-                            onNavigate = { currentScreen = it }
-                        )
-                    }
                 }
             ) { paddingValues ->
                 Box(

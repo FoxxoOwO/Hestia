@@ -5,7 +5,6 @@ import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
-import { MobileNav } from './components/MobileNav';
 
 import { LoginPage } from './pages/LoginPage';
 import { RecipesPage } from './pages/RecipesPage';
@@ -87,8 +86,6 @@ const AppContent: React.FC = () => {
             </Routes>
           </main>
         </div>
-
-        <MobileNav />
       </div>
     </BrowserRouter>
   );
