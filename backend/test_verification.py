@@ -3,14 +3,15 @@ import datetime
 from fastapi.testclient import TestClient
 from app.main import app
 from app.database import engine, Base, SessionLocal
-from app.services.seed_data import seed_initial_data
+from app.services.seed_demo_data import seed_demo_data
+from app.services.clean_data import clean_all_sample_data
 
 def run_tests():
     print("=== SPUŠTĚNÍ TESTŮ HESTIA ===")
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
-        seed_initial_data(db)
+        seed_demo_data(db)
     finally:
         db.close()
 
@@ -1053,6 +1054,14 @@ def run_tests():
     deleted_login = client.post("/api/v1/auth/login", json={"username": test_uname, "password": "nove_bezpecne_heslo_456"})
     assert deleted_login.status_code in (400, 401, 404)
     print(f"16.11 Úspěšné smazání člena a ověření zamítnutí přístupu (DELETE /users/{test_user_id}) - OK")
+
+    # Uklidit testovací data z databáze
+    clean_db = SessionLocal()
+    try:
+        clean_all_sample_data(clean_db)
+        print("17. Vyčištění testovacích dat: Databáze zanechána v čistém produkčním stavu - OK")
+    finally:
+        clean_db.close()
 
     print("\n[SUCCESS] VŠECHNY TESTY ÚSPĚŠNĚ PROŠLY! HESTIA JE PLNĚ PŘIPRAVENA VČETNĚ VŠECH 16 TESTOVACÍCH SEKCE (SPRÁVA ČLENŮ, AUDIT LOG, RECEPTY, KVĚTINY, MAZLÍČCI, DOMÁCÍ PRÁCE, FINANCE, DOKUMENTY, VOZOVÝ PARK, LÉKÁRNIČKA).")
 
