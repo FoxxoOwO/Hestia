@@ -298,7 +298,7 @@ fun DashboardScreen(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = act.user_display_name.take(1).uppercase(),
+                                    text = act.displayName.take(1).uppercase(),
                                     color = Color.White,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold
@@ -313,7 +313,7 @@ fun DashboardScreen(
                                     color = MaterialTheme.colorScheme.onBackground
                                 )
                                 Text(
-                                    text = "${act.user_display_name} • ${act.created_at.take(16).replace('T', ' ')}",
+                                    text = "${act.displayName} • ${act.created_at.take(16).replace('T', ' ')}",
                                     fontSize = 10.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )

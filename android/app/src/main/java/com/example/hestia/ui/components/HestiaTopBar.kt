@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -24,11 +25,21 @@ import com.example.hestia.theme.HestiaOrange
 fun HestiaTopBar(
     title: String,
     currentUser: User?,
+    onMenuClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onUserClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     TopAppBar(
+        navigationIcon = {
+            IconButton(onClick = onMenuClick) {
+                Icon(
+                    imageVector = Icons.Default.Menu,
+                    contentDescription = "Boční menu",
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        },
         title = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,

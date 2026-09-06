@@ -215,12 +215,216 @@ data class MileageUpdate(
 @Serializable
 data class ActivityLog(
     val id: Int,
-    val username: String,
-    val user_display_name: String,
+    val user_id: Int? = null,
+    val user_name: String = "Systém",
+    val username: String? = null,
+    val user_display_name: String? = null,
+    val user_avatar_color: String? = "#F97316",
     val user_color: String? = "#F97316",
-    val module: String,
-    val action_type: String,
+    val module: String = "system",
+    val action_type: String = "info",
+    val title: String = "",
+    val description: String? = null,
+    val created_at: String = ""
+) {
+    val displayName: String
+        get() = user_display_name ?: user_name.ifBlank { username ?: "Uživatel" }
+
+    val effectiveColor: String
+        get() = user_color ?: user_avatar_color ?: "#F97316"
+}
+
+@Serializable
+data class ActivityListResponse(
+    val items: List<ActivityLog> = emptyList(),
+    val total: Int = 0,
+    val limit: Int = 50,
+    val offset: Int = 0
+)
+
+// --- RECIPES & COOKBOOK ---
+@Serializable
+data class RecipeIngredient(
+    val name: String,
+    val amount: Double = 1.0,
+    val unit: String = "ks",
+    val note: String? = null,
+    val category: String? = "other"
+)
+
+@Serializable
+data class RecipeStep(
+    val step: Int = 1,
+    val text: String,
+    val timer_minutes: Int? = null
+)
+
+@Serializable
+data class Recipe(
+    val id: Int,
     val title: String,
     val description: String? = null,
-    val created_at: String
+    val image_url: String? = null,
+    val prep_time_minutes: Int = 15,
+    val cook_time_minutes: Int = 30,
+    val total_time_minutes: Int = 45,
+    val difficulty: String = "medium",
+    val price_level: String = "medium",
+    val default_servings: Int = 4,
+    val tags: List<String> = emptyList(),
+    val ingredients: List<RecipeIngredient> = emptyList(),
+    val instructions: List<RecipeStep> = emptyList(),
+    val is_favorite: Boolean = false
+)
+
+// --- PANTRY & INVENTORY ---
+@Serializable
+data class PantryItem(
+    val id: Int,
+    val name: String,
+    val category: String = "pantry",
+    val quantity: Double = 1.0,
+    val unit: String = "ks",
+    val expiration_date: String? = null,
+    val min_quantity: Double? = null,
+    val note: String? = null,
+    val status: String = "fresh"
+)
+
+@Serializable
+data class PantryItemCreate(
+    val name: String,
+    val category: String = "pantry",
+    val quantity: Double = 1.0,
+    val unit: String = "ks",
+    val expiration_date: String? = null,
+    val note: String? = null
+)
+
+// --- PETS ---
+@Serializable
+data class PetMedicalRecord(
+    val id: Int = 0,
+    val record_type: String = "checkup",
+    val title: String,
+    val performed_date: String,
+    val valid_until: String? = null,
+    val veterinarian: String? = null,
+    val notes: String? = null
+)
+
+@Serializable
+data class Pet(
+    val id: Int,
+    val name: String,
+    val species: String = "dog",
+    val breed: String? = null,
+    val birth_date: String? = null,
+    val gender: String = "unknown",
+    val color: String? = null,
+    val primary_image_url: String? = null,
+    val age_formatted: String = "",
+    val latest_weight_kg: Double? = null,
+    val last_fed_at: String? = null,
+    val last_fed_by_name: String? = null,
+    val vet_name: String? = null,
+    val vet_phone: String? = null,
+    val medical_records: List<PetMedicalRecord> = emptyList(),
+    val is_favorite: Boolean = false
+)
+
+// --- FINANCE ---
+@Serializable
+data class TransactionItem(
+    val id: Int,
+    val title: String,
+    val amount: Double,
+    val transaction_type: String = "expense",
+    val category: String = "groceries",
+    val date: String,
+    val payer_id: Int,
+    val is_shared: Boolean = true,
+    val is_settled: Boolean = false,
+    val notes: String? = null,
+    val payer: UserSimple? = null
+)
+
+@Serializable
+data class UserSimple(
+    val id: Int,
+    val username: String,
+    val display_name: String,
+    val avatar_color: String? = "#F97316"
+)
+
+@Serializable
+data class DebtSettlementItem(
+    val from_user_id: Int,
+    val from_user_name: String,
+    val to_user_id: Int,
+    val to_user_name: String,
+    val amount: Double,
+    val spayd_string: String = ""
+)
+
+@Serializable
+data class MemberBalance(
+    val user_id: Int,
+    val user_name: String,
+    val avatar_color: String = "#F97316",
+    val paid_total: Double,
+    val share_total: Double,
+    val net_balance: Double
+)
+
+@Serializable
+data class DebtSettlementResponse(
+    val balances: List<MemberBalance> = emptyList(),
+    val settlements: List<DebtSettlementItem> = emptyList()
+)
+
+@Serializable
+data class FinanceSummary(
+    val current_month_expenses: Double = 0.0,
+    val current_month_income: Double = 0.0,
+    val current_month_net: Double = 0.0,
+    val historical_average_monthly_expense: Double = 0.0
+)
+
+// --- DOCUMENTS & ARCHIVE ---
+@Serializable
+data class DocumentItem(
+    val id: Int,
+    val title: String,
+    val category: String = "warranty",
+    val file_name: String = "",
+    val file_size: Int = 0,
+    val file_type: String = "application/pdf",
+    val issuer: String? = null,
+    val document_date: String? = null,
+    val expiry_date: String? = null,
+    val warranty_months: Int? = null,
+    val amount: Double? = null,
+    val physical_location: String? = null,
+    val is_vault_protected: Boolean = false,
+    val days_until_expiry: Int? = null,
+    val status: String = "active"
+)
+
+@Serializable
+data class DocumentStats(
+    val total_documents: Int = 0,
+    val vault_protected: Int = 0,
+    val expiring_soon: Int = 0,
+    val expired: Int = 0
+)
+
+// --- SYSTEM BACKUPS ---
+@Serializable
+data class BackupItem(
+    val filename: String,
+    val created_at: String,
+    val size_kb: Double = 0.0,
+    val items_count: Int = 0,
+    val note: String? = null
 )

@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Flame, Moon, Sun, Monitor, Globe, UserCheck, ChevronDown, LogOut, History, Palette } from 'lucide-react';
+import {
+  Flame, Moon, Sun, Monitor, Globe, UserCheck, ChevronDown, LogOut, History, Palette,
+  Menu, X, UtensilsCrossed, PackageOpen, ShoppingCart, Flower2, Dog, CheckSquare,
+  Wallet, FolderArchive, Car, HeartPulse, Settings
+} from 'lucide-react';
 import { useTranslation } from '../i18n';
 import { useTheme, DesignStyle } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -15,7 +19,23 @@ export const Navbar: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [switchModalOpen, setSwitchModalOpen] = useState(false);
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [targetUser, setTargetUser] = useState<User | null>(null);
+
+  const mobileNavItems = [
+    { to: '/', label: t('nav.recipes'), icon: UtensilsCrossed },
+    { to: '/pantry', label: t('nav.pantry'), icon: PackageOpen },
+    { to: '/shopping', label: t('nav.shopping'), icon: ShoppingCart },
+    { to: '/plants', label: t('nav.plants'), icon: Flower2 },
+    { to: '/pets', label: t('nav.pets'), icon: Dog },
+    { to: '/chores', label: t('nav.chores'), icon: CheckSquare },
+    { to: '/finance', label: t('nav.finances'), icon: Wallet },
+    { to: '/documents', label: t('nav.documents'), icon: FolderArchive },
+    { to: '/vehicles', label: t('nav.vehicles'), icon: Car },
+    { to: '/medicines', label: t('nav.first_aid'), icon: HeartPulse },
+    { to: '/activity', label: t('nav.activity'), icon: History },
+    { to: '/settings', label: t('nav.settings'), icon: Settings },
+  ];
 
 
   useEffect(() => {
@@ -45,7 +65,16 @@ export const Navbar: React.FC = () => {
     <header className="sticky top-0 z-40 w-full backdrop-blur-md bg-white/80 dark:bg-zinc-900/80 border-b border-zinc-200 dark:border-zinc-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Brand */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Mobile hamburger menu toggle */}
+          <button
+            type="button"
+            onClick={() => setMobileDrawerOpen(!mobileDrawerOpen)}
+            className="lg:hidden p-2 -ml-2 rounded-xl text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
+            aria-label="Menu modulů"
+          >
+            {mobileDrawerOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
           {designStyle === 'terminal' ? (
             <div className="flex items-center gap-2 font-mono">
               <div className="w-9 h-9 border border-emerald-600 dark:border-emerald-500 bg-emerald-100 dark:bg-emerald-950/80 flex items-center justify-center text-emerald-800 dark:text-emerald-400 font-bold text-sm shadow-sm dark:shadow-[0_0_10px_rgba(34,197,94,0.4)]">
@@ -279,6 +308,82 @@ export const Navbar: React.FC = () => {
         onClose={() => setSwitchModalOpen(false)}
         targetUser={targetUser}
       />
+
+      {/* Mobile Side Navigation Drawer */}
+      {mobileDrawerOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity"
+            onClick={() => setMobileDrawerOpen(false)}
+          />
+          {/* Slide-out drawer sheet */}
+          <div className="fixed inset-y-0 left-0 max-w-xs w-full bg-white dark:bg-zinc-900 shadow-2xl p-4 flex flex-col z-10 overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 mb-3 border-b border-zinc-200 dark:border-zinc-800">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-amber-500 to-orange-600 flex items-center justify-center text-white shadow-xs">
+                  <Flame className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="font-bold text-base bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent dark:from-orange-400 dark:to-amber-400">
+                    {t('app_name')}
+                  </span>
+                  <span className="text-[10px] uppercase font-bold ml-1.5 px-1 py-0.5 rounded bg-orange-100 dark:bg-orange-950/60 text-orange-700 dark:text-orange-300">
+                    v1.1
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setMobileDrawerOpen(false)}
+                className="p-1.5 rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
+                aria-label="Zavřít"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 px-2 mb-2">
+              {language === 'cs' ? 'Moduly domácnosti' : 'Household Modules'}
+            </div>
+
+            <nav className="space-y-1 flex-1">
+              {mobileNavItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    onClick={() => setMobileDrawerOpen(false)}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-orange-50 dark:hover:bg-orange-950/40 hover:text-orange-600 dark:hover:text-orange-400 transition"
+                  >
+                    <Icon className="w-4 h-4 shrink-0 text-orange-500" />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+
+            {user && (
+              <div className="pt-3 mt-3 border-t border-zinc-200 dark:border-zinc-800 flex items-center gap-3 px-2">
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
+                  style={{ backgroundColor: user.avatar_color }}
+                >
+                  {user.display_name.charAt(0)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 truncate">
+                    {user.display_name}
+                  </p>
+                  <p className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate">
+                    {user.role === 'admin' ? (language === 'cs' ? 'Správce domova' : 'Admin') : (language === 'cs' ? 'Člen domova' : 'Member')}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </header>
   );
 };

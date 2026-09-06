@@ -129,12 +129,74 @@ class HestiaRepository(
         getService().updateVehicleMileage(id, MileageUpdate(mileage))
     }
 
-    // --- ACTIVITIES ---
-    suspend fun getActivities(limit: Int = 30): Result<List<ActivityLog>> = runCatching {
-        getService().getActivities(limit)
+    // --- RECIPES ---
+    suspend fun getRecipes(): Result<List<Recipe>> = runCatching {
+        getService().getRecipes()
     }
 
-    // --- SYSTEM ---
+    suspend fun getRecipe(id: Int): Result<Recipe> = runCatching {
+        getService().getRecipe(id)
+    }
+
+    // --- PANTRY ---
+    suspend fun getPantryItems(): Result<List<PantryItem>> = runCatching {
+        getService().getPantryItems()
+    }
+
+    suspend fun createPantryItem(item: PantryItemCreate): Result<PantryItem> = runCatching {
+        getService().createPantryItem(item)
+    }
+
+    suspend fun deletePantryItem(id: Int): Result<Unit> = runCatching {
+        getService().deletePantryItem(id)
+    }
+
+    // --- PETS ---
+    suspend fun getPets(): Result<List<Pet>> = runCatching {
+        getService().getPets()
+    }
+
+    suspend fun feedPet(id: Int): Result<Map<String, String>> = runCatching {
+        getService().feedPet(id)
+    }
+
+    // --- FINANCE ---
+    suspend fun getFinanceSummary(): Result<FinanceSummary> = runCatching {
+        getService().getFinanceSummary()
+    }
+
+    suspend fun getTransactions(limit: Int = 50): Result<List<TransactionItem>> = runCatching {
+        getService().getTransactions(limit)
+    }
+
+    suspend fun getDebtSettlements(): Result<DebtSettlementResponse> = runCatching {
+        getService().getDebtSettlements()
+    }
+
+    // --- DOCUMENTS ---
+    suspend fun getDocuments(): Result<List<DocumentItem>> = runCatching {
+        getService().getDocuments()
+    }
+
+    suspend fun getDocumentStats(): Result<DocumentStats> = runCatching {
+        getService().getDocumentStats()
+    }
+
+    // --- ACTIVITIES ---
+    suspend fun getActivities(limit: Int = 30): Result<List<ActivityLog>> = runCatching {
+        getService().getActivities(limit).items
+    }
+
+    // --- SYSTEM & BACKUPS ---
+    suspend fun getBackups(): Result<List<BackupItem>> = runCatching {
+        getService().getBackups()
+    }
+
+    suspend fun createBackup(note: String = ""): Result<Map<String, String>> = runCatching {
+        val body = if (note.isNotBlank()) mapOf("note" to note) else emptyMap()
+        getService().createBackup(body)
+    }
+
     suspend fun resetAllData(confirmation: String, password: String? = null): Result<Map<String, String>> = runCatching {
         val body = mutableMapOf("confirmation" to confirmation)
         if (!password.isNullOrBlank()) {

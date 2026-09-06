@@ -84,13 +84,60 @@ interface HestiaApiService {
         @Body body: MileageUpdate
     ): Map<String, String>
 
+    // --- RECIPES ---
+    @GET("api/v1/recipes")
+    suspend fun getRecipes(): List<Recipe>
+
+    @GET("api/v1/recipes/{id}")
+    suspend fun getRecipe(@Path("id") id: Int): Recipe
+
+    // --- PANTRY ---
+    @GET("api/v1/pantry")
+    suspend fun getPantryItems(): List<PantryItem>
+
+    @POST("api/v1/pantry")
+    suspend fun createPantryItem(@Body item: PantryItemCreate): PantryItem
+
+    @DELETE("api/v1/pantry/{id}")
+    suspend fun deletePantryItem(@Path("id") id: Int)
+
+    // --- PETS ---
+    @GET("api/v1/pets")
+    suspend fun getPets(): List<Pet>
+
+    @POST("api/v1/pets/{id}/feed")
+    suspend fun feedPet(@Path("id") id: Int): Map<String, String>
+
+    // --- FINANCE ---
+    @GET("api/v1/finance/summary")
+    suspend fun getFinanceSummary(): FinanceSummary
+
+    @GET("api/v1/finance/transactions")
+    suspend fun getTransactions(@Query("limit") limit: Int = 50): List<TransactionItem>
+
+    @GET("api/v1/finance/settlements")
+    suspend fun getDebtSettlements(): DebtSettlementResponse
+
+    // --- DOCUMENTS ---
+    @GET("api/v1/documents")
+    suspend fun getDocuments(): List<DocumentItem>
+
+    @GET("api/v1/documents/stats")
+    suspend fun getDocumentStats(): DocumentStats
+
     // --- ACTIVITIES ---
     @GET("api/v1/activities")
     suspend fun getActivities(
         @Query("limit") limit: Int = 30
-    ): List<ActivityLog>
+    ): ActivityListResponse
 
-    // --- SYSTEM ---
+    // --- SYSTEM & BACKUPS ---
+    @GET("api/v1/system/backups")
+    suspend fun getBackups(): List<BackupItem>
+
+    @POST("api/v1/system/backups")
+    suspend fun createBackup(@Body body: Map<String, String> = emptyMap()): Map<String, String>
+
     @POST("api/v1/system/reset-data")
     suspend fun resetAllData(
         @Body body: Map<String, String>
