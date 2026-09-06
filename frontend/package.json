@@ -9,6 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@m3e/web": "^2.7.9",
+    "lit": "^3.3.3",
     "lucide-react": "^1.16.0",
     "qrcode": "^1.5.4",
     "react": "^19.0.0",

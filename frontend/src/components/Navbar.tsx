@@ -35,7 +35,7 @@ export const Navbar: React.FC = () => {
   };
 
   const cycleDesignStyle = () => {
-    const styles: DesignStyle[] = ['classic', 'nordic', 'cyber', 'glass', 'sunset'];
+    const styles = designOptions.map((o) => o.id);
     const currentIndex = styles.indexOf(designStyle);
     const nextStyle = styles[(currentIndex + 1) % styles.length];
     setDesignStyle(nextStyle);

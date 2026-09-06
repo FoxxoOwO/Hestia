@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import '@m3e/web/theme';
 
 export type Theme = 'light' | 'dark' | 'system';
-export type DesignStyle = 'classic' | 'nordic' | 'cyber' | 'glass' | 'sunset';
+export type DesignStyle = 'classic' | 'nordic' | 'cyber' | 'glass' | 'sunset' | 'm3e';
 
 export interface DesignStyleOption {
   id: DesignStyle;
@@ -26,6 +27,17 @@ export const DESIGN_STYLES: DesignStyleOption[] = [
     badgeEn: 'Default',
     primaryColor: '#f97316',
     previewColors: ['#f97316', '#ea580c', '#fdba74', '#fff7ed'],
+  },
+  {
+    id: 'm3e',
+    name: 'Material 3 Expressive (M3E)',
+    nameEn: 'Material 3 Expressive (M3E)',
+    description: 'Expresivní design podle Google Material Design 3 s tónovými vrstvami a zaoblenými tvary (matraic/m3e)',
+    descriptionEn: 'Modern expressive design following Google Material Design 3 with tonal surfaces and fluid rounded shapes (matraic/m3e)',
+    badge: 'M3E / Material 3',
+    badgeEn: 'M3E / Material 3',
+    primaryColor: '#6750a4',
+    previewColors: ['#6750a4', '#7f67be', '#d0bcff', '#eaddff'],
   },
   {
     id: 'nordic',
@@ -133,6 +145,22 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     DESIGN_STYLES.forEach((s) => root.classList.remove(`design-${s.id}`));
     root.classList.add(`design-${designStyle}`);
   }, [designStyle]);
+
+  useEffect(() => {
+    let el = document.querySelector('m3e-theme') as HTMLElement | null;
+    if (designStyle === 'm3e') {
+      if (!el) {
+        el = document.createElement('m3e-theme');
+        document.body.appendChild(el);
+      }
+      el.setAttribute('color', '#6750A4');
+      el.setAttribute('variant', 'expressive');
+      el.setAttribute('motion', 'expressive');
+      el.setAttribute('scheme', isDark ? 'dark' : 'light');
+    } else if (el) {
+      el.remove();
+    }
+  }, [designStyle, isDark]);
 
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme);
