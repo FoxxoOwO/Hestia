@@ -48,35 +48,35 @@ export const Navbar: React.FC = () => {
         <div className="flex items-center gap-3">
           {designStyle === 'terminal' ? (
             <div className="flex items-center gap-2 font-mono">
-              <div className="w-9 h-9 border border-emerald-500 bg-emerald-950/80 flex items-center justify-center text-emerald-400 font-bold text-sm shadow-[0_0_10px_rgba(34,197,94,0.4)]">
+              <div className="w-9 h-9 border border-emerald-600 dark:border-emerald-500 bg-emerald-100 dark:bg-emerald-950/80 flex items-center justify-center text-emerald-800 dark:text-emerald-400 font-bold text-sm shadow-sm dark:shadow-[0_0_10px_rgba(34,197,94,0.4)]">
                 &gt;_
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-lg text-emerald-400 tracking-wider">
+                  <span className="font-bold text-lg text-emerald-800 dark:text-emerald-400 tracking-wider">
                     HESTIA.SYS
                   </span>
-                  <span className="inline-block w-2 h-4 bg-emerald-400 animate-pulse" />
-                  <span className="text-[10px] uppercase font-bold px-1 py-0.2 border border-emerald-500/40 text-emerald-400 bg-emerald-950/40">
+                  <span className="inline-block w-2 h-4 bg-emerald-700 dark:bg-emerald-400 animate-pulse" />
+                  <span className="text-[10px] uppercase font-bold px-1 py-0.2 border border-emerald-600/40 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/40">
                     v1.1
                   </span>
                 </div>
-                <p className="text-[10px] text-emerald-600 dark:text-emerald-500 hidden sm:block">
+                <p className="text-[10px] text-emerald-700 dark:text-emerald-500 hidden sm:block">
                   ROOT@LOCAL_NODE // OK
                 </p>
               </div>
             </div>
           ) : designStyle === 'neobrutalism' ? (
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-yellow-300 border-2 border-black flex items-center justify-center text-black font-black text-base shadow-[2px_2px_0px_#000]">
+              <div className="w-10 h-10 bg-yellow-300 border-2 border-black dark:border-white flex items-center justify-center text-black font-black text-base shadow-[2px_2px_0px_#000] dark:shadow-[2px_2px_0px_#fff]">
                 ⚡
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <span className="font-black text-xl tracking-tight bg-yellow-300 text-black px-2 py-0.5 border-2 border-black shadow-[2px_2px_0px_#000] uppercase rotate-[-1deg]">
+                  <span className="font-black text-xl tracking-tight bg-yellow-300 text-black px-2 py-0.5 border-2 border-black dark:border-white shadow-[2px_2px_0px_#000] dark:shadow-[2px_2px_0px_#fff] uppercase rotate-[-1deg]">
                     HESTIA!
                   </span>
-                  <span className="text-[10px] font-black px-1.5 py-0.5 bg-black text-yellow-300 border border-black uppercase shadow-[1px_1px_0px_#000]">
+                  <span className="text-[10px] font-black px-1.5 py-0.5 bg-black dark:bg-zinc-900 text-yellow-300 border border-black dark:border-white uppercase shadow-[1px_1px_0px_#000] dark:shadow-[1px_1px_0px_#fff]">
                     v1.1
                   </span>
                 </div>
@@ -129,13 +129,13 @@ export const Navbar: React.FC = () => {
         {/* Center layout decoration */}
         <div className="hidden lg:flex items-center">
           {designStyle === 'terminal' && (
-            <div className="flex items-center gap-2 font-mono text-[11px] text-emerald-400/90 bg-emerald-950/40 px-3 py-1 border border-emerald-500/40 shadow-[0_0_8px_rgba(34,197,94,0.2)]">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+            <div className="flex items-center gap-2 font-mono text-[11px] text-emerald-800 dark:text-emerald-400/90 bg-emerald-100/70 dark:bg-emerald-950/40 px-3 py-1 border border-emerald-600/40 dark:border-emerald-500/40 shadow-xs dark:shadow-[0_0_8px_rgba(34,197,94,0.2)]">
+              <span className="w-2 h-2 rounded-full bg-emerald-600 dark:bg-emerald-400 animate-ping" />
               <span>PORT:8000 // TTY:1 // BUFFER:CLEAN // SYSTEM:READY</span>
             </div>
           )}
           {designStyle === 'neobrutalism' && (
-            <div className="flex items-center gap-2 px-3 py-1 bg-yellow-300 text-black border-2 border-black shadow-[3px_3px_0px_#000] text-xs font-black uppercase tracking-wider">
+            <div className="flex items-center gap-2 px-3 py-1 bg-yellow-300 text-black border-2 border-black dark:border-white shadow-[3px_3px_0px_#000] dark:shadow-[3px_3px_0px_#fff] text-xs font-black uppercase tracking-wider">
               <span>⚡ 3D TACTILE POP-ART OS</span>
             </div>
           )}
