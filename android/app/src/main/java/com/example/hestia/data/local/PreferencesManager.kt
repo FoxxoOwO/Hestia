@@ -21,7 +21,14 @@ class PreferencesManager(private val context: Context) {
         val KEY_SERVER_URL = stringPreferencesKey("server_url")
         val KEY_AUTH_TOKEN = stringPreferencesKey("auth_token")
         val KEY_USER_DATA = stringPreferencesKey("user_data")
+        val KEY_APP_MODE = stringPreferencesKey("app_mode")
         const val DEFAULT_SERVER_URL = "http://10.0.2.2:8000"
+        const val MODE_WEB = "web"
+        const val MODE_NATIVE = "native"
+    }
+
+    val appModeFlow: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[KEY_APP_MODE] ?: MODE_WEB
     }
 
     val serverUrlFlow: Flow<String> = context.dataStore.data.map { preferences ->
@@ -42,6 +49,12 @@ class PreferencesManager(private val context: Context) {
     }
 
     val isLoggedInFlow: Flow<Boolean> = authTokenFlow.map { !it.isNullOrBlank() }
+
+    suspend fun setAppMode(mode: String) {
+        context.dataStore.edit { preferences ->
+            preferences[KEY_APP_MODE] = mode
+        }
+    }
 
     suspend fun setServerUrl(url: String) {
         val cleanUrl = url.trim().trimEnd('/')

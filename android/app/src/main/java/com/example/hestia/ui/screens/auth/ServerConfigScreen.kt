@@ -33,9 +33,11 @@ fun ServerConfigScreen(
     var isChecking by remember { mutableStateOf(false) }
     var testResult by remember { mutableStateOf<String?>(null) }
     var isSuccess by remember { mutableStateOf<Boolean?>(null) }
+    var selectedMode by remember { mutableStateOf(com.example.hestia.data.local.PreferencesManager.MODE_WEB) }
 
     LaunchedEffect(Unit) {
         serverUrl = repository.preferences.serverUrlFlow.first()
+        selectedMode = repository.preferences.appModeFlow.first()
     }
 
     Scaffold(
@@ -182,13 +184,62 @@ fun ServerConfigScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Mode Selector
+            Text(
+                text = "Režim mobilní aplikace",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.align(Alignment.Start)
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChip(
+                    selected = selectedMode == com.example.hestia.data.local.PreferencesManager.MODE_WEB,
+                    onClick = { selectedMode = com.example.hestia.data.local.PreferencesManager.MODE_WEB },
+                    label = { Text("Plnohodnotný Web (100%)", fontSize = 11.sp) },
+                    leadingIcon = {
+                        if (selectedMode == com.example.hestia.data.local.PreferencesManager.MODE_WEB) {
+                            Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(14.dp))
+                        }
+                    },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = HestiaOrange.copy(alpha = 0.2f),
+                        selectedLabelColor = HestiaOrange
+                    ),
+                    modifier = Modifier.weight(1f)
+                )
+
+                FilterChip(
+                    selected = selectedMode == com.example.hestia.data.local.PreferencesManager.MODE_NATIVE,
+                    onClick = { selectedMode = com.example.hestia.data.local.PreferencesManager.MODE_NATIVE },
+                    label = { Text("Nativní Compose", fontSize = 11.sp) },
+                    leadingIcon = {
+                        if (selectedMode == com.example.hestia.data.local.PreferencesManager.MODE_NATIVE) {
+                            Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(14.dp))
+                        }
+                    },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = HestiaOrange.copy(alpha = 0.2f),
+                        selectedLabelColor = HestiaOrange
+                    ),
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
 
             // Save and continue button
             Button(
                 onClick = {
                     coroutineScope.launch {
                         repository.preferences.setServerUrl(serverUrl)
+                        repository.preferences.setAppMode(selectedMode)
                         onConfigured()
                     }
                 },
@@ -196,7 +247,7 @@ fun ServerConfigScreen(
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Uložit a přejít k přihlášení", fontWeight = FontWeight.Bold)
+                Text("Uložit a spustit Hestii", fontWeight = FontWeight.Bold)
             }
         }
     }

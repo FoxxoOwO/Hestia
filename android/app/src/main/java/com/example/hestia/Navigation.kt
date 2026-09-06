@@ -18,6 +18,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.hestia.data.local.PreferencesManager
+import com.example.hestia.data.repository.HestiaRepository
 import com.example.hestia.theme.HestiaOrange
 import com.example.hestia.ui.components.HestiaTopBar
 import com.example.hestia.ui.navigation.Screen
@@ -37,6 +39,7 @@ import com.example.hestia.ui.screens.recipes.RecipesScreen
 import com.example.hestia.ui.screens.settings.SettingsScreen
 import com.example.hestia.ui.screens.shopping.ShoppingScreen
 import com.example.hestia.ui.screens.vehicles.VehiclesScreen
+import com.example.hestia.ui.web.HestiaWebScreen
 import kotlinx.coroutines.launch
 
 @Composable
@@ -44,6 +47,36 @@ fun MainNavigation() {
     val app = HestiaApplication.instance
     val repository = app.repository
 
+    val serverUrl by repository.preferences.serverUrlFlow.collectAsState(initial = PreferencesManager.DEFAULT_SERVER_URL)
+    val appMode by repository.preferences.appModeFlow.collectAsState(initial = PreferencesManager.MODE_WEB)
+
+    var showServerConfig by remember { mutableStateOf(false) }
+
+    if (showServerConfig) {
+        ServerConfigScreen(
+            repository = repository,
+            onConfigured = { showServerConfig = false }
+        )
+    } else if (appMode == PreferencesManager.MODE_WEB) {
+        // Full-fledged frontend with 100% web feature parity
+        HestiaWebScreen(
+            serverUrl = serverUrl,
+            onNavigateServerConfig = { showServerConfig = true }
+        )
+    } else {
+        // Native Compose interface
+        NativeComposeNavigation(
+            repository = repository,
+            onNavigateServerConfig = { showServerConfig = true }
+        )
+    }
+}
+
+@Composable
+fun NativeComposeNavigation(
+    repository: HestiaRepository,
+    onNavigateServerConfig: () -> Unit
+) {
     val isLoggedIn by repository.preferences.isLoggedInFlow.collectAsState(initial = false)
     val currentUser by repository.preferences.currentUserFlow.collectAsState(initial = null)
 
@@ -288,7 +321,7 @@ fun MainNavigation() {
                         Screen.Settings -> SettingsScreen(
                             repository = repository,
                             onLogout = { currentScreen = Screen.Dashboard },
-                            onNavigateServerConfig = { currentScreen = Screen.ServerConfig }
+                            onNavigateServerConfig = onNavigateServerConfig
                         )
                         Screen.ServerConfig -> ServerConfigScreen(
                             repository = repository,

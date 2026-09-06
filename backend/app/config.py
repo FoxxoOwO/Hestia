@@ -1,6 +1,16 @@
 import os
 from pydantic_settings import BaseSettings
 
+def _resolve_frontend_dist() -> str:
+    env_dist = os.getenv("FRONTEND_DIST_DIR", "")
+    if env_dist and os.path.exists(env_dist):
+        return env_dist
+    repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    candidate = os.path.join(repo_root, "frontend", "dist")
+    if os.path.exists(candidate):
+        return candidate
+    return env_dist
+
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Hestia - Smart Home Management"
     API_V1_STR: str = "/api/v1"
@@ -12,7 +22,7 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
     
     UPLOAD_DIR: str = os.getenv("UPLOAD_DIR", "./uploads")
-    FRONTEND_DIST_DIR: str = os.getenv("FRONTEND_DIST_DIR", "")
+    FRONTEND_DIST_DIR: str = _resolve_frontend_dist()
     
     class Config:
         case_sensitive = True
