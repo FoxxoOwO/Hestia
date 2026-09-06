@@ -33,6 +33,10 @@ fun SettingsScreen(
     val coroutineScope = rememberCoroutineScope()
     var user by remember { mutableStateOf<User?>(null) }
     var serverUrl by remember { mutableStateOf("") }
+    var showResetDialog by remember { mutableStateOf(false) }
+    var resetConfirmationText by remember { mutableStateOf("") }
+    var resetError by remember { mutableStateOf<String?>(null) }
+    var isResetting by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         user = repository.preferences.currentUserFlow.first()
@@ -157,6 +161,51 @@ fun SettingsScreen(
                 }
             }
 
+            // Danger Zone Card (Admin only)
+            if (user?.role == "admin") {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = StatusRed.copy(alpha = 0.08f)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, StatusRed.copy(alpha = 0.3f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(Icons.Default.Warning, contentDescription = null, tint = StatusRed, modifier = Modifier.size(20.dp))
+                            Text("Nebezpečná zóna", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = StatusRed)
+                        }
+
+                        Text(
+                            "Trvalé smazání všech dat domácnosti (recepty, zásoby, kytky, mazlíčci, finance, auta, léky). Účet správce zůstane zachován.",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            lineHeight = 16.sp
+                        )
+
+                        Button(
+                            onClick = {
+                                resetConfirmationText = ""
+                                resetError = null
+                                showResetDialog = true
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = StatusRed, contentColor = Color.White),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.DeleteForever, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Smazat všechna data", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        }
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.weight(1f))
 
             // Logout Button
@@ -178,5 +227,77 @@ fun SettingsScreen(
                 Text("Odhlásit se z Hestie", fontWeight = FontWeight.Bold)
             }
         }
+    }
+
+    if (showResetDialog) {
+        AlertDialog(
+            onDismissRequest = { if (!isResetting) showResetDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Default.Warning, contentDescription = null, tint = StatusRed)
+                    Text("Opravdu smazat všechna data?", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        "Tato akce je nevratná. Dojde k trvalému odstranění všech záznamů domácnosti z databáze.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        "Pro potvrzení napište slovo SMAZAT:",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    OutlinedTextField(
+                        value = resetConfirmationText,
+                        onValueChange = { resetConfirmationText = it },
+                        placeholder = { Text("SMAZAT") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (resetError != null) {
+                        Text(resetError!!, color = StatusRed, fontSize = 11.sp)
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val cleanText = resetConfirmationText.trim().uppercase()
+                        if (cleanText != "SMAZAT" && cleanText != "CONFIRM") {
+                            resetError = "Napište slovo SMAZAT"
+                            return@Button
+                        }
+                        isResetting = true
+                        resetError = null
+                        coroutineScope.launch {
+                            val res = repository.resetAllData("SMAZAT")
+                            isResetting = false
+                            if (res.isSuccess) {
+                                showResetDialog = false
+                                repository.logout()
+                                onLogout()
+                            } else {
+                                resetError = res.exceptionOrNull()?.message ?: "Chyba při mazání dat"
+                            }
+                        }
+                    },
+                    enabled = !isResetting && (resetConfirmationText.trim().uppercase() == "SMAZAT" || resetConfirmationText.trim().uppercase() == "CONFIRM"),
+                    colors = ButtonDefaults.buttonColors(containerColor = StatusRed, contentColor = Color.White)
+                ) {
+                    Text(if (isResetting) "Mazání..." else "Ano, smazat vše")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showResetDialog = false },
+                    enabled = !isResetting
+                ) {
+                    Text("Zrušit")
+                }
+            }
+        )
     }
 }

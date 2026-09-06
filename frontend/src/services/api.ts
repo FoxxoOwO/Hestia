@@ -1498,6 +1498,24 @@ export const api = {
     });
     if (!res.ok) throw new Error('Failed to clear activity logs');
     return res.json();
+  },
+
+  // System & Maintenance
+  async resetAllData(confirmation: string, password?: string): Promise<{
+    status: string;
+    message: string;
+    deleted_counts: Record<string, number>;
+  }> {
+    const res = await fetch(`${API_BASE}/system/reset-data`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ confirmation, password: password || null }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Chyba při resetování dat' }));
+      throw new Error(err.detail || 'Chyba při resetování dat');
+    }
+    return res.json();
   }
 };
 

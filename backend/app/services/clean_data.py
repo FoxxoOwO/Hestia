@@ -25,10 +25,10 @@ from app.utils.auth import get_password_hash
 from app.config import settings
 
 
-def clean_all_sample_data(db: Session, upload_dirs: list[str] = None) -> dict[str, int]:
+def clean_all_sample_data(db: Session, preserve_user_id: int | None = None, upload_dirs: list[str] = None) -> dict[str, int]:
     """
-    Deletes all sample data across all modules, preserves only the Admin account,
-    and removes sample uploaded files.
+    Deletes all sample/household data across all modules, preserves the Admin account,
+    and removes uploaded files.
     """
     deleted_counts = {}
 
@@ -82,15 +82,23 @@ def clean_all_sample_data(db: Session, upload_dirs: list[str] = None) -> dict[st
     deleted_counts["pantry_items"] = db.query(PantryItem).delete()
     deleted_counts["recipes"] = db.query(Recipe).delete()
 
-    # 10. Users: Delete demo users (anna, petr, etc.), keep / ensure admin
-    non_admin_users = db.query(User).filter(User.username != "admin").all()
-    deleted_counts["demo_users"] = len(non_admin_users)
-    for u in non_admin_users:
+    # 10. Users: Delete demo users, preserve current/main admin
+    if preserve_user_id:
+        target_admin = db.query(User).filter(User.id == preserve_user_id).first()
+    else:
+        target_admin = db.query(User).filter(User.role == "admin").first() or db.query(User).filter(User.username == "admin").first()
+
+    if target_admin:
+        users_to_delete = db.query(User).filter(User.id != target_admin.id).all()
+    else:
+        users_to_delete = db.query(User).filter(User.username != "admin").all()
+
+    deleted_counts["demo_users"] = len(users_to_delete)
+    for u in users_to_delete:
         db.delete(u)
 
-    admin = db.query(User).filter(User.username == "admin").first()
-    if not admin:
-        admin = User(
+    if not target_admin:
+        target_admin = User(
             username="admin",
             display_name="Správce Domácnosti",
             email="admin@hestia.home",
@@ -101,10 +109,10 @@ def clean_all_sample_data(db: Session, upload_dirs: list[str] = None) -> dict[st
             preferred_theme="system",
             is_active=True
         )
-        db.add(admin)
+        db.add(target_admin)
     else:
-        admin.role = "admin"
-        admin.is_active = True
+        target_admin.role = "admin"
+        target_admin.is_active = True
 
     db.commit()
 

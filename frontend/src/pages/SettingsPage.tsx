@@ -40,6 +40,39 @@ export const SettingsPage: React.FC = () => {
   const [deletingMember, setDeletingMember] = useState<User | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
+  // Reset all data modal
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [resetConfirmText, setResetConfirmText] = useState('');
+  const [resetPassword, setResetPassword] = useState('');
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [resetSuccess, setResetSuccess] = useState<string | null>(null);
+
+  const handleResetAllData = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanConfirm = resetConfirmText.trim().toUpperCase();
+    if (cleanConfirm !== 'SMAZAT' && cleanConfirm !== 'CONFIRM') {
+      setResetError('Musíte zadat text "SMAZAT" pro potvrzení.');
+      return;
+    }
+
+    try {
+      setIsResetting(true);
+      setResetError(null);
+      const res = await api.resetAllData(resetConfirmText.trim(), resetPassword.trim() || undefined);
+      setResetSuccess(res.message || t('settings.reset_data_success'));
+      setTimeout(() => {
+        setIsResetModalOpen(false);
+        setIsResetting(false);
+        fetchSettingsData();
+        window.location.reload();
+      }, 1500);
+    } catch (err: any) {
+      setIsResetting(false);
+      setResetError(err.message || 'Chyba při resetování databáze');
+    }
+  };
+
   const fetchSettingsData = async () => {
     try {
       const [membersData, statusData] = await Promise.all([
@@ -487,6 +520,52 @@ export const SettingsPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Danger Zone: Wipe / Factory Reset Data (Admin only) */}
+      {user?.role === 'admin' && (
+        <div className="p-6 rounded-3xl bg-red-50/40 dark:bg-red-950/20 border border-red-200/80 dark:border-red-900/50 shadow-xs space-y-4">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-red-600 text-white shadow-md shadow-red-500/20">
+              <AlertTriangle className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="font-bold text-sm text-red-950 dark:text-red-200">
+                {t('settings.danger_zone_title')}
+              </h3>
+              <p className="text-xs text-red-800/70 dark:text-red-300/70">
+                {t('settings.danger_zone_desc')}
+              </p>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-red-200 dark:border-red-900/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <h4 className="font-bold text-xs text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
+                <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                <span>{t('settings.reset_data_title')}</span>
+              </h4>
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 max-w-xl leading-relaxed">
+                {t('settings.reset_data_desc')}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsResetModalOpen(true);
+                setResetError(null);
+                setResetSuccess(null);
+                setResetConfirmText('');
+                setResetPassword('');
+              }}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-xs transition shadow-sm shrink-0"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>{t('settings.reset_data_btn')}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Add Member Modal */}
       {isAddMemberOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
@@ -807,6 +886,118 @@ export const SettingsPage: React.FC = () => {
                 Zrušit
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Wipe All Data Confirmation Modal */}
+      {isResetModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white dark:bg-zinc-900 w-full max-w-lg rounded-3xl shadow-2xl border border-red-200 dark:border-red-900/80 p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-red-100 dark:bg-red-950/70 text-red-600 dark:text-red-400">
+                  <AlertTriangle className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-zinc-900 dark:text-zinc-100">
+                    {t('settings.reset_data_modal_title')}
+                  </h3>
+                  <p className="text-xs text-red-600 dark:text-red-400 font-medium">
+                    Nevratná operace s databází
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => !isResetting && setIsResetModalOpen(false)}
+                className="p-1 text-zinc-400 hover:text-zinc-600 rounded-lg"
+                disabled={isResetting}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {resetError && (
+              <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/40 text-red-600 dark:text-red-400 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{resetError}</span>
+              </div>
+            )}
+
+            {resetSuccess && (
+              <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/40 text-emerald-600 dark:text-emerald-400 text-xs flex items-center gap-2">
+                <Check className="w-4 h-4 shrink-0" />
+                <span>{resetSuccess}</span>
+              </div>
+            )}
+
+            <div className="p-3.5 rounded-2xl bg-red-50/60 dark:bg-red-950/30 border border-red-200/80 dark:border-red-900/40 text-xs text-red-900 dark:text-red-200 leading-relaxed">
+              <p className="font-semibold mb-1">⚠️ {t('settings.reset_data_modal_warning')}</p>
+              <ul className="list-disc list-inside text-[11px] text-red-800/80 dark:text-red-300/80 space-y-0.5 mt-1">
+                <li>Smaže všechny recepty a kuchařku</li>
+                <li>Smaže zásoby ve spíži a lednici i nákupní seznam</li>
+                <li>Smaže pokojovky, mazlíčky a evidenci úkolů</li>
+                <li>Smaže veškeré rodinné finance, rozpočty a transakce</li>
+                <li>Smaže naskenované dokumenty z archivu</li>
+                <li>Smaže garáž a vozový park, domácí lékárničku i historii aktivit</li>
+                <li>Váš administrátorský účet ({user?.display_name}) zůstane plně funkční</li>
+              </ul>
+            </div>
+
+            <form onSubmit={handleResetAllData} className="space-y-3.5 pt-1">
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                  {t('settings.reset_data_confirm_label')}
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={resetConfirmText}
+                  onChange={(e) => setResetConfirmText(e.target.value)}
+                  placeholder="SMAZAT"
+                  disabled={isResetting}
+                  className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 text-sm font-mono tracking-wide"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                  {t('settings.reset_data_password_label')}
+                </label>
+                <input
+                  type="password"
+                  value={resetPassword}
+                  onChange={(e) => setResetPassword(e.target.value)}
+                  placeholder={t('settings.reset_data_password_placeholder')}
+                  disabled={isResetting}
+                  className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 text-sm"
+                />
+              </div>
+
+              <div className="pt-2 flex gap-2">
+                <button
+                  type="submit"
+                  disabled={isResetting || (resetConfirmText.trim().toUpperCase() !== 'SMAZAT' && resetConfirmText.trim().toUpperCase() !== 'CONFIRM')}
+                  className={`flex-1 py-2.5 px-4 rounded-xl font-semibold text-xs flex items-center justify-center gap-2 transition shadow-sm ${
+                    isResetting || (resetConfirmText.trim().toUpperCase() !== 'SMAZAT' && resetConfirmText.trim().toUpperCase() !== 'CONFIRM')
+                      ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-400 cursor-not-allowed'
+                      : 'bg-red-600 hover:bg-red-700 text-white'
+                  }`}
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>{isResetting ? t('settings.reset_data_cancelling') : t('settings.reset_data_confirm_btn')}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsResetModalOpen(false)}
+                  disabled={isResetting}
+                  className="py-2.5 px-4 rounded-xl font-semibold text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition"
+                >
+                  Zrušit
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

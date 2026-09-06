@@ -1055,15 +1055,52 @@ def run_tests():
     assert deleted_login.status_code in (400, 401, 404)
     print(f"16.11 Úspěšné smazání člena a ověření zamítnutí přístupu (DELETE /users/{test_user_id}) - OK")
 
-    # Uklidit testovací data z databáze
-    clean_db = SessionLocal()
-    try:
-        clean_all_sample_data(clean_db)
-        print("17. Vyčištění testovacích dat: Databáze zanechána v čistém produkčním stavu - OK")
-    finally:
-        clean_db.close()
+    # --- SEKCE 17: Systém & Tlačítko na smazání všech dat (POST /api/v1/system/reset-data) ---
+    print("\n=== SEKCE 17: Systém & Tlačítko na smazání všech dat (POST /api/v1/system/reset-data) ===")
+    
+    # 17.1 Neplatný potvrzovací řetězec (400)
+    bad_conf_res = client.post(
+        "/api/v1/system/reset-data",
+        json={"confirmation": "NEPLATNY_TEXT", "password": "hestia123"},
+        headers=headers
+    )
+    assert bad_conf_res.status_code == 400
+    assert "SMAZAT" in bad_conf_res.text
+    print("17.1 Neplatný potvrzovací řetězec správně zamítnut (400 Bad Request) - OK")
 
-    print("\n[SUCCESS] VŠECHNY TESTY ÚSPĚŠNĚ PROŠLY! HESTIA JE PLNĚ PŘIPRAVENA VČETNĚ VŠECH 16 TESTOVACÍCH SEKCE (SPRÁVA ČLENŮ, AUDIT LOG, RECEPTY, KVĚTINY, MAZLÍČCI, DOMÁCÍ PRÁCE, FINANCE, DOKUMENTY, VOZOVÝ PARK, LÉKÁRNIČKA).")
+    # 17.2 Neplatné administrátorské heslo (400)
+    bad_pwd_res = client.post(
+        "/api/v1/system/reset-data",
+        json={"confirmation": "SMAZAT", "password": "spatne_heslo_999"},
+        headers=headers
+    )
+    assert bad_pwd_res.status_code == 400
+    assert "administrátorské heslo" in bad_pwd_res.text
+    print("17.2 Neplatné administrátorské heslo správně zamítnuto (400 Bad Request) - OK")
+
+    # 17.3 Úspěšné spuštění resetu databáze přes API (200)
+    valid_reset_res = client.post(
+        "/api/v1/system/reset-data",
+        json={"confirmation": "SMAZAT", "password": "hestia123"},
+        headers=headers
+    )
+    assert valid_reset_res.status_code == 200
+    reset_data = valid_reset_res.json()
+    assert reset_data["status"] == "success"
+    assert "deleted_counts" in reset_data
+    print("17.3 Úspěšný reset databáze přes API endpoint POST /system/reset-data - OK")
+
+    # 17.4 Ověření čistého stavu po volání endpointu
+    recs_after = client.get("/api/v1/recipes", headers=headers).json()
+    assert len(recs_after) == 0
+    pantry_after = client.get("/api/v1/pantry", headers=headers).json()
+    assert len(pantry_after) == 0
+    members_after = client.get("/api/v1/auth/users", headers=headers).json()
+    assert len(members_after) == 1
+    assert members_after[0]["username"] == "admin"
+    print("17.4 Ověření: Všechny aplikační tabulky jsou prázdné (0 položek), administrátorský účet zachován - OK")
+
+    print("\n[SUCCESS] VŠECHNY TESTY ÚSPĚŠNĚ PROŠLY! HESTIA JE PLNĚ PŘIPRAVENA VČETNĚ VŠECH 17 TESTOVACÍCH SEKCÍ (SPRÁVA DATABÁZE A RESET DAT, SPRÁVA ČLENŮ, AUDIT LOG, RECEPTY, KVĚTINY, MAZLÍČCI, DOMÁCÍ PRÁCE, FINANCE, DOKUMENTY, VOZOVÝ PARK, LÉKÁRNIČKA).")
 
 if __name__ == "__main__":
     run_tests()

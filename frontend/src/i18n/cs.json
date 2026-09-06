@@ -404,7 +404,21 @@
     "save_changes": "Uložit změny",
     "cannot_delete_self": "Nemůžete smazat svůj vlastní administrátorský účet.",
     "member_updated_success": "Profil člena byl úspěšně upraven",
-    "member_deleted_success": "Člen domácnosti byl úspěšně odebrán"
+    "member_deleted_success": "Člen domácnosti byl úspěšně odebrán",
+    "danger_zone_title": "Nebezpečná zóna: Správa databáze",
+    "danger_zone_desc": "Destruktivní operace a tovární vyčištění databáze",
+    "reset_data_title": "Smazat všechna data",
+    "reset_data_desc": "Trvale odstraní veškerá data domácnosti (recepty, zásoby, nákupní seznam, květiny, zvířata, úkoly, finance, dokumenty, auta, léky a aktivity). Administrátorský účet a přístup k systému zůstanou zachovány.",
+    "reset_data_btn": "Smazat všechna data...",
+    "reset_data_modal_title": "Opravdu si přejete smazat všechna data?",
+    "reset_data_modal_warning": "Tato akce je nevratná! Veškeré záznamy a nahrané dokumenty budou trvale odstraněny z databáze a disku. Váš administrátorský účet zůstane aktivní.",
+    "reset_data_confirm_label": "Pro potvrzení zadejte slovo SMAZAT:",
+    "reset_data_confirm_placeholder": "SMAZAT",
+    "reset_data_password_label": "Heslo administrátora (volitelné potvrzení):",
+    "reset_data_password_placeholder": "Vaše heslo",
+    "reset_data_confirm_btn": "Trvale smazat všechna data",
+    "reset_data_cancelling": "Resetování...",
+    "reset_data_success": "Všechna data v systému byla úspěšně smazána."
   },
   "finance": {
     "title": "Rodinné finance a rozpočet",

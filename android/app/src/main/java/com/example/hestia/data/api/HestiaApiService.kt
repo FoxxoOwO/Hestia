@@ -89,4 +89,10 @@ interface HestiaApiService {
     suspend fun getActivities(
         @Query("limit") limit: Int = 30
     ): List<ActivityLog>
+
+    // --- SYSTEM ---
+    @POST("api/v1/system/reset-data")
+    suspend fun resetAllData(
+        @Body body: Map<String, String>
+    ): Map<String, String>
 }

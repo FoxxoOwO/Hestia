@@ -133,4 +133,13 @@ class HestiaRepository(
     suspend fun getActivities(limit: Int = 30): Result<List<ActivityLog>> = runCatching {
         getService().getActivities(limit)
     }
+
+    // --- SYSTEM ---
+    suspend fun resetAllData(confirmation: String, password: String? = null): Result<Map<String, String>> = runCatching {
+        val body = mutableMapOf("confirmation" to confirmation)
+        if (!password.isNullOrBlank()) {
+            body["password"] = password
+        }
+        getService().resetAllData(body)
+    }
 }

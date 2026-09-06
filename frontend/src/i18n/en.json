@@ -404,7 +404,21 @@
     "save_changes": "Save Changes",
     "cannot_delete_self": "You cannot delete your own administrator account.",
     "member_updated_success": "Member profile successfully updated",
-    "member_deleted_success": "Household member successfully removed"
+    "member_deleted_success": "Household member successfully removed",
+    "danger_zone_title": "Danger Zone: Database Management",
+    "danger_zone_desc": "Destructive operations and factory data cleanup",
+    "reset_data_title": "Delete All Data",
+    "reset_data_desc": "Permanently deletes all household data (recipes, pantry, shopping list, plants, pets, chores, finance, documents, vehicles, medicines, and activities). Your administrator account and system access will remain intact.",
+    "reset_data_btn": "Delete All Data...",
+    "reset_data_modal_title": "Are you sure you want to delete all data?",
+    "reset_data_modal_warning": "This action is irreversible! All records and uploaded files will be permanently erased from the database and disk. Your administrator account will stay active.",
+    "reset_data_confirm_label": "Type SMAZAT or CONFIRM to proceed:",
+    "reset_data_confirm_placeholder": "CONFIRM",
+    "reset_data_password_label": "Admin password (optional confirmation):",
+    "reset_data_password_placeholder": "Your password",
+    "reset_data_confirm_btn": "Permanently Delete All Data",
+    "reset_data_cancelling": "Resetting...",
+    "reset_data_success": "All data in the system has been successfully erased."
   },
   "finance": {
     "title": "Family Finances & Budget",
