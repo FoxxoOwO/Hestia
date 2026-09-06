@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import '@m3e/web/theme';
 
 export type Theme = 'light' | 'dark' | 'system';
-export type DesignStyle = 'classic' | 'nordic' | 'cyber' | 'glass' | 'sunset' | 'm3e';
+export type DesignStyle = 'classic' | 'm3e' | 'neobrutalism' | 'terminal' | 'editorial' | 'nordic' | 'cyber' | 'glass' | 'sunset';
 
 export interface DesignStyleOption {
   id: DesignStyle;
@@ -14,6 +14,12 @@ export interface DesignStyleOption {
   badgeEn: string;
   primaryColor: string;
   previewColors: string[];
+  fontCategory?: string;
+  fontCategoryEn?: string;
+  shapeStyle?: string;
+  shapeStyleEn?: string;
+  layoutStyle?: string;
+  layoutStyleEn?: string;
 }
 
 export const DESIGN_STYLES: DesignStyleOption[] = [
@@ -27,6 +33,12 @@ export const DESIGN_STYLES: DesignStyleOption[] = [
     badgeEn: 'Default',
     primaryColor: '#f97316',
     previewColors: ['#f97316', '#ea580c', '#fdba74', '#fff7ed'],
+    fontCategory: 'Inter / System Sans',
+    fontCategoryEn: 'Inter / System Sans',
+    shapeStyle: 'Měkké zaoblené rohy (rounded-2xl)',
+    shapeStyleEn: 'Soft rounded corners',
+    layoutStyle: 'Standardní přehledný dashboard',
+    layoutStyleEn: 'Standard clean dashboard',
   },
   {
     id: 'm3e',
@@ -38,6 +50,63 @@ export const DESIGN_STYLES: DesignStyleOption[] = [
     badgeEn: 'M3E / Material 3',
     primaryColor: '#6750a4',
     previewColors: ['#6750a4', '#7f67be', '#d0bcff', '#eaddff'],
+    fontCategory: 'Roboto / M3 Sans',
+    fontCategoryEn: 'Roboto / M3 Sans',
+    shapeStyle: 'M3 tónové vrstvy & 28px zaoblení',
+    shapeStyleEn: 'M3 tonal surfaces & 28px radius',
+    layoutStyle: 'M3 pilulková navigace & pružinový pohyb',
+    layoutStyleEn: 'M3 pill navigation & spring motion',
+  },
+  {
+    id: 'neobrutalism',
+    name: 'Neo-Brutalist Pop (Neo-Brutalism)',
+    nameEn: 'Neo-Brutalist Pop',
+    description: 'Úderný pop-art s tlustými černými rámečky, 3D hmatovými tlačítky, ostrými stíny a fontem Space Grotesk',
+    descriptionEn: 'Bold pop-art with thick black borders, 3D tactile buttons, hard offset shadows and Space Grotesk typography',
+    badge: '3D Pop-Art',
+    badgeEn: '3D Pop-Art',
+    primaryColor: '#FFE600',
+    previewColors: ['#FFE600', '#FF5C5C', '#52D172', '#000000'],
+    fontCategory: 'Space Grotesk (Bold Sans)',
+    fontCategoryEn: 'Space Grotesk (Bold Sans)',
+    shapeStyle: 'Ostré 3D rámečky (2.5px černé) & tvrdý stín',
+    shapeStyleEn: 'Sharp 3D frames (2.5px black) & offset shadow',
+    layoutStyle: 'Sticker nálepky, hmatová tlačítka & pop-art grid',
+    layoutStyleEn: 'Stickers, tactile 3D buttons & pop-art grid',
+  },
+  {
+    id: 'terminal',
+    name: 'Retro Terminal CRT (ASCII Console)',
+    nameEn: 'Retro Terminal CRT',
+    description: 'Kyberpunková zelená konzole s monospace fontem, scanlines efektem, hranatými rámy a terminálovým layoutem',
+    descriptionEn: 'Cyberpunk green CRT console with monospaced typography, scanlines, blocky geometry and dense CLI layout',
+    badge: 'Hacker CLI',
+    badgeEn: 'Hacker CLI',
+    primaryColor: '#22c55e',
+    previewColors: ['#22c55e', '#15803d', '#4ade80', '#050805'],
+    fontCategory: 'JetBrains Mono (Monospace)',
+    fontCategoryEn: 'JetBrains Mono (Monospace)',
+    shapeStyle: 'Přísně hranaté (0px radius) & zelený drátěný rám',
+    shapeStyleEn: 'Strictly rectangular (0px radius) & green wireframe',
+    layoutStyle: 'Kompaktní CRT konzole, scanlines & CLI navigace',
+    layoutStyleEn: 'Dense CRT console, scanlines & CLI navigation',
+  },
+  {
+    id: 'editorial',
+    name: 'Editorial Gazette (Knižní & Magazínový)',
+    nameEn: 'Editorial Gazette',
+    description: 'Vznešená novinová a knižní typografie s patkovým fontem Playfair, pergamenovým papírem a dvojitými linkami',
+    descriptionEn: 'Refined newspaper & book typography with Playfair serif, warm parchment paper and classical double rules',
+    badge: 'Knižní tisk',
+    badgeEn: 'Editorial Serif',
+    primaryColor: '#881337',
+    previewColors: ['#881337', '#b45309', '#fcf8f2', '#1c1917'],
+    fontCategory: 'Playfair Display (Serif)',
+    fontCategoryEn: 'Playfair Display (Serif)',
+    shapeStyle: 'Jemné knižní linie & dvojité linky záhlaví',
+    shapeStyleEn: 'Fine bookbind lines & double-ruled mastheads',
+    layoutStyle: 'Magazínový sloupcový layout & pergamenový papír',
+    layoutStyleEn: 'Editorial magazine columns & warm parchment',
   },
   {
     id: 'nordic',
@@ -49,6 +118,12 @@ export const DESIGN_STYLES: DesignStyleOption[] = [
     badgeEn: 'Organic',
     primaryColor: '#10b981',
     previewColors: ['#10b981', '#059669', '#6ee7b7', '#ecfdf5'],
+    fontCategory: 'Skandinávský čistý sans',
+    fontCategoryEn: 'Nordic Clean Sans',
+    shapeStyle: 'Přírodní organické křivky',
+    shapeStyleEn: 'Organic natural curves',
+    layoutStyle: 'Vzdušný minimalistický prostor',
+    layoutStyleEn: 'Airy minimalist spacing',
   },
   {
     id: 'cyber',
@@ -60,6 +135,12 @@ export const DESIGN_STYLES: DesignStyleOption[] = [
     badgeEn: 'High-Tech',
     primaryColor: '#06b6d4',
     previewColors: ['#06b6d4', '#8b5cf6', '#22d3ee', '#0c101c'],
+    fontCategory: 'Futuristický high-tech sans',
+    fontCategoryEn: 'Futuristic High-Tech Sans',
+    shapeStyle: 'Neonové zářící linky (Cyan & Glow)',
+    shapeStyleEn: 'Neon glowing outlines (Cyan & Glow)',
+    layoutStyle: 'Dark cyber noir konzole',
+    layoutStyleEn: 'Dark cyber noir console',
   },
   {
     id: 'glass',
@@ -71,6 +152,12 @@ export const DESIGN_STYLES: DesignStyleOption[] = [
     badgeEn: 'Modern Glass',
     primaryColor: '#6366f1',
     previewColors: ['#6366f1', '#3b82f6', '#a5b4fc', '#eef2ff'],
+    fontCategory: 'Moderní čistý sans',
+    fontCategoryEn: 'Modern Clean Sans',
+    shapeStyle: 'Translucentní mléčné sklo (Backdrop-Blur)',
+    shapeStyleEn: 'Translucent frosted glass (Backdrop-Blur)',
+    layoutStyle: 'Hloubkový vrstvený prostor',
+    layoutStyleEn: 'Layered depth space',
   },
   {
     id: 'sunset',
@@ -82,6 +169,12 @@ export const DESIGN_STYLES: DesignStyleOption[] = [
     badgeEn: 'Cozy',
     primaryColor: '#f43f5e',
     previewColors: ['#f43f5e', '#fb923c', '#fda4af', '#fff1f2'],
+    fontCategory: 'Hřejivý humanistický sans',
+    fontCategoryEn: 'Warm Humanist Sans',
+    shapeStyle: 'Měkké terakotové kontury',
+    shapeStyleEn: 'Soft terracotta contours',
+    layoutStyle: 'Útulná rodinná atmosféra',
+    layoutStyleEn: 'Cozy domestic atmosphere',
   },
 ];
 

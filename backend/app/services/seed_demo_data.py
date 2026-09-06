@@ -1656,7 +1656,7 @@ def seed_demo_data(db: Session):
             db.commit()
 
     # 16. Seed Initial Activity Logs
-    if db.query(ActivityLog).count() == 0:
+    if db.query(ActivityLog).filter(ActivityLog.description.ilike("%myčk%")).count() == 0:
         now = datetime.datetime.utcnow()
         admin = db.query(User).filter(User.username == "admin").first()
         anna = db.query(User).filter(User.username == "anna").first()

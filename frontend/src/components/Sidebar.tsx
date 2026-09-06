@@ -6,9 +6,11 @@ import {
   FolderArchive, Car, History
 } from 'lucide-react';
 import { useTranslation } from '../i18n';
+import { useTheme } from '../context/ThemeContext';
 
 export const Sidebar: React.FC = () => {
   const { t } = useTranslation();
+  const { designStyle } = useTheme();
 
   const mainNav = [
     { to: '/', label: t('nav.recipes'), icon: UtensilsCrossed },
@@ -33,7 +35,7 @@ export const Sidebar: React.FC = () => {
   return (
     <aside className="hidden lg:flex flex-col w-64 border-r border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50 p-4 shrink-0 min-h-[calc(100vh-4rem)]">
       <div className="space-y-1">
-        {mainNav.map((item) => {
+        {mainNav.map((item, idx) => {
           const Icon = item.icon;
           return (
             <NavLink
@@ -48,6 +50,13 @@ export const Sidebar: React.FC = () => {
                 }`
               }
             >
+              {designStyle === 'terminal' ? (
+                <span className="font-mono text-[10px] text-emerald-500/80 mr-[-4px]">&gt;</span>
+              ) : designStyle === 'editorial' ? (
+                <span className="font-serif text-[11px] text-amber-900/60 dark:text-amber-200/60 mr-[-4px] italic">
+                  §{idx + 1}
+                </span>
+              ) : null}
               <Icon className="w-4 h-4 shrink-0" />
               <span>{item.label}</span>
             </NavLink>
