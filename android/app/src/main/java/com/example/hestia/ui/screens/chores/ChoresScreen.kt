@@ -39,14 +39,16 @@ fun ChoresScreen(
     var chores by remember { mutableStateOf<List<Chore>>(emptyList()) }
     var members by remember { mutableStateOf<List<PublicMember>>(emptyList()) }
     var leaderboard by remember { mutableStateOf<List<LeaderboardMember>>(emptyList()) }
+    var rewards by remember { mutableStateOf<List<ChoreRewardItem>>(emptyList()) }
     var currentUser by remember { mutableStateOf<User?>(null) }
-    var selectedTab by remember { mutableIntStateOf(0) } // 0 = Moje úkoly, 1 = Všechny, 2 = Síň slávy
+    var selectedTab by remember { mutableIntStateOf(0) } // 0 = Moje, 1 = Všechny, 2 = Síň slávy, 3 = Odměny
     var isLoading by remember { mutableStateOf(true) }
 
     var showPanicDialog by remember { mutableStateOf(false) }
     var panicModeResponse by remember { mutableStateOf<PanicModeResponse?>(null) }
     var showWheelDialog by remember { mutableStateOf(false) }
     var showAddChoreDialog by remember { mutableStateOf(false) }
+    var showAddRewardDialog by remember { mutableStateOf(false) }
     var snackbarMessage by remember { mutableStateOf<String?>(null) }
 
     fun refreshChores() {
@@ -56,6 +58,7 @@ fun ChoresScreen(
             repository.getChores().onSuccess { chores = it }
             repository.getPublicMembers().onSuccess { members = it }
             repository.getLeaderboard().onSuccess { leaderboard = it }
+            repository.getChoreRewards().onSuccess { rewards = it }
             isLoading = false
         }
     }
@@ -73,7 +76,7 @@ fun ChoresScreen(
         modifier = modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
         floatingActionButton = {
-            if (selectedTab != 2) {
+            if (selectedTab in 0..1) {
                 FloatingActionButton(
                     onClick = { showAddChoreDialog = true },
                     containerColor = HestiaOrange,
@@ -81,6 +84,15 @@ fun ChoresScreen(
                     shape = CircleShape
                 ) {
                     Icon(Icons.Default.Add, contentDescription = "Přidat úkol")
+                }
+            } else if (selectedTab == 3) {
+                FloatingActionButton(
+                    onClick = { showAddRewardDialog = true },
+                    containerColor = HestiaOrange,
+                    contentColor = Color.White,
+                    shape = CircleShape
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Přidat odměnu")
                 }
             }
         },
@@ -185,6 +197,11 @@ fun ChoresScreen(
                         selected = selectedTab == 2,
                         onClick = { selectedTab = 2 },
                         text = { Text("Síň slávy 🏆", fontSize = 12.sp) }
+                    )
+                    Tab(
+                        selected = selectedTab == 3,
+                        onClick = { selectedTab = 3 },
+                        text = { Text("Odměny 🎁", fontSize = 12.sp) }
                     )
                 }
 
@@ -420,6 +437,149 @@ fun ChoresScreen(
                             }
                         }
                     }
+
+                    // TAB 3: REWARDS SHOP
+                    3 -> {
+                        val myPoints = leaderboard.find { it.user_id == currentUser?.id }?.weekly_points ?: 0
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            // User Points Balance Banner
+                            Card(
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = HestiaOrange.copy(alpha = 0.12f)
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(14.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Icon(Icons.Default.Stars, contentDescription = null, tint = HestiaOrange)
+                                        Column {
+                                            Text("Váš bodový zůstatek", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            Text("$myPoints bodů k vyčerpání", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = HestiaOrange)
+                                        }
+                                    }
+
+                                    Button(
+                                        onClick = { showAddRewardDialog = true },
+                                        shape = RoundedCornerShape(8.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = HestiaOrange),
+                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                                    ) {
+                                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(14.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("Nová", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+
+                            if (rewards.isEmpty()) {
+                                EmptyStateCard(
+                                    message = "V obchodě zatím nejsou vytvořeny žádné odměny.",
+                                    icon = Icons.Default.CardGiftcard
+                                )
+                            } else {
+                                LazyColumn(
+                                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentPadding = PaddingValues(bottom = 80.dp)
+                                ) {
+                                    items(rewards, key = { it.id }) { reward ->
+                                        Card(
+                                            shape = RoundedCornerShape(14.dp),
+                                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(14.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                                    modifier = Modifier.weight(1f)
+                                                ) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(42.dp)
+                                                            .clip(RoundedCornerShape(10.dp))
+                                                            .background(HestiaOrange.copy(alpha = 0.15f)),
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        Icon(
+                                                            when (reward.icon) {
+                                                                "Film" -> Icons.Default.Movie
+                                                                "Utensils" -> Icons.Default.Restaurant
+                                                                "Celebration" -> Icons.Default.Celebration
+                                                                else -> Icons.Default.CardGiftcard
+                                                            },
+                                                            contentDescription = null,
+                                                            tint = HestiaOrange,
+                                                            modifier = Modifier.size(22.dp)
+                                                        )
+                                                    }
+
+                                                    Column {
+                                                        Text(reward.title, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                                        if (!reward.description.isNullOrBlank()) {
+                                                            Text(
+                                                                reward.description,
+                                                                fontSize = 12.sp,
+                                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                            )
+                                                        }
+                                                        Text(
+                                                            "${reward.cost_points} bodů",
+                                                            fontWeight = FontWeight.Bold,
+                                                            fontSize = 12.sp,
+                                                            color = HestiaOrange,
+                                                            modifier = Modifier.padding(top = 2.dp)
+                                                        )
+                                                    }
+                                                }
+
+                                                Button(
+                                                    onClick = {
+                                                        coroutineScope.launch {
+                                                            repository.redeemChoreReward(reward.id)
+                                                                .onSuccess {
+                                                                    refreshChores()
+                                                                    snackbarMessage = "Odměna '${reward.title}' byla úspěšně zakoupena! 🎉"
+                                                                }
+                                                                .onFailure { err ->
+                                                                    snackbarMessage = "Nelze zakoupit: ${err.message}"
+                                                                }
+                                                        }
+                                                    },
+                                                    enabled = myPoints >= reward.cost_points,
+                                                    shape = RoundedCornerShape(8.dp),
+                                                    colors = ButtonDefaults.buttonColors(containerColor = HestiaOrange),
+                                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                                ) {
+                                                    Text(
+                                                        if (myPoints >= reward.cost_points) "Koupit" else "Málo bodů",
+                                                        fontSize = 11.sp,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -614,6 +774,103 @@ fun ChoresScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showAddChoreDialog = false }) {
+                    Text("Zrušit")
+                }
+            }
+        )
+    }
+
+    // Add Chore Reward Dialog
+    if (showAddRewardDialog) {
+        var title by remember { mutableStateOf("") }
+        var description by remember { mutableStateOf("") }
+        var costPoints by remember { mutableStateOf("50") }
+        var icon by remember { mutableStateOf("Gift") }
+
+        AlertDialog(
+            onDismissRequest = { showAddRewardDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Default.CardGiftcard, contentDescription = null, tint = HestiaOrange)
+                    Text("Nová rodinná odměna", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(
+                        value = title,
+                        onValueChange = { title = it },
+                        label = { Text("Název odměny *") },
+                        placeholder = { Text("např. Výběr filmu na pátek") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = description,
+                        onValueChange = { description = it },
+                        label = { Text("Popis (volitelné)") },
+                        placeholder = { Text("např. Držitel vybírá film...") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = costPoints,
+                        onValueChange = { costPoints = it },
+                        label = { Text("Cena v bodech *") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Text("Ikona odměny:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        listOf(
+                            "Gift" to "Dárek 🎁",
+                            "Film" to "Film 🎬",
+                            "Utensils" to "Jídlo 🍕",
+                            "Celebration" to "Oslava 🎉"
+                        ).forEach { (k, l) ->
+                            FilterChip(
+                                selected = icon == k,
+                                onClick = { icon = k },
+                                label = { Text(l, fontSize = 11.sp) }
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val cost = costPoints.toIntOrNull() ?: 50
+                        if (title.isNotBlank()) {
+                            coroutineScope.launch {
+                                repository.createChoreReward(
+                                    ChoreRewardCreate(
+                                        title = title.trim(),
+                                        description = description.trim().ifBlank { null },
+                                        cost_points = cost,
+                                        icon = icon
+                                    )
+                                ).onSuccess {
+                                    showAddRewardDialog = false
+                                    refreshChores()
+                                    snackbarMessage = "Nová odměna byla úspěšně přidána!"
+                                }
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = HestiaOrange)
+                ) {
+                    Text("Vytvořit odměnu")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddRewardDialog = false }) {
                     Text("Zrušit")
                 }
             }

@@ -18,8 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.hestia.data.models.Plant
-import com.example.hestia.data.models.PlantCreate
+import com.example.hestia.data.models.*
 import com.example.hestia.data.repository.HestiaRepository
 import com.example.hestia.theme.*
 import com.example.hestia.ui.components.EmptyStateCard
@@ -37,6 +36,7 @@ fun PlantsScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var showDoctorDialog by remember { mutableStateOf(false) }
     var showSitterDialog by remember { mutableStateOf(false) }
+    var showAiBotanikDialog by remember { mutableStateOf(false) }
     var snackbarMessage by remember { mutableStateOf<String?>(null) }
 
     fun refreshPlants() {
@@ -113,6 +113,20 @@ fun PlantsScreen(
                     )
 
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        FilledTonalButton(
+                            onClick = { showAiBotanikDialog = true },
+                            colors = ButtonDefaults.filledTonalButtonColors(
+                                containerColor = StatusGreen.copy(alpha = 0.15f),
+                                contentColor = StatusGreen
+                            ),
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("AI Botanik", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+
                         FilledTonalButton(
                             onClick = { showDoctorDialog = true },
                             colors = ButtonDefaults.filledTonalButtonColors(
@@ -492,6 +506,236 @@ fun PlantsScreen(
             confirmButton = {
                 TextButton(onClick = { showSitterDialog = false }) {
                     Text("Zavřít", color = HestiaOrange)
+                }
+            }
+        )
+    }
+
+    // AI Botanik Dialog
+    if (showAiBotanikDialog) {
+        var queryPlant by remember { mutableStateOf("") }
+        var isAnalyzing by remember { mutableStateOf(false) }
+        var analysisResult by remember { mutableStateOf<PlantAiExtracted?>(null) }
+        var analysisError by remember { mutableStateOf<String?>(null) }
+        var selectedRoom by remember { mutableStateOf("Obývací pokoj") }
+        val rooms = listOf("Obývací pokoj", "Kuchyně", "Ložnice", "Chodba", "Koupelna", "Balkon / Terasa")
+        val suggestions = listOf("Monstera Deliciosa", "Ficus Elastica", "Pothos (Šplhavnice)", "Sansevieria", "Zamioculcas", "Calathea")
+
+        AlertDialog(
+            onDismissRequest = { showAiBotanikDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = StatusGreen)
+                    Text("AI Botanik (Gemini)", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                }
+            },
+            text = {
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    item {
+                        Text(
+                            text = "Zadejte název pokojové rostliny a Gemini AI automaticky vygeneruje harmonogram zálivky, nároky na světlo, substrát i toxicitu pro zvířata.",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    item {
+                        OutlinedTextField(
+                            value = queryPlant,
+                            onValueChange = { queryPlant = it },
+                            label = { Text("Název rostliny") },
+                            placeholder = { Text("např. Monstera deliciosa") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                    }
+
+                    item {
+                        Text("Populární rostliny:", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            items(suggestions) { sugg ->
+                                SuggestionChip(
+                                    onClick = { queryPlant = sugg },
+                                    label = { Text(sugg, fontSize = 11.sp) }
+                                )
+                            }
+                        }
+                    }
+
+                    item {
+                        Button(
+                            onClick = {
+                                if (queryPlant.isNotBlank()) {
+                                    coroutineScope.launch {
+                                        isAnalyzing = true
+                                        analysisError = null
+                                        repository.aiAnalyzePlant(plantName = queryPlant.trim())
+                                            .onSuccess {
+                                                analysisResult = it
+                                                isAnalyzing = false
+                                            }
+                                            .onFailure {
+                                                analysisError = it.localizedMessage ?: "Nepodařilo se analyzovat rostlinu."
+                                                isAnalyzing = false
+                                            }
+                                    }
+                                }
+                            },
+                            enabled = queryPlant.isNotBlank() && !isAnalyzing,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = StatusGreen),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            if (isAnalyzing) {
+                                CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Analyzuji botanická data...")
+                            } else {
+                                Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Analyzovat s Gemini")
+                            }
+                        }
+                    }
+
+                    if (analysisError != null) {
+                        item {
+                            Text(
+                                text = "Chyba: $analysisError",
+                                color = StatusRed,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+
+                    analysisResult?.let { res ->
+                        item {
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Text(
+                                        text = res.common_name,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 16.sp
+                                    )
+                                    if (res.species_latin.isNotBlank()) {
+                                        Text(
+                                            text = res.species_latin,
+                                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    if (res.description.isNotBlank()) {
+                                        Text(text = res.description, fontSize = 12.sp)
+                                    }
+
+                                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text("💧 Zálivka v létě:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                        Text("každých ${res.watering_interval_days} dní", fontSize = 12.sp)
+                                    }
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text("❄️ Zálivka v zimě:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                        Text("každých ${res.winter_watering_interval_days} dní", fontSize = 12.sp)
+                                    }
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text("🌿 Substrát:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                        Text(res.substrate_recommendation, fontSize = 11.sp)
+                                    }
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text("🐾 Pro zvířata:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                        Text(
+                                            text = if (res.pet_toxicity == "safe") "Bezpečná (Pet Friendly) ✅" else "Pozor: Toxická ⚠️",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (res.pet_toxicity == "safe") StatusGreen else StatusRed
+                                        )
+                                    }
+                                    if (res.pet_toxicity_details.isNotBlank()) {
+                                        Text(
+                                            text = res.pet_toxicity_details,
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        item {
+                            Text("Vyberte umístění:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                items(rooms) { r ->
+                                    FilterChip(
+                                        selected = selectedRoom == r,
+                                        onClick = { selectedRoom = r },
+                                        label = { Text(r, fontSize = 11.sp) }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                if (analysisResult != null) {
+                    Button(
+                        onClick = {
+                            val res = analysisResult ?: return@Button
+                            coroutineScope.launch {
+                                repository.createPlant(
+                                    PlantCreate(
+                                        name = res.common_name,
+                                        species_latin = res.species_latin.ifBlank { null },
+                                        species_czech = res.species_czech.ifBlank { null },
+                                        room = selectedRoom,
+                                        light_requirement = res.light_requirement,
+                                        watering_interval_days = res.watering_interval_days,
+                                        winter_watering_interval_days = res.winter_watering_interval_days,
+                                        fertilizing_interval_days = res.fertilizing_interval_days,
+                                        misting_required = res.misting_required,
+                                        substrate_type = res.substrate_recommendation,
+                                        pet_toxicity = res.pet_toxicity,
+                                        pet_toxicity_notes = res.pet_toxicity_details.ifBlank { null },
+                                        health_notes = res.initial_health_assessment.ifBlank { null },
+                                        notes = res.description.ifBlank { null }
+                                    )
+                                ).onSuccess {
+                                    showAiBotanikDialog = false
+                                    refreshPlants()
+                                    snackbarMessage = "Květina '${res.common_name}' byla uložena s AI péčí!"
+                                }
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = StatusGreen)
+                    ) {
+                        Text("Uložit do rostlin")
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAiBotanikDialog = false }) {
+                    Text("Zavřít")
                 }
             }
         )

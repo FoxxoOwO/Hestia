@@ -215,4 +215,30 @@ interface HestiaApiService {
     suspend fun resetAllData(
         @Body body: Map<String, String>
     ): Map<String, String>
+
+    // --- GEMINI AI & SCANNING ENDPOINTS ---
+    @POST("api/v1/ai/import-recipe")
+    suspend fun aiImportRecipe(@Body body: AiRecipeImportRequest): GeminiExtractedRecipe
+
+    @GET("api/v1/chores/rewards")
+    suspend fun getChoreRewards(): List<ChoreRewardItem>
+
+    @POST("api/v1/chores/rewards")
+    suspend fun createChoreReward(@Body body: ChoreRewardCreate): ChoreRewardItem
+
+    @POST("api/v1/chores/rewards/{id}/redeem")
+    suspend fun redeemChoreReward(@Path("id") id: Int): Map<String, String>
+
+    @POST("api/v1/ai/analyze-plant")
+    suspend fun aiAnalyzePlant(@Body body: PlantAiRequest): PlantAiExtracted
+
+    @POST("api/v1/ai/check-pet-food-safety")
+    suspend fun checkPetFoodSafety(@Body body: PetFoodSafetyRequest): PetFoodSafetyResponse
+
+    @POST("api/v1/ai/diagnose-pet-symptoms")
+    suspend fun diagnosePetSymptoms(@Body body: PetSymptomRequest): PetSymptomResponse
+
+    @POST("api/v1/finance/scan-receipt")
+    suspend fun scanReceipt(@Body body: ReceiptScanRequest): ReceiptScanResponse
 }
+

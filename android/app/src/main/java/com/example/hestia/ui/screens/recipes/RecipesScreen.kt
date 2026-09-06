@@ -43,6 +43,7 @@ fun RecipesScreen(
     var selectedRecipe by remember { mutableStateOf<Recipe?>(null) }
     var activeFilter by remember { mutableStateOf("all") } // "all", "can_cook", "favorites"
     var showAddDialog by remember { mutableStateOf(false) }
+    var showGeminiDialog by remember { mutableStateOf(false) }
     var snackbarMessage by remember { mutableStateOf<String?>(null) }
 
     fun refreshRecipes() {
@@ -165,12 +166,33 @@ fun RecipesScreen(
                     )
                 }
 
-                Text(
-                    text = "Kuchařka & Recepty (${filteredRecipes.size})",
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(vertical = 6.dp)
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Kuchařka & Recepty (${filteredRecipes.size})",
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    FilledTonalButton(
+                        onClick = { showGeminiDialog = true },
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = HestiaOrange.copy(alpha = 0.15f),
+                            contentColor = HestiaOrange
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Gemini AI", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
 
                 if (filteredRecipes.isEmpty()) {
                     EmptyStateCard(
@@ -756,6 +778,218 @@ fun RecipesScreen(
             dismissButton = {
                 TextButton(onClick = { showAddDialog = false }) {
                     Text("Zrušit")
+                }
+            }
+        )
+    }
+
+    // Gemini AI Import Dialog
+    if (showGeminiDialog) {
+        var importUrl by remember { mutableStateOf("") }
+        var importText by remember { mutableStateOf("") }
+        var importType by remember { mutableStateOf("url") } // "url" or "text"
+        var isAnalyzing by remember { mutableStateOf(false) }
+        var isSaving by remember { mutableStateOf(false) }
+        var extractedRecipe by remember { mutableStateOf<GeminiExtractedRecipe?>(null) }
+        var importError by remember { mutableStateOf<String?>(null) }
+
+        AlertDialog(
+            onDismissRequest = {
+                if (!isAnalyzing && !isSaving) showGeminiDialog = false
+            },
+            title = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = HestiaOrange)
+                    Text("Import s Gemini AI", fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    if (extractedRecipe == null) {
+                        Text(
+                            "Vložte odkaz na web nebo text receptu. Gemini AI z něj automaticky vyextrahuje suroviny, časy a postup.",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            FilterChip(
+                                selected = importType == "url",
+                                onClick = { importType = "url" },
+                                label = { Text("Z odkazu (URL)", fontSize = 11.sp) },
+                                modifier = Modifier.weight(1f)
+                            )
+                            FilterChip(
+                                selected = importType == "text",
+                                onClick = { importType = "text" },
+                                label = { Text("Z textu / schránky", fontSize = 11.sp) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+
+                        if (importType == "url") {
+                            OutlinedTextField(
+                                value = importUrl,
+                                onValueChange = { importUrl = it; importError = null },
+                                label = { Text("URL adresa receptu") },
+                                placeholder = { Text("https://www.recepty.cz/...") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        } else {
+                            OutlinedTextField(
+                                value = importText,
+                                onValueChange = { importText = it; importError = null },
+                                label = { Text("Text receptu") },
+                                placeholder = { Text("Vložte text se surovinami a postupem...") },
+                                minLines = 3,
+                                maxLines = 6,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+
+                        if (importError != null) {
+                            Text(
+                                text = importError!!,
+                                color = MaterialTheme.colorScheme.error,
+                                fontSize = 12.sp
+                            )
+                        }
+                    } else {
+                        val ext = extractedRecipe!!
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = HestiaOrange.copy(alpha = 0.08f)
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text(
+                                    text = "✨ ${ext.title}",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp,
+                                    color = HestiaOrange
+                                )
+                                if (!ext.description.isNullOrBlank()) {
+                                    Text(text = ext.description!!, fontSize = 12.sp, maxLines = 2)
+                                }
+                                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    Text("⏱️ ${ext.prep_time_minutes + ext.cook_time_minutes} min", fontSize = 11.sp)
+                                    Text("👥 ${ext.default_servings} porce", fontSize = 11.sp)
+                                    Text("📊 ${ext.difficulty}", fontSize = 11.sp)
+                                }
+                                Text(
+                                    text = "Rozpoznáno: ${ext.ingredients.size} surovin, ${ext.instructions.size} kroků.",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                if (extractedRecipe == null) {
+                    Button(
+                        onClick = {
+                            val url = if (importType == "url") importUrl.trim().ifBlank { null } else null
+                            val text = if (importType == "text") importText.trim().ifBlank { null } else null
+
+                            if (url == null && text == null) {
+                                importError = "Zadejte URL nebo vložte text receptu."
+                                return@Button
+                            }
+
+                            coroutineScope.launch {
+                                isAnalyzing = true
+                                importError = null
+                                repository.aiImportRecipe(url = url, rawText = text)
+                                    .onSuccess {
+                                        extractedRecipe = it
+                                        isAnalyzing = false
+                                    }
+                                    .onFailure { err ->
+                                        isAnalyzing = false
+                                        importError = err.message ?: "Chyba při analýze receptu pomocí AI."
+                                    }
+                            }
+                        },
+                        enabled = !isAnalyzing && (importUrl.isNotBlank() || importText.isNotBlank()),
+                        colors = ButtonDefaults.buttonColors(containerColor = HestiaOrange)
+                    ) {
+                        if (isAnalyzing) {
+                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Analyzuji...")
+                        } else {
+                            Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Analyzovat")
+                        }
+                    }
+                } else {
+                    Button(
+                        onClick = {
+                            val ext = extractedRecipe!!
+                            coroutineScope.launch {
+                                isSaving = true
+                                repository.createRecipe(
+                                    RecipeCreate(
+                                        title = ext.title,
+                                        description = ext.description?.ifBlank { null },
+                                        image_url = ext.image_url?.ifBlank { null },
+                                        prep_time_minutes = ext.prep_time_minutes,
+                                        cook_time_minutes = ext.cook_time_minutes,
+                                        difficulty = ext.difficulty,
+                                        price_level = ext.price_level,
+                                        default_servings = ext.default_servings,
+                                        tags = ext.tags,
+                                        ingredients = ext.ingredients,
+                                        instructions = ext.instructions
+                                    )
+                                ).onSuccess {
+                                    isSaving = false
+                                    showGeminiDialog = false
+                                    refreshRecipes()
+                                    snackbarMessage = "Recept \"${ext.title}\" byl úspěšně naimportován přes Gemini AI!"
+                                }.onFailure { err ->
+                                    isSaving = false
+                                    importError = "Chyba při ukládání: ${err.message}"
+                                }
+                            }
+                        },
+                        enabled = !isSaving,
+                        colors = ButtonDefaults.buttonColors(containerColor = HestiaOrange)
+                    ) {
+                        if (isSaving) {
+                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(16.dp))
+                        } else {
+                            Text("Uložit do kuchařky")
+                        }
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        if (extractedRecipe != null) {
+                            extractedRecipe = null
+                        } else {
+                            showGeminiDialog = false
+                        }
+                    }
+                ) {
+                    Text(if (extractedRecipe != null) "Zpět" else "Zrušit")
                 }
             }
         )

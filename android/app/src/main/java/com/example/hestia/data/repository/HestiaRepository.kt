@@ -302,4 +302,51 @@ class HestiaRepository(
         }
         getService().resetAllData(body)
     }
+
+    // --- GEMINI AI & SCANNING ---
+    suspend fun aiImportRecipe(url: String? = null, rawText: String? = null): Result<GeminiExtractedRecipe> = runCatching {
+        getService().aiImportRecipe(AiRecipeImportRequest(url = url, raw_text = rawText))
+    }
+
+    suspend fun getChoreRewards(): Result<List<ChoreRewardItem>> = runCatching {
+        getService().getChoreRewards()
+    }
+
+    suspend fun createChoreReward(item: ChoreRewardCreate): Result<ChoreRewardItem> = runCatching {
+        getService().createChoreReward(item)
+    }
+
+    suspend fun redeemChoreReward(id: Int): Result<Map<String, String>> = runCatching {
+        getService().redeemChoreReward(id)
+    }
+
+    suspend fun aiAnalyzePlant(plantName: String? = null, imageBase64: String? = null): Result<PlantAiExtracted> = runCatching {
+        getService().aiAnalyzePlant(PlantAiRequest(plant_name = plantName, image_base64 = imageBase64))
+    }
+
+    suspend fun checkPetFoodSafety(foodName: String, species: String = "dog"): Result<PetFoodSafetyResponse> = runCatching {
+        getService().checkPetFoodSafety(PetFoodSafetyRequest(species = species, food_name = foodName))
+    }
+
+    suspend fun diagnosePetSymptoms(
+        petId: Int? = null,
+        petName: String? = null,
+        petSpecies: String = "dog",
+        symptoms: String,
+        imageBase64: String? = null
+    ): Result<PetSymptomResponse> = runCatching {
+        getService().diagnosePetSymptoms(
+            PetSymptomRequest(
+                pet_id = petId,
+                pet_name = petName,
+                pet_species = petSpecies,
+                symptoms_description = symptoms,
+                image_base64 = imageBase64
+            )
+        )
+    }
+
+    suspend fun scanReceipt(imageBase64: String? = null, imageUrl: String? = null): Result<ReceiptScanResponse> = runCatching {
+        getService().scanReceipt(ReceiptScanRequest(image_base64 = imageBase64, image_url = imageUrl))
+    }
 }

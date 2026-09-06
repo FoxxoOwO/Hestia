@@ -435,6 +435,8 @@ data class BackupItem(
 data class RecipeCreate(
     val title: String,
     val description: String? = null,
+    val image_url: String? = null,
+    val source_url: String? = null,
     val prep_time_minutes: Int = 15,
     val cook_time_minutes: Int = 30,
     val difficulty: String = "medium",
@@ -506,11 +508,19 @@ data class LeaderboardMember(
 @Serializable
 data class PlantCreate(
     val name: String,
+    val species_latin: String? = null,
     val species_czech: String? = null,
-    val room: String = "Obývací pokoj",
+    val room: String = "living_room",
     val light_requirement: String = "bright_indirect",
     val watering_interval_days: Int = 7,
+    val winter_watering_interval_days: Int = 14,
+    val fertilizing_interval_days: Int = 14,
+    val misting_required: Boolean = false,
+    val substrate_type: String? = null,
     val pet_toxicity: String = "safe",
+    val pet_toxicity_notes: String? = null,
+    val health_status: String = "healthy",
+    val health_notes: String? = null,
     val notes: String? = null
 )
 
@@ -646,4 +656,145 @@ data class MedicineCreate(
     val is_prescription: Boolean = false,
     val notes: String? = null
 )
+
+// --- GEMINI AI & SCANNING MODELS ---
+
+@Serializable
+data class AiRecipeImportRequest(
+    val url: String? = null,
+    val raw_text: String? = null,
+    val target_language: String = "cs"
+)
+
+@Serializable
+data class GeminiExtractedRecipe(
+    val title: String,
+    val description: String? = "",
+    val image_url: String? = "",
+    val prep_time_minutes: Int = 15,
+    val cook_time_minutes: Int = 30,
+    val difficulty: String = "medium",
+    val price_level: String = "medium",
+    val default_servings: Int = 4,
+    val tags: List<String> = emptyList(),
+    val utensils: List<String> = emptyList(),
+    val ingredients: List<RecipeIngredient> = emptyList(),
+    val instructions: List<RecipeStep> = emptyList(),
+    val source_url: String? = null
+)
+
+@Serializable
+data class ChoreRewardItem(
+    val id: Int = 0,
+    val title: String,
+    val description: String? = null,
+    val cost_points: Int = 50,
+    val icon: String = "Gift",
+    val is_active: Boolean = true
+)
+
+@Serializable
+data class ChoreRewardCreate(
+    val title: String,
+    val description: String? = null,
+    val cost_points: Int = 50,
+    val icon: String = "Gift",
+    val is_active: Boolean = true
+)
+
+@Serializable
+data class ChoreRedemption(
+    val id: Int = 0,
+    val reward_id: Int = 0,
+    val user_id: Int = 0,
+    val points_spent: Int = 0,
+    val status: String = "approved",
+    val redeemed_at: String? = null,
+    val reward: ChoreRewardItem? = null
+)
+
+@Serializable
+data class PlantAiRequest(
+    val plant_name: String? = null,
+    val image_base64: String? = null,
+    val image_url: String? = null,
+    val target_language: String = "cs"
+)
+
+@Serializable
+data class PlantAiExtracted(
+    val common_name: String,
+    val species_latin: String = "",
+    val species_czech: String = "",
+    val description: String = "",
+    val light_requirement: String = "bright_indirect",
+    val watering_interval_days: Int = 7,
+    val winter_watering_interval_days: Int = 14,
+    val fertilizing_interval_days: Int = 30,
+    val misting_required: Boolean = false,
+    val substrate_recommendation: String = "Univerzální pokojový substrát",
+    val pet_toxicity: String = "safe",
+    val pet_toxicity_details: String = "",
+    val initial_health_assessment: String = "Zdravá rostlina"
+)
+
+@Serializable
+data class PetFoodSafetyRequest(
+    val species: String = "dog",
+    val food_name: String,
+    val target_language: String = "cs"
+)
+
+@Serializable
+data class PetFoodSafetyResponse(
+    val food_name: String,
+    val species: String,
+    val safety_level: String = "safe",
+    val headline: String,
+    val risk_description: String = "",
+    val toxic_dose_info: String? = null,
+    val symptoms_of_poisoning: List<String> = emptyList(),
+    val first_aid_action: String = ""
+)
+
+@Serializable
+data class PetSymptomRequest(
+    val pet_id: Int? = null,
+    val pet_name: String? = null,
+    val pet_species: String = "dog",
+    val pet_age: String? = null,
+    val symptoms_description: String,
+    val image_base64: String? = null,
+    val image_url: String? = null,
+    val target_language: String = "cs"
+)
+
+@Serializable
+data class PetSymptomResponse(
+    val pet_name: String? = null,
+    val severity: String = "low",
+    val assessment_headline: String,
+    val possible_causes: List<String> = emptyList(),
+    val urgency_message: String = "",
+    val action_steps: List<String> = emptyList(),
+    val red_flag_symptoms: List<String> = emptyList(),
+    val home_care_advice: String = ""
+)
+
+@Serializable
+data class ReceiptScanRequest(
+    val image_base64: String? = null,
+    val image_url: String? = null
+)
+
+@Serializable
+data class ReceiptScanResponse(
+    val store_name: String? = null,
+    val date: String? = null,
+    val total_amount: Double? = null,
+    val category: String? = "groceries",
+    val items_summary: String? = null,
+    val raw_text: String? = null
+)
+
 

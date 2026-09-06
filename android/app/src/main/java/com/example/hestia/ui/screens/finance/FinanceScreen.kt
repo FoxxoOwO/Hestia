@@ -1,5 +1,11 @@
 package com.example.hestia.ui.screens.finance
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
+import android.util.Base64
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -20,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -33,6 +40,7 @@ import com.example.hestia.ui.components.EmptyStateCard
 import com.example.hestia.ui.components.QrCodeImage
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.io.ByteArrayOutputStream
 import java.util.Locale
 
 @Composable
@@ -40,6 +48,7 @@ fun FinanceScreen(
     repository: HestiaRepository,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     var summary by remember { mutableStateOf<FinanceSummary?>(null) }
     var settlements by remember { mutableStateOf<DebtSettlementResponse?>(null) }
@@ -326,6 +335,33 @@ fun FinanceScreen(
 
                     // TAB 1: TRANSACTIONS LIST
                     1 -> {
+                        item {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("Transakce (${transactions.size})", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    FilledTonalButton(
+                                        onClick = { showAddTransactionDialog = true },
+                                        colors = ButtonDefaults.filledTonalButtonColors(
+                                            containerColor = HestiaOrange.copy(alpha = 0.15f),
+                                            contentColor = HestiaOrange
+                                        ),
+                                        shape = RoundedCornerShape(10.dp),
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                                    ) {
+                                        Icon(Icons.Default.DocumentScanner, contentDescription = null, modifier = Modifier.size(14.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("AI Účtenka", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        }
+
                         if (transactions.isEmpty()) {
                             item {
                                 EmptyStateCard(
@@ -591,82 +627,219 @@ fun FinanceScreen(
         var payerId by remember { mutableStateOf<Int?>(currentUser?.id) }
         var isShared by remember { mutableStateOf(true) }
 
+        var isScanningReceipt by remember { mutableStateOf(false) }
+        var scanError by remember { mutableStateOf<String?>(null) }
+        var scannedItemsSummary by remember { mutableStateOf<String?>(null) }
+        var isReceiptSuccess by remember { mutableStateOf(false) }
+
         val categories = listOf("groceries" to "Potraviny", "household" to "Domácnost", "entertainment" to "Zábava", "transport" to "Doprava", "other" to "Ostatní")
+
+        val receiptPickerLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.GetContent()
+        ) { uri: Uri? ->
+            uri?.let {
+                coroutineScope.launch {
+                    isScanningReceipt = true
+                    scanError = null
+                    isReceiptSuccess = false
+                    try {
+                        val inputStream = context.contentResolver.openInputStream(uri)
+                        val originalBitmap = BitmapFactory.decodeStream(inputStream)
+                        inputStream?.close()
+
+                        if (originalBitmap != null) {
+                            val maxDim = 1600
+                            val width = originalBitmap.width
+                            val height = originalBitmap.height
+                            val scaledBitmap = if (width > maxDim || height > maxDim) {
+                                val ratio = width.toFloat() / height.toFloat()
+                                val (newW, newH) = if (ratio > 1f) maxDim to (maxDim / ratio).toInt() else (maxDim * ratio).toInt() to maxDim
+                                Bitmap.createScaledBitmap(originalBitmap, newW, newH, true)
+                            } else {
+                                originalBitmap
+                            }
+                            val baos = ByteArrayOutputStream()
+                            scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 85, baos)
+                            val base64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)
+
+                            repository.scanReceipt(imageBase64 = base64)
+                                .onSuccess { scanRes ->
+                                    scanRes.store_name?.let { if (it.isNotBlank()) title = it }
+                                    scanRes.total_amount?.let { amount = String.format(Locale.US, "%.2f", it) }
+                                    scanRes.category?.let { cat ->
+                                        if (categories.any { it.first == cat }) {
+                                            category = cat
+                                        }
+                                    }
+                                    scannedItemsSummary = scanRes.items_summary
+                                    isReceiptSuccess = true
+                                }
+                                .onFailure { err ->
+                                    scanError = err.localizedMessage ?: "Nepodařilo se rozpoznat účtenku."
+                                }
+                        } else {
+                            scanError = "Nepodařilo se načíst soubor obrázku."
+                        }
+                    } catch (e: Exception) {
+                        scanError = e.localizedMessage ?: "Chyba při zpracování obrázku."
+                    } finally {
+                        isScanningReceipt = false
+                    }
+                }
+            }
+        }
 
         AlertDialog(
             onDismissRequest = { showAddTransactionDialog = false },
             title = { Text("Přidat transakci", fontWeight = FontWeight.Bold) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    // Type toggle (Výdaj / Příjem)
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(
-                            selected = type == "expense",
-                            onClick = { type = "expense" },
-                            label = { Text("Výdaj (-)", fontSize = 12.sp) },
-                            modifier = Modifier.weight(1f)
-                        )
-                        FilterChip(
-                            selected = type == "income",
-                            onClick = { type = "income" },
-                            label = { Text("Příjem (+)", fontSize = 12.sp) },
-                            modifier = Modifier.weight(1f)
-                        )
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    // Receipt scanner banner
+                    item {
+                        OutlinedCard(
+                            onClick = {
+                                if (!isScanningReceipt) {
+                                    receiptPickerLauncher.launch("image/*")
+                                }
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                if (isScanningReceipt) {
+                                    CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp, color = HestiaOrange)
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text("Gemini OCR čte účtenku...", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                        Text("Rozpoznávám obchod, částku a položky...", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                } else {
+                                    Icon(Icons.Default.DocumentScanner, contentDescription = null, tint = HestiaOrange, modifier = Modifier.size(24.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text("Skenovat účtenku (Gemini AI)", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = HestiaOrange)
+                                        Text("Nahrajte fotku účtenky pro automatické vyplnění", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    Icon(Icons.Default.ArrowForwardIos, contentDescription = null, modifier = Modifier.size(12.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
                     }
 
-                    OutlinedTextField(
-                        value = title,
-                        onValueChange = { title = it },
-                        label = { Text("Název transakce *") },
-                        placeholder = { Text("např. Velký nákup Lidl") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
+                    if (isReceiptSuccess) {
+                        item {
+                            Surface(
+                                color = StatusGreen.copy(alpha = 0.12f),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.padding(8.dp)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = StatusGreen, modifier = Modifier.size(14.dp))
+                                        Text("Účtenka byla úspěšně načtena!", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = StatusGreen)
+                                    }
+                                    scannedItemsSummary?.let { summary ->
+                                        if (summary.isNotBlank()) {
+                                            Text(summary, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
 
-                    OutlinedTextField(
-                        value = amount,
-                        onValueChange = { amount = it },
-                        label = { Text("Částka v Kč *") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
+                    if (scanError != null) {
+                        item {
+                            Text("Chyba při skenování: $scanError", color = StatusRed, fontSize = 11.sp)
+                        }
+                    }
 
-                    Text("Kategorie:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        items(categories) { (k, l) ->
+                    // Type toggle (Výdaj / Příjem)
+                    item {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             FilterChip(
-                                selected = category == k,
-                                onClick = { category = k },
-                                label = { Text(l, fontSize = 11.sp) }
+                                selected = type == "expense",
+                                onClick = { type = "expense" },
+                                label = { Text("Výdaj (-)", fontSize = 12.sp) },
+                                modifier = Modifier.weight(1f)
+                            )
+                            FilterChip(
+                                selected = type == "income",
+                                onClick = { type = "income" },
+                                label = { Text("Příjem (+)", fontSize = 12.sp) },
+                                modifier = Modifier.weight(1f)
                             )
                         }
                     }
 
-                    if (members.isNotEmpty()) {
-                        Text("Kdo platil:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    item {
+                        OutlinedTextField(
+                            value = title,
+                            onValueChange = { title = it },
+                            label = { Text("Název transakce *") },
+                            placeholder = { Text("např. Velký nákup Lidl") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                    }
+
+                    item {
+                        OutlinedTextField(
+                            value = amount,
+                            onValueChange = { amount = it },
+                            label = { Text("Částka v Kč *") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                    }
+
+                    item {
+                        Text("Kategorie:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            items(members) { m ->
+                            items(categories) { (k, l) ->
                                 FilterChip(
-                                    selected = payerId == m.id,
-                                    onClick = { payerId = m.id },
-                                    label = { Text(m.display_name, fontSize = 11.sp) }
+                                    selected = category == k,
+                                    onClick = { category = k },
+                                    label = { Text(l, fontSize = 11.sp) }
                                 )
                             }
                         }
                     }
 
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.clickable { isShared = !isShared }
-                    ) {
-                        Checkbox(
-                            checked = isShared,
-                            onCheckedChange = { isShared = it },
-                            colors = CheckboxDefaults.colors(checkedColor = HestiaOrange)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Sdílený náklad domácnosti (do vyrovnání)", fontSize = 12.sp)
+                    if (members.isNotEmpty()) {
+                        item {
+                            Text("Kdo platil:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                items(members) { m ->
+                                    FilterChip(
+                                        selected = payerId == m.id,
+                                        onClick = { payerId = m.id },
+                                        label = { Text(m.display_name, fontSize = 11.sp) }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    item {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.clickable { isShared = !isShared }
+                        ) {
+                            Checkbox(
+                                checked = isShared,
+                                onCheckedChange = { isShared = it },
+                                colors = CheckboxDefaults.colors(checkedColor = HestiaOrange)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Sdílený náklad domácnosti (do vyrovnání)", fontSize = 12.sp)
+                        }
                     }
                 }
             },

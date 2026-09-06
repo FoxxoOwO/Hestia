@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.hestia.data.local.PreferencesManager
 import com.example.hestia.data.models.User
 import com.example.hestia.data.repository.HestiaRepository
 import com.example.hestia.theme.HestiaOrange
@@ -28,12 +29,14 @@ fun SettingsScreen(
     repository: HestiaRepository,
     onLogout: () -> Unit,
     onNavigateServerConfig: () -> Unit,
+    onSwitchUser: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     var user by remember { mutableStateOf<User?>(null) }
     var serverUrl by remember { mutableStateOf("") }
+    val appMode by repository.preferences.appModeFlow.collectAsState(initial = PreferencesManager.MODE_NATIVE)
     var showResetDialog by remember { mutableStateOf(false) }
     var resetConfirmationText by remember { mutableStateOf("") }
     var resetError by remember { mutableStateOf<String?>(null) }
@@ -77,47 +80,110 @@ fun SettingsScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
-                        modifier = Modifier.padding(16.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(50.dp)
-                                .clip(CircleShape)
-                                .background(userColor),
-                            contentAlignment = Alignment.Center
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
-                            Text(
-                                text = user!!.display_name.take(1).uppercase(),
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 20.sp
-                            )
-                        }
-
-                        Column {
-                            Text(
-                                text = user!!.display_name,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp
-                            )
-                            Text(
-                                text = "@${user!!.username} • ${if (user!!.role == "admin") "Správce" else "Člen"}",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            if (!user!!.email.isNullOrBlank()) {
+                            Box(
+                                modifier = Modifier
+                                    .size(50.dp)
+                                    .clip(CircleShape)
+                                    .background(userColor),
+                                contentAlignment = Alignment.Center
+                            ) {
                                 Text(
-                                    text = user!!.email!!,
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    text = user!!.display_name.take(1).uppercase(),
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 20.sp
                                 )
                             }
+
+                            Column {
+                                Text(
+                                    text = user!!.display_name,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp
+                                )
+                                Text(
+                                    text = "@${user!!.username} • ${if (user!!.role == "admin") "Správce" else "Člen"}",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                if (!user!!.email.isNullOrBlank()) {
+                                    Text(
+                                        text = user!!.email!!,
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+
+                        OutlinedButton(
+                            onClick = onSwitchUser,
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Icon(Icons.Default.People, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Přepnout", fontSize = 11.sp)
                         }
                     }
                 }
             }
+
+            // Application Mode Card
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text("Režim aplikace", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text(
+                        "Vyberte si mezi bleskovým nativním Compose nebo plnohodnotným webovým rozhraním.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(
+                            selected = appMode == PreferencesManager.MODE_NATIVE,
+                            onClick = {
+                                coroutineScope.launch {
+                                    repository.preferences.setAppMode(PreferencesManager.MODE_NATIVE)
+                                }
+                            },
+                            label = { Text("⚡ Nativní Compose", fontSize = 12.sp) },
+                            modifier = Modifier.weight(1f)
+                        )
+                        FilterChip(
+                            selected = appMode == PreferencesManager.MODE_WEB,
+                            onClick = {
+                                coroutineScope.launch {
+                                    repository.preferences.setAppMode(PreferencesManager.MODE_WEB)
+                                }
+                            },
+                            label = { Text("🌐 Webový režim", fontSize = 12.sp) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+
 
             // Server Settings Card
             Card(

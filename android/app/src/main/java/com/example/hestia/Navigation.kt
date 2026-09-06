@@ -22,6 +22,7 @@ import com.example.hestia.data.local.PreferencesManager
 import com.example.hestia.data.repository.HestiaRepository
 import com.example.hestia.theme.HestiaOrange
 import com.example.hestia.ui.components.HestiaTopBar
+import com.example.hestia.ui.components.SwitchUserDialog
 import com.example.hestia.ui.navigation.Screen
 import com.example.hestia.ui.navigation.drawerModuleScreens
 import com.example.hestia.ui.screens.activity.ActivityScreen
@@ -82,9 +83,20 @@ fun NativeComposeNavigation(
 
     var currentScreen by remember { mutableStateOf<Screen>(Screen.Dashboard) }
     var authSubScreen by remember { mutableStateOf<Screen>(Screen.Login) }
+    var showSwitchUserDialog by remember { mutableStateOf(false) }
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
+
+    if (showSwitchUserDialog) {
+        SwitchUserDialog(
+            repository = repository,
+            onDismiss = { showSwitchUserDialog = false },
+            onUserSwitched = {
+                showSwitchUserDialog = false
+            }
+        )
+    }
 
     if (!isLoggedIn) {
         when (authSubScreen) {
@@ -293,7 +305,7 @@ fun NativeComposeNavigation(
                             coroutineScope.launch { drawerState.open() }
                         },
                         onSettingsClick = { currentScreen = Screen.Settings },
-                        onUserClick = { currentScreen = Screen.Settings }
+                        onUserClick = { showSwitchUserDialog = true }
                     )
                 }
             ) { paddingValues ->
@@ -321,7 +333,8 @@ fun NativeComposeNavigation(
                         Screen.Settings -> SettingsScreen(
                             repository = repository,
                             onLogout = { currentScreen = Screen.Dashboard },
-                            onNavigateServerConfig = onNavigateServerConfig
+                            onNavigateServerConfig = onNavigateServerConfig,
+                            onSwitchUser = { showSwitchUserDialog = true }
                         )
                         Screen.ServerConfig -> ServerConfigScreen(
                             repository = repository,

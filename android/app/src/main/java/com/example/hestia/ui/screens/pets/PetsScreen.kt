@@ -23,9 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.hestia.data.models.Pet
-import com.example.hestia.data.models.PetCreate
-import com.example.hestia.data.models.PetMedicalRecordCreate
+import com.example.hestia.data.models.*
 import com.example.hestia.data.repository.HestiaRepository
 import com.example.hestia.theme.HestiaOrange
 import com.example.hestia.theme.StatusGreen
@@ -46,6 +44,7 @@ fun PetsScreen(
 
     var showAddPetDialog by remember { mutableStateOf(false) }
     var showFoodSafetyDialog by remember { mutableStateOf(false) }
+    var showVetDoctorDialog by remember { mutableStateOf(false) }
     var selectedPetForSos by remember { mutableStateOf<Pet?>(null) }
     var selectedPetForRecord by remember { mutableStateOf<Pet?>(null) }
 
@@ -114,18 +113,34 @@ fun PetsScreen(
                         fontWeight = FontWeight.Bold
                     )
 
-                    FilledTonalButton(
-                        onClick = { showFoodSafetyDialog = true },
-                        colors = ButtonDefaults.filledTonalButtonColors(
-                            containerColor = StatusRed.copy(alpha = 0.15f),
-                            contentColor = StatusRed
-                        ),
-                        shape = RoundedCornerShape(10.dp),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Icon(Icons.Default.Warning, contentDescription = null, modifier = Modifier.size(14.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Toxické potraviny", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        FilledTonalButton(
+                            onClick = { showVetDoctorDialog = true },
+                            colors = ButtonDefaults.filledTonalButtonColors(
+                                containerColor = StatusGreen.copy(alpha = 0.15f),
+                                contentColor = StatusGreen
+                            ),
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Icon(Icons.Default.MedicalServices, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("AI Veterinář", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+
+                        FilledTonalButton(
+                            onClick = { showFoodSafetyDialog = true },
+                            colors = ButtonDefaults.filledTonalButtonColors(
+                                containerColor = StatusRed.copy(alpha = 0.15f),
+                                contentColor = StatusRed
+                            ),
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Icon(Icons.Default.Warning, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Toxické potraviny", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
 
@@ -654,8 +669,16 @@ fun PetsScreen(
         )
     }
 
-    // Food Safety Dialog (Toxic items)
+    // Food Safety Dialog (Toxic items + Gemini AI safety checker)
     if (showFoodSafetyDialog) {
+        var queryFood by remember { mutableStateOf("") }
+        var selectedSpecies by remember { mutableStateOf("dog") } // "dog" or "cat"
+        var isCheckingFood by remember { mutableStateOf(false) }
+        var foodSafetyResult by remember { mutableStateOf<PetFoodSafetyResponse?>(null) }
+        var checkFoodError by remember { mutableStateOf<String?>(null) }
+
+        val commonTestFoods = listOf("Čokoláda", "Hrozny", "Avokádo", "Cibule", "Jablko", "Vařené kuře")
+
         val toxicFoods = listOf(
             Triple("Čokoláda a kakao", "Obsahuje teobromin, který je pro psy a kočky prudce jedovatý.", "Způsobuje zvracení, křeče a selhání srdce."),
             Triple("Hrozny a rozinky", "I malé množství může způsobit akutní selhání ledvin.", "Nikdy nepodávat psům ani kočkám."),
@@ -669,11 +692,168 @@ fun PetsScreen(
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Default.Warning, contentDescription = null, tint = StatusRed)
-                    Text("Toxické potraviny pro mazlíčky", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text("Bezpečnost potravin (Gemini AI)", fontWeight = FontWeight.Bold, fontSize = 17.sp)
                 }
             },
             text = {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    item {
+                        Text(
+                            text = "Zadejte jakoukoliv surovinu a Gemini AI okamžitě ověří toxicitu, rizika a první pomoc.",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            FilterChip(
+                                selected = selectedSpecies == "dog",
+                                onClick = { selectedSpecies = "dog" },
+                                label = { Text("🐶 Pes", fontSize = 12.sp) }
+                            )
+                            FilterChip(
+                                selected = selectedSpecies == "cat",
+                                onClick = { selectedSpecies = "cat" },
+                                label = { Text("🐱 Kočka", fontSize = 12.sp) }
+                            )
+                        }
+                    }
+
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = queryFood,
+                                onValueChange = { queryFood = it },
+                                label = { Text("Potravina k ověření") },
+                                placeholder = { Text("např. hrozny, arašídy...") },
+                                modifier = Modifier.weight(1f),
+                                singleLine = true
+                            )
+                            Button(
+                                onClick = {
+                                    if (queryFood.isNotBlank()) {
+                                        coroutineScope.launch {
+                                            isCheckingFood = true
+                                            checkFoodError = null
+                                            repository.checkPetFoodSafety(foodName = queryFood.trim(), species = selectedSpecies)
+                                                .onSuccess {
+                                                    foodSafetyResult = it
+                                                    isCheckingFood = false
+                                                }
+                                                .onFailure {
+                                                    checkFoodError = it.localizedMessage ?: "Chyba při ověřování potraviny."
+                                                    isCheckingFood = false
+                                                }
+                                        }
+                                    }
+                                },
+                                enabled = queryFood.isNotBlank() && !isCheckingFood,
+                                colors = ButtonDefaults.buttonColors(containerColor = HestiaOrange),
+                                shape = RoundedCornerShape(10.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 14.dp)
+                            ) {
+                                if (isCheckingFood) {
+                                    CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
+                                } else {
+                                    Icon(Icons.Default.Search, contentDescription = "Ověřit")
+                                }
+                            }
+                        }
+                    }
+
+                    item {
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            items(commonTestFoods) { food ->
+                                SuggestionChip(
+                                    onClick = { queryFood = food },
+                                    label = { Text(food, fontSize = 11.sp) }
+                                )
+                            }
+                        }
+                    }
+
+                    if (checkFoodError != null) {
+                        item {
+                            Text("Chyba: $checkFoodError", color = StatusRed, fontSize = 12.sp)
+                        }
+                    }
+
+                    foodSafetyResult?.let { res ->
+                        item {
+                            val isSafe = res.safety_level.equals("safe", ignoreCase = true)
+                            val isCaution = res.safety_level.equals("caution", ignoreCase = true)
+                            val badgeColor = if (isSafe) StatusGreen else if (isCaution) HestiaOrange else StatusRed
+
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = badgeColor.copy(alpha = 0.1f)),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(res.food_name, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                        Surface(
+                                            color = badgeColor,
+                                            shape = RoundedCornerShape(6.dp)
+                                        ) {
+                                            Text(
+                                                text = if (isSafe) "BEZPEČNÉ" else if (isCaution) "OPATRNOST" else "TOXICKÉ",
+                                                color = Color.White,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 11.sp,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+                                    Text(res.headline, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                    if (res.risk_description.isNotBlank()) {
+                                        Text(res.risk_description, fontSize = 12.sp)
+                                    }
+                                    res.toxic_dose_info?.let { dose ->
+                                        if (dose.isNotBlank()) {
+                                            Text("Dávka: $dose", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                    }
+                                    if (res.first_aid_action.isNotBlank()) {
+                                        Surface(
+                                            color = StatusRed.copy(alpha = 0.12f),
+                                            shape = RoundedCornerShape(8.dp),
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Text(
+                                                text = "První pomoc: ${res.first_aid_action}",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = StatusRed,
+                                                modifier = Modifier.padding(8.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    item {
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                        Text("Nejčastější toxické potraviny:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+
                     items(toxicFoods) { (food, why, effect) ->
                         Card(
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
@@ -691,7 +871,251 @@ fun PetsScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showFoodSafetyDialog = false }) {
-                    Text("Rozumím", color = HestiaOrange)
+                    Text("Zavřít", color = HestiaOrange)
+                }
+            }
+        )
+    }
+
+    // AI Veterinarian Dialog
+    if (showVetDoctorDialog) {
+        var selectedPetForVet by remember { mutableStateOf<Pet?>(pets.firstOrNull()) }
+        var customSpecies by remember { mutableStateOf("dog") }
+        var symptomsText by remember { mutableStateOf("") }
+        var isDiagnosing by remember { mutableStateOf(false) }
+        var diagnosisResult by remember { mutableStateOf<PetSymptomResponse?>(null) }
+        var diagnosisError by remember { mutableStateOf<String?>(null) }
+
+        val commonSymptoms = listOf("Zvracení", "Průjem", "Apatie a únava", "Kulhání", "Nechutenství", "Kašel", "Intenzivní drbání")
+
+        AlertDialog(
+            onDismissRequest = { showVetDoctorDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Default.MedicalServices, contentDescription = null, tint = StatusGreen)
+                    Text("AI Veterinář (Gemini)", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                }
+            },
+            text = {
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    item {
+                        Text(
+                            text = "Popište symptomy vašeho mazlíčka. Gemini AI zhodnotí závažnost, doporučí první pomoc a určí, zda je nutná okamžitá pohotovost.",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    if (pets.isNotEmpty()) {
+                        item {
+                            Text("Vyberte mazlíčka:", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                items(pets) { pet ->
+                                    FilterChip(
+                                        selected = selectedPetForVet?.id == pet.id,
+                                        onClick = { selectedPetForVet = pet },
+                                        label = { Text("${pet.name} (${pet.species})", fontSize = 11.sp) }
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        item {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                FilterChip(
+                                    selected = customSpecies == "dog",
+                                    onClick = { customSpecies = "dog" },
+                                    label = { Text("🐶 Pes", fontSize = 12.sp) }
+                                )
+                                FilterChip(
+                                    selected = customSpecies == "cat",
+                                    onClick = { customSpecies = "cat" },
+                                    label = { Text("🐱 Kočka", fontSize = 12.sp) }
+                                )
+                            }
+                        }
+                    }
+
+                    item {
+                        OutlinedTextField(
+                            value = symptomsText,
+                            onValueChange = { symptomsText = it },
+                            label = { Text("Popis příznaků *") },
+                            placeholder = { Text("např. Pes od rána zvrací bílou pěnu, odmítá pít vodu a leží...") },
+                            modifier = Modifier.fillMaxWidth(),
+                            minLines = 3,
+                            maxLines = 5
+                        )
+                    }
+
+                    item {
+                        Text("Rychlé symptomy:", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            items(commonSymptoms) { sym ->
+                                SuggestionChip(
+                                    onClick = {
+                                        symptomsText = if (symptomsText.isBlank()) sym else "$symptomsText, $sym"
+                                    },
+                                    label = { Text(sym, fontSize = 11.sp) }
+                                )
+                            }
+                        }
+                    }
+
+                    item {
+                        Button(
+                            onClick = {
+                                if (symptomsText.isNotBlank()) {
+                                    coroutineScope.launch {
+                                        isDiagnosing = true
+                                        diagnosisError = null
+                                        val pet = selectedPetForVet
+                                        val species = pet?.species ?: customSpecies
+                                        repository.diagnosePetSymptoms(
+                                            petId = pet?.id,
+                                            petName = pet?.name,
+                                            petSpecies = species,
+                                            symptoms = symptomsText.trim()
+                                        ).onSuccess {
+                                            diagnosisResult = it
+                                            isDiagnosing = false
+                                        }.onFailure {
+                                            diagnosisError = it.localizedMessage ?: "Chyba při diagnostice symptomů."
+                                            isDiagnosing = false
+                                        }
+                                    }
+                                }
+                            },
+                            enabled = symptomsText.isNotBlank() && !isDiagnosing,
+                            colors = ButtonDefaults.buttonColors(containerColor = StatusGreen),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            if (isDiagnosing) {
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Vyhodnocuji zdravotní stav...")
+                            } else {
+                                Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Konzultovat s AI Veterinářem")
+                            }
+                        }
+                    }
+
+                    if (diagnosisError != null) {
+                        item {
+                            Text("Chyba: $diagnosisError", color = StatusRed, fontSize = 12.sp)
+                        }
+                    }
+
+                    diagnosisResult?.let { res ->
+                        item {
+                            val isEmergency = res.severity.equals("emergency", ignoreCase = true) || res.severity.equals("high", ignoreCase = true)
+                            val sevColor = if (isEmergency) StatusRed else if (res.severity.equals("medium", ignoreCase = true)) HestiaOrange else StatusGreen
+
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = sevColor.copy(alpha = 0.1f)),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = res.assessment_headline,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 15.sp,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        Surface(
+                                            color = sevColor,
+                                            shape = RoundedCornerShape(6.dp)
+                                        ) {
+                                            Text(
+                                                text = if (isEmergency) "🚨 VÁŽNÉ" else "ℹ️ NORMÁLNÍ",
+                                                color = Color.White,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 10.sp,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+
+                                    if (res.urgency_message.isNotBlank()) {
+                                        Text(
+                                            text = res.urgency_message,
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontSize = 12.sp,
+                                            color = if (isEmergency) StatusRed else MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+
+                                    if (res.possible_causes.isNotEmpty()) {
+                                        Text("Možné příčiny:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        res.possible_causes.forEach { cause ->
+                                            Text("• $cause", fontSize = 11.sp)
+                                        }
+                                    }
+
+                                    if (res.action_steps.isNotEmpty()) {
+                                        Text("Doporučené kroky:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        res.action_steps.forEach { step ->
+                                            Text("👉 $step", fontSize = 11.sp)
+                                        }
+                                    }
+
+                                    if (res.home_care_advice.isNotBlank()) {
+                                        Text("Domácí péče: ${res.home_care_advice}", fontSize = 11.sp, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
+                                    }
+
+                                    if (res.red_flag_symptoms.isNotEmpty()) {
+                                        Surface(
+                                            color = StatusRed.copy(alpha = 0.15f),
+                                            shape = RoundedCornerShape(8.dp),
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Column(modifier = Modifier.padding(8.dp)) {
+                                                Text("⚠️ Okamžitě na veterinu při:", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = StatusRed)
+                                                res.red_flag_symptoms.forEach { rf ->
+                                                    Text("• $rf", fontSize = 11.sp, color = StatusRed)
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    selectedPetForVet?.vet_phone?.let { phone ->
+                                        if (phone.isNotBlank()) {
+                                            Button(
+                                                onClick = {
+                                                    val callIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))
+                                                    context.startActivity(callIntent)
+                                                },
+                                                colors = ButtonDefaults.buttonColors(containerColor = StatusRed),
+                                                shape = RoundedCornerShape(8.dp),
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) {
+                                                Icon(Icons.Default.Phone, contentDescription = null, modifier = Modifier.size(16.dp))
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text("Volat veterináře ($phone)")
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showVetDoctorDialog = false }) {
+                    Text("Zavřít", color = StatusGreen)
                 }
             }
         )
