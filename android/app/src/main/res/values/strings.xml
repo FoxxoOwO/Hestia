@@ -1,0 +1,62 @@
+<resources>
+    <string name="app_name">Hestia</string>
+    <string name="app_tagline">Chytrá domácnost</string>
+
+    <!-- Navigation -->
+    <string name="nav_dashboard">Přehled</string>
+    <string name="nav_shopping">Nákup</string>
+    <string name="nav_chores">Úkoly</string>
+    <string name="nav_medicines">Lékárnička</string>
+    <string name="nav_plants">Květiny</string>
+    <string name="nav_vehicles">Garáž</string>
+    <string name="nav_settings">Nastavení</string>
+
+    <!-- Auth & Server -->
+    <string name="login_title">Vítejte v Hestii</string>
+    <string name="login_subtitle">Vyberte svůj rodinný profil</string>
+    <string name="login_custom_user">Přihlásit se pod jiným jménem</string>
+    <string name="login_button">Přihlásit se</string>
+    <string name="server_settings">Nastavení serveru</string>
+    <string name="server_url">URL adresa Hestia serveru</string>
+    <string name="test_connection">Otestovat spojení</string>
+    <string name="connection_success">Spojení se serverem navázáno</string>
+    <string name="connection_failed">K serveru se nelze připojit</string>
+    <string name="logout">Odhlásit se</string>
+
+    <!-- Dashboard -->
+    <string name="quick_actions">Rychlé akce</string>
+    <string name="panic_mode">Panic Mode</string>
+    <string name="water_all_plants">Zalít žíznivé kytky</string>
+    <string name="add_to_shopping">Přidat do nákupu</string>
+    <string name="urgent_tasks">Dnešní povinnosti</string>
+    <string name="thirsty_plants">Žíznivé rostliny</string>
+    <string name="expiring_meds">Léky k expiraci</string>
+    <string name="recent_activity">Poslední rodinné aktivity</string>
+
+    <!-- Shopping -->
+    <string name="shopping_title">Nákupní seznam</string>
+    <string name="add_item">Přidat položku</string>
+    <string name="item_name">Název položky</string>
+    <string name="amount">Množství</string>
+    <string name="clear_checked">Smazat nakoupené</string>
+    <string name="empty_shopping">Nákupní seznam je prázdný</string>
+
+    <!-- Chores -->
+    <string name="my_chores">Moje úkoly</string>
+    <string name="all_chores">Všechny úkoly</string>
+    <string name="done_by_me">Splněno mnou</string>
+    <string name="leaderboard">Síň slávy</string>
+
+    <!-- Medicines -->
+    <string name="take_dose">Vzít dávku</string>
+    <string name="pediatric_calculator">Dětská kalkulačka</string>
+    <string name="first_aid_sos">První pomoc SOS</string>
+    <string name="child_weight">Hmotnost dítěte</string>
+
+    <!-- Vehicles -->
+    <string name="stk_label">STK</string>
+    <string name="vignette_label">Dálniční známka</string>
+    <string name="update_mileage">Zapsat tachometr</string>
+    <string name="refuel">Záznam tankování</string>
+    <string name="call_sos_1224">Asistence (1224)</string>
+</resources>
