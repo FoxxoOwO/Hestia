@@ -8,6 +8,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.view.View
 import android.view.ViewGroup
 import android.webkit.*
 import android.widget.Toast
@@ -105,6 +106,10 @@ fun HestiaWebScreen(
                             ViewGroup.LayoutParams.MATCH_PARENT
                         )
 
+                        isVerticalScrollBarEnabled = true
+                        isHorizontalScrollBarEnabled = false
+                        overScrollMode = View.OVER_SCROLL_NEVER
+
                         settings.apply {
                             javaScriptEnabled = true
                             domStorageEnabled = true
@@ -113,8 +118,8 @@ fun HestiaWebScreen(
                             loadWithOverviewMode = true
                             cacheMode = WebSettings.LOAD_DEFAULT
                             mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-                            setSupportZoom(true)
-                            builtInZoomControls = true
+                            setSupportZoom(false)
+                            builtInZoomControls = false
                             displayZoomControls = false
                             allowFileAccess = true
                             allowContentAccess = true

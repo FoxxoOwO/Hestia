@@ -92,20 +92,20 @@ export const RecipesPage: React.FC = () => {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 min-w-0">
           <button
             onClick={() => setIsGeminiModalOpen(true)}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-2xl text-xs sm:text-sm font-semibold bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-md shadow-orange-500/20 transition"
+            className="flex items-center gap-2 px-3 sm:px-3.5 py-2 rounded-2xl text-xs sm:text-sm font-semibold bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-md shadow-orange-500/20 transition shrink-0"
           >
-            <Sparkles className="w-4 h-4" />
-            <span>{t('recipes.import_gemini')}</span>
+            <Sparkles className="w-4 h-4 shrink-0" />
+            <span className="truncate">{t('recipes.import_gemini')}</span>
           </button>
 
           <Link
             to="/recipes/new"
-            className="flex items-center gap-2 px-3.5 py-2 rounded-2xl text-xs sm:text-sm font-semibold bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:hover:bg-zinc-100 dark:text-zinc-900 shadow-sm transition"
+            className="flex items-center gap-2 px-3 sm:px-3.5 py-2 rounded-2xl text-xs sm:text-sm font-semibold bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:hover:bg-zinc-100 dark:text-zinc-900 shadow-sm transition shrink-0"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4 shrink-0" />
             <span>{t('recipes.add_recipe')}</span>
           </Link>
         </div>

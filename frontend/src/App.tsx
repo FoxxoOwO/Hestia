@@ -51,12 +51,12 @@ const AppContent: React.FC = () => {
 
   return (
     <BrowserRouter>
-      <div className="min-h-screen flex flex-col bg-transparent text-zinc-900 dark:text-zinc-100 transition-colors duration-200">
+      <div className="min-h-screen flex flex-col bg-transparent text-zinc-900 dark:text-zinc-100 transition-colors duration-200 overflow-x-hidden w-full max-w-full">
         <Navbar />
         
-        <div className="flex-1 flex max-w-7xl w-full mx-auto">
+        <div className="flex-1 flex max-w-7xl w-full mx-auto overflow-x-hidden">
           <Sidebar />
-          <main className="flex-1 p-4 sm:p-6 lg:p-8 min-w-0">
+          <main className="flex-1 p-3 sm:p-6 lg:p-8 min-w-0 w-full max-w-full overflow-x-hidden">
             <Routes>
               <Route path="/" element={<RecipesPage />} />
               <Route path="/recipes/new" element={<RecipeEditPage />} />
