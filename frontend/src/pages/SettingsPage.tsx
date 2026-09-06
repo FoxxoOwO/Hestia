@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import {
   Settings, Users, Globe, Moon, Sun, Monitor,
   Sparkles, Check, AlertCircle, Plus, Shield, UserPlus, X, Palette,
-  Pencil, Trash2, AlertTriangle
+  Pencil, Trash2, AlertTriangle, Download, Upload, Database, HardDrive,
+  RefreshCw, FileDown, FileUp, FileJson
 } from 'lucide-react';
 import { api } from '../services/api';
-import { User } from '../types';
+import { User, ServerBackup } from '../types';
 import { useTranslation } from '../i18n';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -48,6 +49,36 @@ export const SettingsPage: React.FC = () => {
   const [resetError, setResetError] = useState<string | null>(null);
   const [resetSuccess, setResetSuccess] = useState<string | null>(null);
 
+  // Backups, Export & Import states
+  const [backups, setBackups] = useState<ServerBackup[]>([]);
+  const [loadingBackups, setLoadingBackups] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+
+  // Import modal
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importMode, setImportMode] = useState<'merge' | 'replace'>('merge');
+  const [isImporting, setIsImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importSuccess, setImportSuccess] = useState<string | null>(null);
+
+  // Create snapshot modal
+  const [isCreateBackupOpen, setIsCreateBackupOpen] = useState(false);
+  const [backupNote, setBackupNote] = useState('');
+  const [isCreatingBackup, setIsCreatingBackup] = useState(false);
+  const [backupError, setBackupError] = useState<string | null>(null);
+  const [backupSuccess, setBackupSuccess] = useState<string | null>(null);
+
+  // Restore snapshot modal
+  const [restoringBackup, setRestoringBackup] = useState<ServerBackup | null>(null);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
+  const [restoreSuccess, setRestoreSuccess] = useState<string | null>(null);
+
+  // Delete snapshot modal
+  const [deletingBackup, setDeletingBackup] = useState<ServerBackup | null>(null);
+  const [isDeletingBackup, setIsDeletingBackup] = useState(false);
+
   const handleResetAllData = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanConfirm = resetConfirmText.trim().toUpperCase();
@@ -86,9 +117,141 @@ export const SettingsPage: React.FC = () => {
     }
   };
 
+  const fetchBackups = async () => {
+    if (user?.role !== 'admin') return;
+    try {
+      setLoadingBackups(true);
+      const data = await api.getBackups();
+      setBackups(data);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingBackups(false);
+    }
+  };
+
   useEffect(() => {
     fetchSettingsData();
-  }, []);
+    if (user?.role === 'admin') {
+      fetchBackups();
+    }
+  }, [user?.role]);
+
+  const handleExportData = async () => {
+    try {
+      setIsExporting(true);
+      const blob = await api.exportData();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const now = new Date();
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+      a.download = `hestia_backup_${timestamp}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert(err.message || 'Chyba při exportu dat');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleDownloadBackup = async (b: ServerBackup) => {
+    try {
+      const blob = await api.downloadBackup(b.filename);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = b.filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert(err.message || 'Chyba při stahování zálohy');
+    }
+  };
+
+  const handleImportSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!importFile) return;
+    try {
+      setIsImporting(true);
+      setImportError(null);
+      setImportSuccess(null);
+      const res = await api.importData(importFile, importMode);
+      setImportSuccess(`${t('settings.import_success')} (${res.total_imported} položek)`);
+      setTimeout(() => {
+        setIsImportModalOpen(false);
+        setIsImporting(false);
+        setImportFile(null);
+        fetchSettingsData();
+        fetchBackups();
+        if (importMode === 'replace') {
+          window.location.reload();
+        }
+      }, 1500);
+    } catch (err: any) {
+      setIsImporting(false);
+      setImportError(err.message || 'Chyba při importu souboru');
+    }
+  };
+
+  const handleCreateSnapshot = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setIsCreatingBackup(true);
+      setBackupError(null);
+      await api.createBackup(backupNote.trim() || undefined);
+      setBackupSuccess('Záloha byla úspěšně vytvořena.');
+      setBackupNote('');
+      fetchBackups();
+      setTimeout(() => {
+        setIsCreateBackupOpen(false);
+        setBackupSuccess(null);
+      }, 1000);
+    } catch (err: any) {
+      setBackupError(err.message || 'Chyba při vytváření zálohy');
+    } finally {
+      setIsCreatingBackup(false);
+    }
+  };
+
+  const handleRestoreSnapshot = async () => {
+    if (!restoringBackup) return;
+    try {
+      setIsRestoring(true);
+      setRestoreError(null);
+      await api.restoreBackup(restoringBackup.filename);
+      setRestoreSuccess(t('settings.restore_success'));
+      setTimeout(() => {
+        setRestoringBackup(null);
+        setIsRestoring(false);
+        window.location.reload();
+      }, 1500);
+    } catch (err: any) {
+      setIsRestoring(false);
+      setRestoreError(err.message || 'Chyba při obnově systému ze zálohy');
+    }
+  };
+
+  const handleDeleteSnapshot = async () => {
+    if (!deletingBackup) return;
+    try {
+      setIsDeletingBackup(true);
+      await api.deleteBackup(deletingBackup.filename);
+      setDeletingBackup(null);
+      fetchBackups();
+    } catch (err: any) {
+      alert(err.message || 'Chyba při mazání zálohy');
+    } finally {
+      setIsDeletingBackup(false);
+    }
+  };
+
 
   const handleCreateMember = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -576,6 +739,206 @@ export const SettingsPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Backups & Data Management (Admin only) */}
+      {user?.role === 'admin' && (
+        <div className="p-6 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20">
+                <Database className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-sm text-zinc-900 dark:text-zinc-100">
+                  {t('settings.backups_title')}
+                </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  {t('settings.backups_desc')}
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsCreateBackupOpen(true);
+                setBackupNote('');
+                setBackupError(null);
+                setBackupSuccess(null);
+              }}
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition shadow-sm self-start sm:self-auto"
+            >
+              <Plus className="w-4 h-4" />
+              <span>{t('settings.create_snapshot_btn')}</span>
+            </button>
+          </div>
+
+          {/* 2 Cards: Export & Import */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Export Card */}
+            <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200/80 dark:border-zinc-700/80 flex flex-col justify-between gap-3">
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2 text-zinc-900 dark:text-zinc-100 font-bold text-xs">
+                  <Download className="w-4 h-4 text-blue-500" />
+                  <span>{t('settings.export_card_title')}</span>
+                </div>
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                  {t('settings.export_card_desc')}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleExportData}
+                disabled={isExporting}
+                className="inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-600 text-zinc-800 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-600 font-semibold text-xs transition shadow-xs"
+              >
+                {isExporting ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-500" />
+                    <span>{t('settings.exporting')}</span>
+                  </>
+                ) : (
+                  <>
+                    <FileDown className="w-3.5 h-3.5 text-blue-500" />
+                    <span>{t('settings.export_btn')}</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Import Card */}
+            <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200/80 dark:border-zinc-700/80 flex flex-col justify-between gap-3">
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2 text-zinc-900 dark:text-zinc-100 font-bold text-xs">
+                  <Upload className="w-4 h-4 text-emerald-500" />
+                  <span>{t('settings.import_card_title')}</span>
+                </div>
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                  {t('settings.import_card_desc')}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsImportModalOpen(true);
+                  setImportFile(null);
+                  setImportError(null);
+                  setImportSuccess(null);
+                }}
+                className="inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-600 text-zinc-800 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-600 font-semibold text-xs transition shadow-xs"
+              >
+                <FileUp className="w-3.5 h-3.5 text-emerald-500" />
+                <span>{t('settings.import_btn')}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Snapshots Table / List */}
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center justify-between">
+              <h4 className="font-bold text-xs text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
+                <HardDrive className="w-4 h-4 text-zinc-400" />
+                <span>{t('settings.snapshots_title')}</span>
+                <span className="ml-1 text-[11px] font-normal text-zinc-400">
+                  ({backups.length})
+                </span>
+              </h4>
+              <button
+                type="button"
+                onClick={fetchBackups}
+                disabled={loadingBackups}
+                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-xs p-1"
+                title="Aktualizovat seznam"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingBackups ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
+
+            {loadingBackups && backups.length === 0 ? (
+              <div className="text-center py-6 text-xs text-zinc-400">
+                {t('common.loading')}
+              </div>
+            ) : backups.length === 0 ? (
+              <div className="p-6 rounded-2xl bg-zinc-50 dark:bg-zinc-800/40 border border-dashed border-zinc-200 dark:border-zinc-700/80 text-center text-xs text-zinc-500 dark:text-zinc-400">
+                {t('settings.no_snapshots')}
+              </div>
+            ) : (
+              <div className="overflow-x-auto rounded-2xl border border-zinc-200 dark:border-zinc-800">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-zinc-50 dark:bg-zinc-800/70 text-zinc-500 dark:text-zinc-400 font-semibold border-b border-zinc-200 dark:border-zinc-800">
+                    <tr>
+                      <th className="py-2.5 px-3.5">{t('settings.col_filename')}</th>
+                      <th className="py-2.5 px-3">{t('settings.col_date')}</th>
+                      <th className="py-2.5 px-3">{t('settings.col_items')}</th>
+                      <th className="py-2.5 px-3">{t('settings.col_size')}</th>
+                      <th className="py-2.5 px-3">{t('settings.col_note')}</th>
+                      <th className="py-2.5 px-3.5 text-right">{t('settings.col_actions')}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
+                    {backups.map((b) => (
+                      <tr key={b.filename} className="hover:bg-zinc-50/70 dark:hover:bg-zinc-800/40 transition-colors">
+                        <td className="py-2.5 px-3.5 font-mono text-[11px] text-zinc-800 dark:text-zinc-200 font-medium">
+                          {b.filename}
+                        </td>
+                        <td className="py-2.5 px-3 text-zinc-500 whitespace-nowrap">
+                          {new Date(b.created_at).toLocaleString('cs-CZ', {
+                            day: '2-digit', month: '2-digit', year: 'numeric',
+                            hour: '2-digit', minute: '2-digit'
+                          })}
+                        </td>
+                        <td className="py-2.5 px-3">
+                          <span className="px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 font-semibold text-[11px]">
+                            {b.total_items}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3 text-zinc-500 font-mono text-[11px]">
+                          {b.file_size_kb} kB
+                        </td>
+                        <td className="py-2.5 px-3 text-zinc-600 dark:text-zinc-300 max-w-[180px] truncate">
+                          {b.note || <span className="text-zinc-300 dark:text-zinc-600">—</span>}
+                        </td>
+                        <td className="py-2.5 px-3.5 text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadBackup(b)}
+                              title={t('settings.btn_download')}
+                              className="p-1.5 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 transition"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setRestoringBackup(b);
+                                setRestoreError(null);
+                                setRestoreSuccess(null);
+                              }}
+                              title={t('settings.btn_restore')}
+                              className="p-1.5 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-950/60 text-amber-600 dark:text-amber-400 transition"
+                            >
+                              <RefreshCw className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setDeletingBackup(b)}
+                              title={t('settings.btn_delete')}
+                              className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-950/60 text-red-600 dark:text-red-400 transition"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Danger Zone: Wipe / Factory Reset Data (Admin only) */}
       {user?.role === 'admin' && (
         <div className="p-6 rounded-3xl bg-red-50/40 dark:bg-red-950/20 border border-red-200/80 dark:border-red-900/50 shadow-xs space-y-4">
@@ -1054,6 +1417,390 @@ export const SettingsPage: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Create Server Backup Modal */}
+      {isCreateBackupOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white dark:bg-zinc-900 w-full max-w-md rounded-3xl shadow-2xl border border-zinc-200 dark:border-zinc-800 p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
+                  <HardDrive className="w-5 h-5" />
+                </div>
+                <h3 className="font-bold text-base text-zinc-900 dark:text-zinc-100">
+                  {t('settings.create_snapshot_btn')}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => !isCreatingBackup && setIsCreateBackupOpen(false)}
+                className="p-1 text-zinc-400 hover:text-zinc-600 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {backupError && (
+              <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/40 text-red-600 dark:text-red-400 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{backupError}</span>
+              </div>
+            )}
+
+            {backupSuccess && (
+              <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/40 text-emerald-600 dark:text-emerald-400 text-xs flex items-center gap-2">
+                <Check className="w-4 h-4 shrink-0" />
+                <span>{backupSuccess}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleCreateSnapshot} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Poznámka k záloze (volitelná)
+                </label>
+                <input
+                  type="text"
+                  value={backupNote}
+                  onChange={(e) => setBackupNote(e.target.value)}
+                  placeholder={t('settings.snapshot_note_placeholder')}
+                  disabled={isCreatingBackup}
+                  className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
+                />
+              </div>
+
+              <div className="pt-2 flex gap-2">
+                <button
+                  type="submit"
+                  disabled={isCreatingBackup}
+                  className="flex-1 py-2.5 px-4 rounded-xl font-semibold text-xs bg-blue-600 hover:bg-blue-700 text-white transition flex items-center justify-center gap-2 shadow-sm"
+                >
+                  {isCreatingBackup ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>{t('settings.creating_snapshot')}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4" />
+                      <span>{t('settings.create_snapshot_btn')}</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsCreateBackupOpen(false)}
+                  disabled={isCreatingBackup}
+                  className="py-2.5 px-4 rounded-xl font-semibold text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
+                >
+                  Zrušit
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Import JSON File Modal */}
+      {isImportModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white dark:bg-zinc-900 w-full max-w-lg rounded-3xl shadow-2xl border border-zinc-200 dark:border-zinc-800 p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400">
+                  <Upload className="w-5 h-5" />
+                </div>
+                <h3 className="font-bold text-base text-zinc-900 dark:text-zinc-100">
+                  {t('settings.import_modal_title')}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => !isImporting && setIsImportModalOpen(false)}
+                className="p-1 text-zinc-400 hover:text-zinc-600 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {importError && (
+              <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/40 text-red-600 dark:text-red-400 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{importError}</span>
+              </div>
+            )}
+
+            {importSuccess && (
+              <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/40 text-emerald-600 dark:text-emerald-400 text-xs flex items-center gap-2">
+                <Check className="w-4 h-4 shrink-0" />
+                <span>{importSuccess}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleImportSubmit} className="space-y-4">
+              {/* Mode Selection */}
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-2">
+                  {t('settings.import_mode_label')}
+                </label>
+                <div className="space-y-2">
+                  <label className={`flex items-start gap-3 p-3 rounded-2xl border cursor-pointer transition ${
+                    importMode === 'merge'
+                      ? 'border-emerald-500 bg-emerald-50/40 dark:bg-emerald-950/20'
+                      : 'border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/40'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="importMode"
+                      value="merge"
+                      checked={importMode === 'merge'}
+                      onChange={() => setImportMode('merge')}
+                      className="mt-0.5 text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <div>
+                      <span className="block text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                        {t('settings.import_mode_merge')}
+                      </span>
+                    </div>
+                  </label>
+
+                  <label className={`flex items-start gap-3 p-3 rounded-2xl border cursor-pointer transition ${
+                    importMode === 'replace'
+                      ? 'border-red-500 bg-red-50/40 dark:bg-red-950/20'
+                      : 'border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/40'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="importMode"
+                      value="replace"
+                      checked={importMode === 'replace'}
+                      onChange={() => setImportMode('replace')}
+                      className="mt-0.5 text-red-600 focus:ring-red-500"
+                    />
+                    <div>
+                      <span className="block text-xs font-bold text-red-700 dark:text-red-300">
+                        {t('settings.import_mode_replace')}
+                      </span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {/* File Input */}
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
+                  {t('settings.import_select_file')}
+                </label>
+                <div className="relative border-2 border-dashed border-zinc-200 dark:border-zinc-700 rounded-2xl p-4 text-center hover:border-emerald-500/50 transition">
+                  <input
+                    type="file"
+                    accept=".json,application/json"
+                    required
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        setImportFile(e.target.files[0]);
+                      }
+                    }}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  <div className="flex flex-col items-center justify-center gap-1 text-zinc-500 dark:text-zinc-400">
+                    <FileJson className="w-8 h-8 text-emerald-500 mb-1" />
+                    {importFile ? (
+                      <div>
+                        <span className="font-semibold text-xs text-zinc-800 dark:text-zinc-200 block">
+                          {importFile.name}
+                        </span>
+                        <span className="text-[10px] text-zinc-400">
+                          ({(importFile.size / 1024).toFixed(1)} kB)
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-xs">{t('settings.import_drag_drop')}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2 flex gap-2">
+                <button
+                  type="submit"
+                  disabled={!importFile || isImporting}
+                  className={`flex-1 py-2.5 px-4 rounded-xl font-semibold text-xs flex items-center justify-center gap-2 transition shadow-sm ${
+                    !importFile || isImporting
+                      ? 'bg-zinc-200 dark:bg-zinc-800 text-zinc-400 cursor-not-allowed'
+                      : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                  }`}
+                >
+                  {isImporting ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>{t('settings.importing')}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4" />
+                      <span>{t('settings.import_confirm_btn')}</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsImportModalOpen(false)}
+                  disabled={isImporting}
+                  className="py-2.5 px-4 rounded-xl font-semibold text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
+                >
+                  Zrušit
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Restore Snapshot Modal */}
+      {restoringBackup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white dark:bg-zinc-900 w-full max-w-md rounded-3xl shadow-2xl border border-zinc-200 dark:border-zinc-800 p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-zinc-900 dark:text-zinc-100">
+                  {t('settings.restore_confirm_title')}
+                </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Obnova databáze ze serverového snapshotu
+                </p>
+              </div>
+            </div>
+
+            {restoreError && (
+              <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/40 text-red-600 dark:text-red-400 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{restoreError}</span>
+              </div>
+            )}
+
+            {restoreSuccess && (
+              <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/40 text-emerald-600 dark:text-emerald-400 text-xs flex items-center gap-2">
+                <Check className="w-4 h-4 shrink-0" />
+                <span>{restoreSuccess}</span>
+              </div>
+            )}
+
+            <div className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/80 text-xs space-y-1.5">
+              <div className="flex justify-between">
+                <span className="text-zinc-400">Soubor:</span>
+                <span className="font-mono font-medium text-zinc-800 dark:text-zinc-200">{restoringBackup.filename}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-zinc-400">Vytvořeno:</span>
+                <span className="text-zinc-700 dark:text-zinc-300">
+                  {new Date(restoringBackup.created_at).toLocaleString('cs-CZ')}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-zinc-400">Položek celkem:</span>
+                <span className="font-semibold text-blue-600 dark:text-blue-400">{restoringBackup.total_items}</span>
+              </div>
+              {restoringBackup.note && (
+                <div className="flex justify-between">
+                  <span className="text-zinc-400">Poznámka:</span>
+                  <span className="text-zinc-700 dark:text-zinc-300">{restoringBackup.note}</span>
+                </div>
+              )}
+            </div>
+
+            <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed bg-amber-50 dark:bg-amber-950/30 p-3 rounded-xl border border-amber-200 dark:border-amber-900/40">
+              ⚠️ Obnova nahradí současný stav databáze daty z této zálohy. Váš administrátorský účet zůstane zachován.
+            </p>
+
+            <div className="pt-2 flex gap-2">
+              <button
+                type="button"
+                onClick={handleRestoreSnapshot}
+                disabled={isRestoring}
+                className="flex-1 py-2.5 px-4 rounded-xl font-semibold text-xs bg-amber-600 hover:bg-amber-700 text-white transition flex items-center justify-center gap-2 shadow-sm"
+              >
+                {isRestoring ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>{t('settings.restoring')}</span>
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4" />
+                    <span>{t('settings.restore_confirm_btn')}</span>
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => !isRestoring && setRestoringBackup(null)}
+                disabled={isRestoring}
+                className="py-2.5 px-4 rounded-xl font-semibold text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
+              >
+                Zrušit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Snapshot Confirmation Modal */}
+      {deletingBackup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white dark:bg-zinc-900 w-full max-w-md rounded-3xl shadow-2xl border border-zinc-200 dark:border-zinc-800 p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-2xl bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-zinc-900 dark:text-zinc-100">
+                  {t('settings.btn_delete')} zálohu
+                </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Potvrzení smazání souboru zálohy ze serveru
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+              Opravdu si přejete smazat záložní snapshot <strong className="font-mono text-zinc-800 dark:text-zinc-200">{deletingBackup.filename}</strong>? Tento soubor bude trvale odstraněn ze serveru.
+            </p>
+
+            <div className="pt-2 flex gap-2">
+              <button
+                type="button"
+                onClick={handleDeleteSnapshot}
+                disabled={isDeletingBackup}
+                className="flex-1 py-2.5 px-4 rounded-xl font-semibold text-xs bg-red-600 hover:bg-red-700 text-white transition flex items-center justify-center gap-2 shadow-sm"
+              >
+                {isDeletingBackup ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Mazání...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    <span>{t('settings.btn_delete')}</span>
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => !isDeletingBackup && setDeletingBackup(null)}
+                disabled={isDeletingBackup}
+                className="py-2.5 px-4 rounded-xl font-semibold text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
+              >
+                Zrušit
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -118,3 +118,19 @@ export interface ShoppingItem {
   added_by_id?: number;
   created_at: string;
 }
+
+export interface ServerBackup {
+  filename: string;
+  created_at: string;
+  file_size_bytes: number;
+  file_size_kb: number;
+  total_items: number;
+  note?: string;
+}
+
+export interface BackupRestoreResult {
+  status: string;
+  message: string;
+  restored_counts?: Record<string, number>;
+  imported_counts?: Record<string, number>;
+}

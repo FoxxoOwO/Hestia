@@ -29,6 +29,9 @@ data/uploads/*
 backend/uploads/*
 !backend/uploads/.gitkeep
 uploads/
+backups/
+backend/backups/
+
 
 # Node & Frontend
 node_modules/

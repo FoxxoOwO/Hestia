@@ -1055,10 +1055,52 @@ def run_tests():
     assert deleted_login.status_code in (400, 401, 404)
     print(f"16.11 Úspěšné smazání člena a ověření zamítnutí přístupu (DELETE /users/{test_user_id}) - OK")
 
-    # --- SEKCE 17: Systém & Tlačítko na smazání všech dat (POST /api/v1/system/reset-data) ---
-    print("\n=== SEKCE 17: Systém & Tlačítko na smazání všech dat (POST /api/v1/system/reset-data) ===")
+    # --- SEKCE 17: Systémové zálohování a Export dat ---
+    print("\n=== SEKCE 17: Systémové zálohování a Export dat ===")
+
+    # 17.1 Export databáze (GET /api/v1/system/export)
+    export_res = client.get("/api/v1/system/export", headers=headers)
+    assert export_res.status_code == 200
+    assert export_res.headers.get("content-type", "").startswith("application/json")
+    assert "attachment; filename=" in export_res.headers.get("content-disposition", "")
+    exported_data = export_res.json()
+    assert "metadata" in exported_data
+    assert "data" in exported_data
+    assert exported_data["metadata"]["total_items"] > 0
+    assert len(exported_data["data"]["recipes"]) > 0
+    print(f"17.1 Export kompletní databáze ({exported_data['metadata']['total_items']} položek napříč všemi moduly) - OK")
+
+    # 17.2 Vytvoření snapshotu na serveru (POST /api/v1/system/backups)
+    snap_res = client.post(
+        "/api/v1/system/backups",
+        json={"note": "Testovací snapshot před smazáním"},
+        headers=headers
+    )
+    assert snap_res.status_code == 200
+    snap_json = snap_res.json()
+    assert snap_json["status"] == "success"
+    snapshot_filename = snap_json["backup"]["filename"]
+    assert snapshot_filename.startswith("hestia_backup_")
+    print(f"17.2 Vytvoření serverového snapshotu ({snapshot_filename}) - OK")
+
+    # 17.3 Seznam záloh (GET /api/v1/system/backups)
+    list_backups_res = client.get("/api/v1/system/backups", headers=headers)
+    assert list_backups_res.status_code == 200
+    backups_list = list_backups_res.json()
+    assert any(b["filename"] == snapshot_filename for b in backups_list)
+    print("17.3 Načtení seznamu serverových záloh - OK")
+
+    # 17.4 Stažení snapshotu (GET /api/v1/system/backups/{filename}/download)
+    download_res = client.get(f"/api/v1/system/backups/{snapshot_filename}/download", headers=headers)
+    assert download_res.status_code == 200
+    downloaded_data = download_res.json()
+    assert downloaded_data["metadata"]["app"] == "Hestia Smart Home OS"
+    print(f"17.4 Stažení snapshot souboru ({download_res.headers.get('content-length', '0')} bytů) - OK")
+
+    # --- SEKCE 18: Systém & Tlačítko na smazání všech dat (POST /api/v1/system/reset-data) ---
+    print("\n=== SEKCE 18: Systém & Tlačítko na smazání všech dat (POST /api/v1/system/reset-data) ===")
     
-    # 17.1 Neplatný potvrzovací řetězec (400)
+    # 18.1 Neplatný potvrzovací řetězec (400)
     bad_conf_res = client.post(
         "/api/v1/system/reset-data",
         json={"confirmation": "NEPLATNY_TEXT", "password": "hestia123"},
@@ -1066,9 +1108,9 @@ def run_tests():
     )
     assert bad_conf_res.status_code == 400
     assert "SMAZAT" in bad_conf_res.text
-    print("17.1 Neplatný potvrzovací řetězec správně zamítnut (400 Bad Request) - OK")
+    print("18.1 Neplatný potvrzovací řetězec správně zamítnut (400 Bad Request) - OK")
 
-    # 17.2 Neplatné administrátorské heslo (400)
+    # 18.2 Neplatné administrátorské heslo (400)
     bad_pwd_res = client.post(
         "/api/v1/system/reset-data",
         json={"confirmation": "SMAZAT", "password": "spatne_heslo_999"},
@@ -1076,9 +1118,9 @@ def run_tests():
     )
     assert bad_pwd_res.status_code == 400
     assert "administrátorské heslo" in bad_pwd_res.text
-    print("17.2 Neplatné administrátorské heslo správně zamítnuto (400 Bad Request) - OK")
+    print("18.2 Neplatné administrátorské heslo správně zamítnuto (400 Bad Request) - OK")
 
-    # 17.3 Úspěšné spuštění resetu databáze přes API (200)
+    # 18.3 Úspěšné spuštění resetu databáze přes API (200)
     valid_reset_res = client.post(
         "/api/v1/system/reset-data",
         json={"confirmation": "SMAZAT", "password": "hestia123"},
@@ -1088,9 +1130,9 @@ def run_tests():
     reset_data = valid_reset_res.json()
     assert reset_data["status"] == "success"
     assert "deleted_counts" in reset_data
-    print("17.3 Úspěšný reset databáze přes API endpoint POST /system/reset-data - OK")
+    print("18.3 Úspěšný reset databáze přes API endpoint POST /system/reset-data - OK")
 
-    # 17.4 Ověření čistého stavu po volání endpointu
+    # 18.4 Ověření čistého stavu po volání endpointu
     recs_after = client.get("/api/v1/recipes", headers=headers).json()
     assert len(recs_after) == 0
     pantry_after = client.get("/api/v1/pantry", headers=headers).json()
@@ -1098,12 +1140,50 @@ def run_tests():
     members_after = client.get("/api/v1/auth/users", headers=headers).json()
     assert len(members_after) == 1
     assert members_after[0]["username"] == "admin"
-    print("17.4 Ověření: Všechny aplikační tabulky jsou prázdné (0 položek), administrátorský účet zachován - OK")
+    print("18.4 Ověření: Všechny aplikační tabulky jsou prázdné (0 položek), administrátorský účet zachován - OK")
 
-    print("\n[SUCCESS] VŠECHNY TESTY ÚSPĚŠNĚ PROŠLY! HESTIA JE PLNĚ PŘIPRAVENA VČETNĚ VŠECH 17 TESTOVACÍCH SEKCÍ (SPRÁVA DATABÁZE A RESET DAT, SPRÁVA ČLENŮ, AUDIT LOG, RECEPTY, KVĚTINY, MAZLÍČCI, DOMÁCÍ PRÁCE, FINANCE, DOKUMENTY, VOZOVÝ PARK, LÉKÁRNIČKA).")
+    # --- SEKCE 19: Obnova ze snapshotu a Import ze souboru ---
+    print("\n=== SEKCE 19: Obnova ze snapshotu a Import ze souboru ===")
+
+    # 19.1 Obnova databáze ze snapshotu (POST /api/v1/system/backups/{filename}/restore)
+    restore_res = client.post(f"/api/v1/system/backups/{snapshot_filename}/restore", headers=headers)
+    assert restore_res.status_code == 200
+    restore_data = restore_res.json()
+    assert restore_data["status"] == "success"
+    print(f"19.1 Úspěšná obnova databáze ze snapshotu {snapshot_filename} - OK")
+
+    # 19.2 Ověření obnovených dat
+    recs_restored = client.get("/api/v1/recipes", headers=headers).json()
+    assert len(recs_restored) > 0
+    pantry_restored = client.get("/api/v1/pantry", headers=headers).json()
+    assert len(pantry_restored) > 0
+    print(f"19.2 Ověření: Data jsou zpět (recepty: {len(recs_restored)}, spíž: {len(pantry_restored)}) - OK")
+
+    # 19.3 Test importu JSON souboru přes multipart form (POST /api/v1/system/import)
+    import io
+    import json
+    json_bytes = json.dumps(exported_data, ensure_ascii=False).encode("utf-8")
+    files = {"file": ("hestia_test_import.json", io.BytesIO(json_bytes), "application/json")}
+    form_payload = {"mode": "merge"}
+    # For multipart requests, do not send Content-Type: application/json header
+    auth_headers = {"Authorization": headers["Authorization"]}
+    import_res = client.post("/api/v1/system/import", files=files, data=form_payload, headers=auth_headers)
+    assert import_res.status_code == 200
+    import_result = import_res.json()
+    assert import_result["status"] == "success"
+    print(f"19.3 Úspěšný import dat ze souboru (merge mode, {import_result['total_imported']} položek) - OK")
+
+    # 19.4 Smazání snapshotu (DELETE /api/v1/system/backups/{filename})
+    delete_snap_res = client.delete(f"/api/v1/system/backups/{snapshot_filename}", headers=headers)
+    assert delete_snap_res.status_code == 200
+    assert delete_snap_res.json()["status"] == "success"
+    print(f"19.4 Úspěšné smazání záložního snapshotu {snapshot_filename} ze serveru - OK")
+
+    print("\n[SUCCESS] VŠECHNY TESTY ÚSPĚŠNĚ PROŠLY! HESTIA JE PLNĚ PŘIPRAVENA VČETNĚ VŠECH 19 TESTOVACÍCH SEKCÍ (ZÁLOHOVÁNÍ, EXPORT/IMPORT DAT, SPRÁVA DATABÁZE A RESET DAT, SPRÁVA ČLENŮ, AUDIT LOG, RECEPTY, KVĚTINY, MAZLÍČCI, DOMÁCÍ PRÁCE, FINANCE, DOKUMENTY, VOZOVÝ PARK, LÉKÁRNIČKA).")
 
 if __name__ == "__main__":
     run_tests()
+
 
 
 
