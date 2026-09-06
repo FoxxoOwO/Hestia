@@ -73,6 +73,9 @@ dependencies {
   // DataStore Preferences
   implementation(libs.androidx.datastore.preferences)
 
+  // QR Code Generation
+  implementation(libs.zxing.core)
+
   // Tooling
   debugImplementation(libs.androidx.compose.ui.tooling)
   // Instrumented tests

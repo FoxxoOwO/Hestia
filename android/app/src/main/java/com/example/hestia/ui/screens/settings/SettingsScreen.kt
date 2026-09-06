@@ -31,6 +31,7 @@ fun SettingsScreen(
     modifier: Modifier = Modifier
 ) {
     val coroutineScope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
     var user by remember { mutableStateOf<User?>(null) }
     var serverUrl by remember { mutableStateOf("") }
     var showResetDialog by remember { mutableStateOf(false) }
@@ -45,6 +46,7 @@ fun SettingsScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Column(
@@ -140,6 +142,50 @@ fun SettingsScreen(
                             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
                         ) {
                             Text("Změnit", fontSize = 11.sp)
+                        }
+                    }
+                }
+            }
+
+            // Application Mode & Backups Card
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text("Správa databáze & Zálohy", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Serverová záloha", fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                            Text("Vytvoří kompletní JSON snapshot na serveru", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+
+                        Button(
+                            onClick = {
+                                coroutineScope.launch {
+                                    repository.createBackup("Záloha z mobilní aplikace").onSuccess {
+                                        snackbarHostState.showSnackbar("Snapshot zálohy byl úspěšně vytvořen na serveru!")
+                                    }.onFailure {
+                                        snackbarHostState.showSnackbar("Chyba při tvorbě zálohy: ${it.message}")
+                                    }
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = HestiaOrange),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Icon(Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Vytvořit zálohu", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }

@@ -91,6 +91,18 @@ interface HestiaApiService {
     @GET("api/v1/recipes/{id}")
     suspend fun getRecipe(@Path("id") id: Int): Recipe
 
+    @POST("api/v1/recipes")
+    suspend fun createRecipe(@Body item: RecipeCreate): Recipe
+
+    @DELETE("api/v1/recipes/{id}")
+    suspend fun deleteRecipe(@Path("id") id: Int): Map<String, String>
+
+    @POST("api/v1/recipes/{id}/toggle-favorite")
+    suspend fun toggleRecipeFavorite(@Path("id") id: Int): Recipe
+
+    @GET("api/v1/recipes/{id}/scale")
+    suspend fun scaleRecipe(@Path("id") id: Int, @Query("servings") servings: Int): ScaledRecipeResponse
+
     // --- PANTRY ---
     @GET("api/v1/pantry")
     suspend fun getPantryItems(): List<PantryItem>
@@ -98,8 +110,25 @@ interface HestiaApiService {
     @POST("api/v1/pantry")
     suspend fun createPantryItem(@Body item: PantryItemCreate): PantryItem
 
+    @PUT("api/v1/pantry/{id}")
+    suspend fun updatePantryItem(@Path("id") id: Int, @Body item: PantryItemUpdate): PantryItem
+
     @DELETE("api/v1/pantry/{id}")
     suspend fun deletePantryItem(@Path("id") id: Int)
+
+    // --- CHORES EXTENDED ---
+    @POST("api/v1/chores")
+    suspend fun createChore(@Body item: ChoreCreate): Chore
+
+    @GET("api/v1/chores/leaderboard")
+    suspend fun getLeaderboard(): List<LeaderboardMember>
+
+    // --- PLANTS EXTENDED ---
+    @POST("api/v1/plants")
+    suspend fun createPlant(@Body item: PlantCreate): Plant
+
+    @DELETE("api/v1/plants/{id}")
+    suspend fun deletePlant(@Path("id") id: Int): Map<String, String>
 
     // --- PETS ---
     @GET("api/v1/pets")
@@ -108,6 +137,12 @@ interface HestiaApiService {
     @POST("api/v1/pets/{id}/feed")
     suspend fun feedPet(@Path("id") id: Int): Map<String, String>
 
+    @POST("api/v1/pets")
+    suspend fun createPet(@Body item: PetCreate): Pet
+
+    @POST("api/v1/pets/{id}/medical-records")
+    suspend fun addPetMedicalRecord(@Path("id") id: Int, @Body item: PetMedicalRecordCreate): PetMedicalRecord
+
     // --- FINANCE ---
     @GET("api/v1/finance/summary")
     suspend fun getFinanceSummary(): FinanceSummary
@@ -115,8 +150,20 @@ interface HestiaApiService {
     @GET("api/v1/finance/transactions")
     suspend fun getTransactions(@Query("limit") limit: Int = 50): List<TransactionItem>
 
+    @POST("api/v1/finance/transactions")
+    suspend fun createTransaction(@Body item: TransactionCreate): TransactionItem
+
     @GET("api/v1/finance/settlements")
     suspend fun getDebtSettlements(): DebtSettlementResponse
+
+    @GET("api/v1/finance/savings-goals")
+    suspend fun getSavingsGoals(): List<SavingsGoal>
+
+    @POST("api/v1/finance/savings-goals/{id}/deposit")
+    suspend fun addSavingsDeposit(@Path("id") id: Int, @Body item: SavingsGoalDeposit): SavingsGoal
+
+    @GET("api/v1/finance/subscriptions")
+    suspend fun getSubscriptions(): List<Subscription>
 
     // --- DOCUMENTS ---
     @GET("api/v1/documents")
@@ -124,6 +171,32 @@ interface HestiaApiService {
 
     @GET("api/v1/documents/stats")
     suspend fun getDocumentStats(): DocumentStats
+
+    @POST("api/v1/documents")
+    suspend fun createDocument(@Body item: DocumentCreate): DocumentItem
+
+    @DELETE("api/v1/documents/{id}")
+    suspend fun deleteDocument(@Path("id") id: Int): Map<String, String>
+
+    @POST("api/v1/documents/vault/verify")
+    suspend fun verifyVaultPin(@Body item: VaultVerifyRequest): VaultVerifyResponse
+
+    // --- VEHICLES EXTENDED ---
+    @POST("api/v1/vehicles")
+    suspend fun createVehicle(@Body item: VehicleCreate): Vehicle
+
+    @DELETE("api/v1/vehicles/{id}")
+    suspend fun deleteVehicle(@Path("id") id: Int): Map<String, String>
+
+    @GET("api/v1/vehicles/{id}/service-records")
+    suspend fun getVehicleServiceRecords(@Path("id") id: Int): List<VehicleServiceRecord>
+
+    // --- MEDICINES EXTENDED ---
+    @POST("api/v1/medicines")
+    suspend fun createMedicine(@Body item: MedicineCreate): Medicine
+
+    @DELETE("api/v1/medicines/{id}")
+    suspend fun deleteMedicine(@Path("id") id: Int): Map<String, String>
 
     // --- ACTIVITIES ---
     @GET("api/v1/activities")

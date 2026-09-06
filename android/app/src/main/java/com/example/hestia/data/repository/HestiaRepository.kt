@@ -138,6 +138,22 @@ class HestiaRepository(
         getService().getRecipe(id)
     }
 
+    suspend fun createRecipe(item: RecipeCreate): Result<Recipe> = runCatching {
+        getService().createRecipe(item)
+    }
+
+    suspend fun deleteRecipe(id: Int): Result<Map<String, String>> = runCatching {
+        getService().deleteRecipe(id)
+    }
+
+    suspend fun toggleRecipeFavorite(id: Int): Result<Recipe> = runCatching {
+        getService().toggleRecipeFavorite(id)
+    }
+
+    suspend fun scaleRecipe(id: Int, servings: Int): Result<ScaledRecipeResponse> = runCatching {
+        getService().scaleRecipe(id, servings)
+    }
+
     // --- PANTRY ---
     suspend fun getPantryItems(): Result<List<PantryItem>> = runCatching {
         getService().getPantryItems()
@@ -147,8 +163,30 @@ class HestiaRepository(
         getService().createPantryItem(item)
     }
 
+    suspend fun updatePantryItem(id: Int, item: PantryItemUpdate): Result<PantryItem> = runCatching {
+        getService().updatePantryItem(id, item)
+    }
+
     suspend fun deletePantryItem(id: Int): Result<Unit> = runCatching {
         getService().deletePantryItem(id)
+    }
+
+    // --- CHORES EXTENDED ---
+    suspend fun createChore(item: ChoreCreate): Result<Chore> = runCatching {
+        getService().createChore(item)
+    }
+
+    suspend fun getLeaderboard(): Result<List<LeaderboardMember>> = runCatching {
+        getService().getLeaderboard()
+    }
+
+    // --- PLANTS EXTENDED ---
+    suspend fun createPlant(item: PlantCreate): Result<Plant> = runCatching {
+        getService().createPlant(item)
+    }
+
+    suspend fun deletePlant(id: Int): Result<Map<String, String>> = runCatching {
+        getService().deletePlant(id)
     }
 
     // --- PETS ---
@@ -160,6 +198,14 @@ class HestiaRepository(
         getService().feedPet(id)
     }
 
+    suspend fun createPet(item: PetCreate): Result<Pet> = runCatching {
+        getService().createPet(item)
+    }
+
+    suspend fun addPetMedicalRecord(petId: Int, item: PetMedicalRecordCreate): Result<PetMedicalRecord> = runCatching {
+        getService().addPetMedicalRecord(petId, item)
+    }
+
     // --- FINANCE ---
     suspend fun getFinanceSummary(): Result<FinanceSummary> = runCatching {
         getService().getFinanceSummary()
@@ -169,8 +215,24 @@ class HestiaRepository(
         getService().getTransactions(limit)
     }
 
+    suspend fun createTransaction(item: TransactionCreate): Result<TransactionItem> = runCatching {
+        getService().createTransaction(item)
+    }
+
     suspend fun getDebtSettlements(): Result<DebtSettlementResponse> = runCatching {
         getService().getDebtSettlements()
+    }
+
+    suspend fun getSavingsGoals(): Result<List<SavingsGoal>> = runCatching {
+        getService().getSavingsGoals()
+    }
+
+    suspend fun addSavingsDeposit(id: Int, amount: Double): Result<SavingsGoal> = runCatching {
+        getService().addSavingsDeposit(id, SavingsGoalDeposit(amount))
+    }
+
+    suspend fun getSubscriptions(): Result<List<Subscription>> = runCatching {
+        getService().getSubscriptions()
     }
 
     // --- DOCUMENTS ---
@@ -180,6 +242,40 @@ class HestiaRepository(
 
     suspend fun getDocumentStats(): Result<DocumentStats> = runCatching {
         getService().getDocumentStats()
+    }
+
+    suspend fun createDocument(item: DocumentCreate): Result<DocumentItem> = runCatching {
+        getService().createDocument(item)
+    }
+
+    suspend fun deleteDocument(id: Int): Result<Map<String, String>> = runCatching {
+        getService().deleteDocument(id)
+    }
+
+    suspend fun verifyVaultPin(pin: String): Result<VaultVerifyResponse> = runCatching {
+        getService().verifyVaultPin(VaultVerifyRequest(pin))
+    }
+
+    // --- VEHICLES EXTENDED ---
+    suspend fun createVehicle(item: VehicleCreate): Result<Vehicle> = runCatching {
+        getService().createVehicle(item)
+    }
+
+    suspend fun deleteVehicle(id: Int): Result<Map<String, String>> = runCatching {
+        getService().deleteVehicle(id)
+    }
+
+    suspend fun getVehicleServiceRecords(id: Int): Result<List<VehicleServiceRecord>> = runCatching {
+        getService().getVehicleServiceRecords(id)
+    }
+
+    // --- MEDICINES EXTENDED ---
+    suspend fun createMedicine(item: MedicineCreate): Result<Medicine> = runCatching {
+        getService().createMedicine(item)
+    }
+
+    suspend fun deleteMedicine(id: Int): Result<Map<String, String>> = runCatching {
+        getService().deleteMedicine(id)
     }
 
     // --- ACTIVITIES ---
@@ -198,9 +294,11 @@ class HestiaRepository(
     }
 
     suspend fun resetAllData(confirmation: String, password: String? = null): Result<Map<String, String>> = runCatching {
-        val body = mutableMapOf("confirmation" to confirmation)
-        if (!password.isNullOrBlank()) {
-            body["password"] = password
+        val body = buildMap {
+            put("confirmation", confirmation)
+            if (!password.isNullOrBlank()) {
+                put("admin_password", password)
+            }
         }
         getService().resetAllData(body)
     }

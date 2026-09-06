@@ -428,3 +428,222 @@ data class BackupItem(
     val items_count: Int = 0,
     val note: String? = null
 )
+
+// --- EXTENDED MODELS FOR FULL FEATURE PARITY ---
+
+@Serializable
+data class RecipeCreate(
+    val title: String,
+    val description: String? = null,
+    val prep_time_minutes: Int = 15,
+    val cook_time_minutes: Int = 30,
+    val difficulty: String = "medium",
+    val price_level: String = "medium",
+    val default_servings: Int = 4,
+    val tags: List<String> = emptyList(),
+    val ingredients: List<RecipeIngredient> = emptyList(),
+    val instructions: List<RecipeStep> = emptyList(),
+    val is_favorite: Boolean = false
+)
+
+@Serializable
+data class ScaledIngredientItem(
+    val name: String,
+    val original_amount: Double,
+    val scaled_amount: Double,
+    val unit: String = "ks",
+    val note: String? = null,
+    val category: String? = "other",
+    val is_in_pantry: Boolean = false,
+    val pantry_amount: Double? = null
+)
+
+@Serializable
+data class ScaledRecipeResponse(
+    val recipe: Recipe,
+    val target_servings: Int,
+    val scale_factor: Double,
+    val scaled_ingredients: List<ScaledIngredientItem> = emptyList()
+)
+
+@Serializable
+data class PantryItemUpdate(
+    val quantity: Double? = null,
+    val name: String? = null,
+    val category: String? = null,
+    val unit: String? = null,
+    val expiration_date: String? = null,
+    val note: String? = null
+)
+
+@Serializable
+data class ChoreCreate(
+    val title: String,
+    val description: String? = null,
+    val room: String? = "Společné prostory",
+    val category: String = "routine",
+    val frequency: String = "weekly",
+    val interval_days: Int = 7,
+    val points: Int = 10,
+    val estimated_minutes: Int = 15,
+    val is_rotation_enabled: Boolean = true,
+    val current_assignee_id: Int? = null,
+    val due_date: String? = null
+)
+
+@Serializable
+data class LeaderboardMember(
+    val user_id: Int,
+    val username: String,
+    val display_name: String,
+    val avatar_color: String = "#F97316",
+    val total_points: Int = 0,
+    val weekly_points: Int = 0,
+    val available_points: Int = 0,
+    val chores_completed_count: Int = 0
+)
+
+@Serializable
+data class PlantCreate(
+    val name: String,
+    val species_czech: String? = null,
+    val room: String = "Obývací pokoj",
+    val light_requirement: String = "bright_indirect",
+    val watering_interval_days: Int = 7,
+    val pet_toxicity: String = "safe",
+    val notes: String? = null
+)
+
+@Serializable
+data class PetCreate(
+    val name: String,
+    val species: String = "dog",
+    val breed: String? = null,
+    val birth_date: String? = null,
+    val gender: String = "unknown",
+    val initial_weight_kg: Double? = null,
+    val vet_name: String? = null,
+    val vet_phone: String? = null,
+    val notes: String? = null
+)
+
+@Serializable
+data class PetMedicalRecordCreate(
+    val record_type: String = "vaccination",
+    val title: String,
+    val performed_date: String,
+    val valid_until: String? = null,
+    val veterinarian: String? = null,
+    val notes: String? = null
+)
+
+@Serializable
+data class TransactionCreate(
+    val title: String,
+    val amount: Double,
+    val transaction_type: String = "expense",
+    val category: String = "groceries",
+    val date: String,
+    val payer_id: Int,
+    val is_shared: Boolean = true,
+    val notes: String? = null
+)
+
+@Serializable
+data class SavingsGoal(
+    val id: Int = 0,
+    val title: String,
+    val target_amount: Double,
+    val current_amount: Double = 0.0,
+    val target_date: String? = null,
+    val icon: String = "PiggyBank",
+    val color: String = "#10B981",
+    val is_completed: Boolean = false,
+    val notes: String? = null
+)
+
+@Serializable
+data class SavingsGoalDeposit(
+    val amount: Double
+)
+
+@Serializable
+data class Subscription(
+    val id: Int = 0,
+    val name: String,
+    val amount: Double,
+    val billing_cycle: String = "monthly",
+    val next_billing_date: String,
+    val category: String = "entertainment",
+    val payer_id: Int? = null,
+    val is_active: Boolean = true,
+    val monthly_equivalent: Double = 0.0,
+    val days_until_billing: Int? = null,
+    val notes: String? = null
+)
+
+@Serializable
+data class DocumentCreate(
+    val title: String,
+    val category: String = "warranty",
+    val file_name: String = "manual_entry.pdf",
+    val file_path: String = "manual_entry",
+    val issuer: String? = null,
+    val document_date: String? = null,
+    val expiry_date: String? = null,
+    val warranty_months: Int? = null,
+    val amount: Double? = null,
+    val physical_location: String? = null,
+    val is_vault_protected: Boolean = false
+)
+
+@Serializable
+data class VaultVerifyRequest(
+    val pin: String
+)
+
+@Serializable
+data class VaultVerifyResponse(
+    val success: Boolean = true,
+    val message: String = ""
+)
+
+@Serializable
+data class VehicleCreate(
+    val name: String,
+    val make: String,
+    val model: String,
+    val license_plate: String,
+    val current_mileage: Int = 0,
+    val fuel_type: String = "diesel",
+    val mot_expiry_date: String? = null,
+    val vignette_expiry_date: String? = null
+)
+
+@Serializable
+data class VehicleServiceRecord(
+    val id: Int = 0,
+    val vehicle_id: Int = 0,
+    val service_type: String = "regular_service",
+    val title: String,
+    val date: String,
+    val mileage: Int,
+    val cost: Double = 0.0,
+    val service_shop: String? = null,
+    val performed_operations: String? = null
+)
+
+@Serializable
+data class MedicineCreate(
+    val name: String,
+    val active_substance: String? = null,
+    val form: String = "tablets",
+    val category: String = "pain_fever",
+    val location: String = "bathroom",
+    val current_quantity: Double = 1.0,
+    val unit: String = "ks",
+    val expiration_date: String? = null,
+    val is_prescription: Boolean = false,
+    val notes: String? = null
+)
+

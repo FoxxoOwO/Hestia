@@ -1,11 +1,15 @@
 package com.example.hestia.ui.screens.pets
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -14,12 +18,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.hestia.data.models.Pet
+import com.example.hestia.data.models.PetCreate
+import com.example.hestia.data.models.PetMedicalRecordCreate
 import com.example.hestia.data.repository.HestiaRepository
 import com.example.hestia.theme.HestiaOrange
+import com.example.hestia.theme.StatusGreen
+import com.example.hestia.theme.StatusRed
 import com.example.hestia.ui.components.EmptyStateCard
 import kotlinx.coroutines.launch
 
@@ -28,10 +38,16 @@ fun PetsScreen(
     repository: HestiaRepository,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     var pets by remember { mutableStateOf<List<Pet>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var actionMessage by remember { mutableStateOf<String?>(null) }
+
+    var showAddPetDialog by remember { mutableStateOf(false) }
+    var showFoodSafetyDialog by remember { mutableStateOf(false) }
+    var selectedPetForSos by remember { mutableStateOf<Pet?>(null) }
+    var selectedPetForRecord by remember { mutableStateOf<Pet?>(null) }
 
     fun refreshPets() {
         coroutineScope.launch {
@@ -48,6 +64,16 @@ fun PetsScreen(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { showAddPetDialog = true },
+                containerColor = HestiaOrange,
+                contentColor = Color.White,
+                shape = CircleShape
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Přidat mazlíčka")
+            }
+        },
         snackbarHost = {
             actionMessage?.let { msg ->
                 Snackbar(
@@ -74,12 +100,34 @@ fun PetsScreen(
                     .padding(padding)
                     .padding(horizontal = 16.dp)
             ) {
-                Text(
-                    text = "Domácí mazlíčci (${pets.size})",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(vertical = 12.dp)
-                )
+                // Header & Action buttons
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Domácí mazlíčci (${pets.size})",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    FilledTonalButton(
+                        onClick = { showFoodSafetyDialog = true },
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = StatusRed.copy(alpha = 0.15f),
+                            contentColor = StatusRed
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Icon(Icons.Default.Warning, contentDescription = null, modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Toxické potraviny", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
 
                 if (pets.isEmpty()) {
                     EmptyStateCard(
@@ -89,9 +137,12 @@ fun PetsScreen(
                 } else {
                     LazyColumn(
                         verticalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(bottom = 80.dp)
                     ) {
                         items(pets, key = { it.id }) { pet ->
+                            var isMedicalExpanded by remember { mutableStateOf(false) }
+
                             Card(
                                 shape = RoundedCornerShape(14.dp),
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -165,7 +216,7 @@ fun PetsScreen(
                                                 }
                                             },
                                             shape = RoundedCornerShape(8.dp),
-                                            colors = ButtonDefaults.buttonColors(containerColor = HestiaOrange),
+                                            colors = ButtonDefaults.buttonColors(containerColor = StatusGreen),
                                             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
                                         ) {
                                             Icon(
@@ -174,7 +225,7 @@ fun PetsScreen(
                                                 modifier = Modifier.size(16.dp)
                                             )
                                             Spacer(modifier = Modifier.width(4.dp))
-                                            Text("Nakrmit", fontSize = 12.sp)
+                                            Text("Nakrmit", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                         }
                                     }
 
@@ -214,13 +265,101 @@ fun PetsScreen(
                                         }
                                     }
 
+                                    // Vet contact
                                     if (!pet.vet_name.isNullOrBlank()) {
-                                        Spacer(modifier = Modifier.height(6.dp))
-                                        Text(
-                                            text = "Veterinář: ${pet.vet_name}${if (!pet.vet_phone.isNullOrBlank()) " (${pet.vet_phone})" else ""}",
-                                            fontSize = 11.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = "Veterinář: ${pet.vet_name}",
+                                                fontSize = 12.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+
+                                            if (!pet.vet_phone.isNullOrBlank()) {
+                                                TextButton(
+                                                    onClick = {
+                                                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${pet.vet_phone}"))
+                                                        context.startActivity(intent)
+                                                    },
+                                                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                                                ) {
+                                                    Icon(Icons.Default.Phone, contentDescription = null, modifier = Modifier.size(14.dp), tint = HestiaOrange)
+                                                    Spacer(modifier = Modifier.width(4.dp))
+                                                    Text(pet.vet_phone!!, fontSize = 11.sp, color = HestiaOrange, fontWeight = FontWeight.Bold)
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    // Action buttons for Pet (SOS flyer, Add Record, View Records)
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        OutlinedButton(
+                                            onClick = { selectedPetForRecord = pet },
+                                            shape = RoundedCornerShape(8.dp),
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Icon(Icons.Default.MedicalServices, contentDescription = null, modifier = Modifier.size(13.dp))
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text("+ Očkování", fontSize = 11.sp)
+                                        }
+
+                                        OutlinedButton(
+                                            onClick = { selectedPetForSos = pet },
+                                            shape = RoundedCornerShape(8.dp),
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Icon(Icons.Default.Campaign, contentDescription = null, modifier = Modifier.size(13.dp), tint = StatusRed)
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text("SOS Leták", fontSize = 11.sp, color = StatusRed)
+                                        }
+
+                                        if (pet.medical_records.isNotEmpty()) {
+                                            TextButton(
+                                                onClick = { isMedicalExpanded = !isMedicalExpanded },
+                                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp)
+                                            ) {
+                                                Text(
+                                                    text = if (isMedicalExpanded) "Skrýt (${pet.medical_records.size})" else "Záznamy (${pet.medical_records.size})",
+                                                    fontSize = 11.sp
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    // Expandable Medical Records
+                                    if (isMedicalExpanded && pet.medical_records.isNotEmpty()) {
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Column(
+                                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                                                .padding(8.dp)
+                                        ) {
+                                            pet.medical_records.forEach { record ->
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.SpaceBetween
+                                                ) {
+                                                    Text("💉 ${record.title}", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                                    Text(record.performed_date, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                }
+                                                if (!record.valid_until.isNullOrBlank()) {
+                                                    Text("   Platnost do: ${record.valid_until}", fontSize = 10.sp, color = StatusGreen)
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -229,5 +368,332 @@ fun PetsScreen(
                 }
             }
         }
+    }
+
+    // Add Pet Dialog
+    if (showAddPetDialog) {
+        var name by remember { mutableStateOf("") }
+        var species by remember { mutableStateOf("dog") }
+        var breed by remember { mutableStateOf("") }
+        var birthDate by remember { mutableStateOf("") }
+        var weight by remember { mutableStateOf("") }
+        var vetName by remember { mutableStateOf("") }
+        var vetPhone by remember { mutableStateOf("") }
+        var notes by remember { mutableStateOf("") }
+
+        val speciesOptions = listOf("dog" to "Pes", "cat" to "Kočka", "rabbit" to "Králík", "rodent" to "Hlodavec", "bird" to "Pták", "other" to "Jiné")
+
+        AlertDialog(
+            onDismissRequest = { showAddPetDialog = false },
+            title = { Text("Přidat nového mazlíčka", fontWeight = FontWeight.Bold) },
+            text = {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    item {
+                        OutlinedTextField(
+                            value = name,
+                            onValueChange = { name = it },
+                            label = { Text("Jméno zvířete *") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                    }
+
+                    item {
+                        Text("Druh:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            items(speciesOptions) { (key, label) ->
+                                FilterChip(
+                                    selected = species == key,
+                                    onClick = { species = key },
+                                    label = { Text(label, fontSize = 11.sp) }
+                                )
+                            }
+                        }
+                    }
+
+                    item {
+                        OutlinedTextField(
+                            value = breed,
+                            onValueChange = { breed = it },
+                            label = { Text("Plemeno / Rasa") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                    }
+
+                    item {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedTextField(
+                                value = birthDate,
+                                onValueChange = { birthDate = it },
+                                label = { Text("Narození (RRRR-MM)") },
+                                placeholder = { Text("2022-05") },
+                                modifier = Modifier.weight(1f),
+                                singleLine = true
+                            )
+
+                            OutlinedTextField(
+                                value = weight,
+                                onValueChange = { weight = it },
+                                label = { Text("Váha (kg)") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                modifier = Modifier.weight(1f),
+                                singleLine = true
+                            )
+                        }
+                    }
+
+                    item {
+                        OutlinedTextField(
+                            value = vetName,
+                            onValueChange = { vetName = it },
+                            label = { Text("Jméno veterináře / Klinika") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                    }
+
+                    item {
+                        OutlinedTextField(
+                            value = vetPhone,
+                            onValueChange = { vetPhone = it },
+                            label = { Text("Telefon na veterináře") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                    }
+
+                    item {
+                        OutlinedTextField(
+                            value = notes,
+                            onValueChange = { notes = it },
+                            label = { Text("Poznámka / Alergie") },
+                            modifier = Modifier.fillMaxWidth(),
+                            maxLines = 2
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (name.isNotBlank()) {
+                            coroutineScope.launch {
+                                repository.createPet(
+                                    PetCreate(
+                                        name = name.trim(),
+                                        species = species,
+                                        breed = breed.trim().ifBlank { null },
+                                        birth_date = birthDate.trim().ifBlank { null },
+                                        initial_weight_kg = weight.toDoubleOrNull(),
+                                        vet_name = vetName.trim().ifBlank { null },
+                                        vet_phone = vetPhone.trim().ifBlank { null },
+                                        notes = notes.trim().ifBlank { null }
+                                    )
+                                ).onSuccess {
+                                    showAddPetDialog = false
+                                    refreshPets()
+                                    actionMessage = "Mazlíček byl úspěšně přidán!"
+                                }
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = HestiaOrange)
+                ) {
+                    Text("Přidat mazlíčka")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddPetDialog = false }) {
+                    Text("Zrušit")
+                }
+            }
+        )
+    }
+
+    // Add Medical Record Dialog
+    selectedPetForRecord?.let { pet ->
+        var recordTitle by remember { mutableStateOf("") }
+        var recordDate by remember { mutableStateOf("") }
+        var validUntil by remember { mutableStateOf("") }
+        var veterinarian by remember { mutableStateOf(pet.vet_name ?: "") }
+
+        AlertDialog(
+            onDismissRequest = { selectedPetForRecord = null },
+            title = { Text("Záznam očkování / lékaře pro ${pet.name}", fontWeight = FontWeight.Bold, fontSize = 16.sp) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(
+                        value = recordTitle,
+                        onValueChange = { recordTitle = it },
+                        label = { Text("Název vakcíny / Zákroku *") },
+                        placeholder = { Text("např. Vzteklina (Nobivac)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+
+                    OutlinedTextField(
+                        value = recordDate,
+                        onValueChange = { recordDate = it },
+                        label = { Text("Datum provedení (RRRR-MM-DD) *") },
+                        placeholder = { Text("2026-09-06") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+
+                    OutlinedTextField(
+                        value = validUntil,
+                        onValueChange = { validUntil = it },
+                        label = { Text("Platnost do (RRRR-MM-DD)") },
+                        placeholder = { Text("2027-09-06") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+
+                    OutlinedTextField(
+                        value = veterinarian,
+                        onValueChange = { veterinarian = it },
+                        label = { Text("Veterinář") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (recordTitle.isNotBlank() && recordDate.isNotBlank()) {
+                            coroutineScope.launch {
+                                repository.addPetMedicalRecord(
+                                    pet.id,
+                                    PetMedicalRecordCreate(
+                                        title = recordTitle.trim(),
+                                        performed_date = recordDate.trim(),
+                                        valid_until = validUntil.trim().ifBlank { null },
+                                        veterinarian = veterinarian.trim().ifBlank { null }
+                                    )
+                                ).onSuccess {
+                                    selectedPetForRecord = null
+                                    refreshPets()
+                                    actionMessage = "Lékařský záznam byl úspěšně uložen!"
+                                }
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = HestiaOrange)
+                ) {
+                    Text("Uložit záznam")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { selectedPetForRecord = null }) {
+                    Text("Zrušit")
+                }
+            }
+        )
+    }
+
+    // Lost Pet SOS Poster Dialog
+    selectedPetForSos?.let { pet ->
+        AlertDialog(
+            onDismissRequest = { selectedPetForSos = null },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Default.Campaign, contentDescription = null, tint = StatusRed)
+                    Text("SOS Leták při ztrátě: ${pet.name}", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = StatusRed)
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = StatusRed.copy(alpha = 0.08f)),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("🚨 POHŘEŠUJE SE MAZLÍČEK 🚨", fontWeight = FontWeight.Black, fontSize = 16.sp, color = StatusRed)
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(pet.name, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                            Text("${pet.species} • ${pet.breed ?: "kříženec"}", fontSize = 13.sp)
+                            if (pet.age_formatted.isNotBlank()) {
+                                Text("Věk: ${pet.age_formatted}", fontSize = 12.sp)
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("Při nálezu prosím ihned volejte:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text(pet.vet_phone ?: "Rodinný kontakt Hestia", fontSize = 15.sp, fontWeight = FontWeight.Black, color = HestiaOrange)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_SUBJECT, "POHŘEŠUJE SE MAZLÍČEK: ${pet.name}")
+                            putExtra(Intent.EXTRA_TEXT, "POHŘEŠUJE SE: ${pet.name} (${pet.species}, ${pet.breed ?: ""}). Při nálezu prosím volejte na kontakt: ${pet.vet_phone ?: "domácnost"}.")
+                        }
+                        context.startActivity(Intent.createChooser(shareIntent, "Sdílet SOS Leták"))
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = StatusRed)
+                ) {
+                    Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Sdílet leták")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { selectedPetForSos = null }) {
+                    Text("Zavřít")
+                }
+            }
+        )
+    }
+
+    // Food Safety Dialog (Toxic items)
+    if (showFoodSafetyDialog) {
+        val toxicFoods = listOf(
+            Triple("Čokoláda a kakao", "Obsahuje teobromin, který je pro psy a kočky prudce jedovatý.", "Způsobuje zvracení, křeče a selhání srdce."),
+            Triple("Hrozny a rozinky", "I malé množství může způsobit akutní selhání ledvin.", "Nikdy nepodávat psům ani kočkám."),
+            Triple("Cibule, česnek a pórek", "Ničí červené krvinky a způsobuje život ohrožující anémii.", "Toxické i ve vařeném stavu nebo vývaru."),
+            Triple("Xylitol (umělé sladidlo)", "Ve žvýkačkách a dietních potravinách. Prudký pokles cukru a selhání jater.", "Okamžitě vyhledejte veterináře!"),
+            Triple("Avokádo a kofein", "Persin v avokádu způsobuje trávicí potíže; kofein stimuluje srdce do arytmií.", "Držte mimo dosah zvířat.")
+        )
+
+        AlertDialog(
+            onDismissRequest = { showFoodSafetyDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Default.Warning, contentDescription = null, tint = StatusRed)
+                    Text("Toxické potraviny pro mazlíčky", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                }
+            },
+            text = {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(toxicFoods) { (food, why, effect) ->
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp)) {
+                                Text("⛔ $food", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = StatusRed)
+                                Text(why, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
+                                Text("⚠️ $effect", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showFoodSafetyDialog = false }) {
+                    Text("Rozumím", color = HestiaOrange)
+                }
+            }
+        )
     }
 }

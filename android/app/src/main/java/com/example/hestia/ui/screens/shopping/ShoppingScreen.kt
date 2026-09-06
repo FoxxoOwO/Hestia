@@ -55,8 +55,26 @@ fun ShoppingScreen(
         refreshItems()
     }
 
+    var selectedCategory by remember { mutableStateOf("all") }
+
     val uncheckedItems = items.filter { !it.is_checked }
     val checkedItems = items.filter { it.is_checked }
+
+    val filteredUnchecked = uncheckedItems.filter {
+        when (selectedCategory) {
+            "all" -> true
+            "urgent" -> it.urgent
+            else -> it.category.equals(selectedCategory, ignoreCase = true)
+        }
+    }
+
+    val shoppingCategories = listOf(
+        "all" to "Vše (${uncheckedItems.size})",
+        "urgent" to "Spěchá (${uncheckedItems.count { it.urgent }})",
+        "potraviny" to "Potraviny",
+        "drogerie" to "Drogerie",
+        "ostatní" to "Ostatní"
+    )
 
     Scaffold(
         floatingActionButton = {
@@ -115,8 +133,24 @@ fun ShoppingScreen(
                     }
                 }
 
+                // Filter pills
+                item {
+                    androidx.compose.foundation.lazy.LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(bottom = 6.dp)
+                    ) {
+                        items(shoppingCategories) { (catKey, catLabel) ->
+                            FilterChip(
+                                selected = selectedCategory == catKey,
+                                onClick = { selectedCategory = catKey },
+                                label = { Text(catLabel, fontSize = 11.sp) }
+                            )
+                        }
+                    }
+                }
+
                 // Unchecked items (To Buy)
-                if (uncheckedItems.isEmpty() && checkedItems.isEmpty()) {
+                if (filteredUnchecked.isEmpty() && checkedItems.isEmpty()) {
                     item {
                         EmptyStateCard(
                             message = "V nákupním košíku nic není.",
@@ -124,7 +158,7 @@ fun ShoppingScreen(
                         )
                     }
                 } else {
-                    items(uncheckedItems, key = { it.id }) { item ->
+                    items(filteredUnchecked, key = { it.id }) { item ->
                         Card(
                             shape = RoundedCornerShape(12.dp),
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
