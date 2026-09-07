@@ -684,6 +684,21 @@ data class GeminiExtractedRecipe(
 )
 
 @Serializable
+data class GeminiBase64FileImportRequest(
+    val filename: String,
+    val file_base64: String,
+    val target_language: String = "cs"
+)
+
+@Serializable
+data class RecipeFileImportResponse(
+    val success: Boolean = true,
+    val count: Int = 0,
+    val filename: String = "",
+    val recipes: List<GeminiExtractedRecipe> = emptyList()
+)
+
+@Serializable
 data class ChoreRewardItem(
     val id: Int = 0,
     val title: String,

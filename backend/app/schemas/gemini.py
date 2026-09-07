@@ -21,3 +21,16 @@ class GeminiExtractedRecipe(BaseModel):
     ingredients: List[IngredientItem] = []
     instructions: List[InstructionStep] = []
     source_url: Optional[str] = None
+
+class GeminiBatchExtractedRecipes(BaseModel):
+    recipes: List[GeminiExtractedRecipe] = []
+
+class RecipeFileImportResponse(BaseModel):
+    recipes: List[GeminiExtractedRecipe] = []
+    total: int = 0
+    filename: str = ""
+
+class GeminiBase64FileImportRequest(BaseModel):
+    file_base64: str
+    filename: str
+    target_language: Optional[str] = "cs"

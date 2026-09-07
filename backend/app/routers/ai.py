@@ -1,7 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+import base64
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from app.config import settings
 from app.models.user import User
-from app.schemas.gemini import GeminiImportRequest, GeminiExtractedRecipe
+from app.schemas.gemini import (
+    GeminiImportRequest, GeminiExtractedRecipe,
+    RecipeFileImportResponse, GeminiBase64FileImportRequest
+)
 from app.schemas.plant import (
     PlantAiAnalyzeRequest, PlantAiExtracted,
     PlantDiagnosisRequest, PlantDiagnosisResponse
@@ -53,6 +57,76 @@ async def import_recipe_with_gemini(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Chyba při zpracování receptu pomocí Gemini AI: {str(e)}"
+        )
+
+@router.post("/import-recipe-file", response_model=RecipeFileImportResponse)
+async def import_recipe_from_file(
+    file: UploadFile = File(...),
+    target_language: str = Form("cs"),
+    current_user: User = Depends(get_current_user)
+):
+    try:
+        content = await file.read()
+        if not content:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Nahraný soubor je prázdný."
+            )
+
+        service = GeminiRecipeService(api_key=settings.GEMINI_API_KEY)
+        recipes = await service.parse_recipe_file(
+            file_bytes=content,
+            filename=file.filename or "recept.txt",
+            content_type=file.content_type,
+            target_language=target_language or current_user.preferred_language or "cs"
+        )
+        return RecipeFileImportResponse(
+            recipes=recipes,
+            total=len(recipes),
+            filename=file.filename or "recept"
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Chyba při zpracování souboru s receptem: {str(e)}"
+        )
+
+@router.post("/import-recipe-base64", response_model=RecipeFileImportResponse)
+async def import_recipe_from_base64(
+    req: GeminiBase64FileImportRequest,
+    current_user: User = Depends(get_current_user)
+):
+    try:
+        clean_b64 = req.file_base64
+        if "," in clean_b64:
+            clean_b64 = clean_b64.split(",", 1)[1]
+
+        file_bytes = base64.b64decode(clean_b64)
+        if not file_bytes:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Obsah souboru v Base64 je prázdný."
+            )
+
+        service = GeminiRecipeService(api_key=settings.GEMINI_API_KEY)
+        recipes = await service.parse_recipe_file(
+            file_bytes=file_bytes,
+            filename=req.filename or "recept.txt",
+            target_language=req.target_language or current_user.preferred_language or "cs"
+        )
+        return RecipeFileImportResponse(
+            recipes=recipes,
+            total=len(recipes),
+            filename=req.filename or "recept"
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Chyba při zpracování Base64 souboru s receptem: {str(e)}"
         )
 
 @router.post("/analyze-plant", response_model=PlantAiExtracted)

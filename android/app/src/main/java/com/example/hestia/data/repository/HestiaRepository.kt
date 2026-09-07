@@ -308,6 +308,10 @@ class HestiaRepository(
         getService().aiImportRecipe(AiRecipeImportRequest(url = url, raw_text = rawText))
     }
 
+    suspend fun aiImportRecipeFile(filename: String, fileBase64: String): Result<RecipeFileImportResponse> = runCatching {
+        getService().aiImportRecipeBase64(GeminiBase64FileImportRequest(filename = filename, file_base64 = fileBase64))
+    }
+
     suspend fun getChoreRewards(): Result<List<ChoreRewardItem>> = runCatching {
         getService().getChoreRewards()
     }

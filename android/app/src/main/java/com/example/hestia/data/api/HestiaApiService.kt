@@ -220,6 +220,9 @@ interface HestiaApiService {
     @POST("api/v1/ai/import-recipe")
     suspend fun aiImportRecipe(@Body body: AiRecipeImportRequest): GeminiExtractedRecipe
 
+    @POST("api/v1/ai/import-recipe-base64")
+    suspend fun aiImportRecipeBase64(@Body body: GeminiBase64FileImportRequest): RecipeFileImportResponse
+
     @GET("api/v1/chores/rewards")
     suspend fun getChoreRewards(): List<ChoreRewardItem>
 

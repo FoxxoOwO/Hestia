@@ -283,6 +283,9 @@ export const RecipesPage: React.FC = () => {
         onRecipeImported={(newRec) => {
           setRecipes((prev) => [newRec, ...prev]);
         }}
+        onRecipesImported={(newRecs) => {
+          setRecipes((prev) => [...newRecs, ...prev]);
+        }}
       />
     </div>
   );

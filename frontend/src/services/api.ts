@@ -250,6 +250,25 @@ export const api = {
     return res.json();
   },
 
+  async importRecipeFromFile(file: File, target_language?: string): Promise<{ success: boolean; count: number; filename: string; recipes: Partial<Recipe>[] }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (target_language) {
+      formData.append('target_language', target_language);
+    }
+
+    const res = await fetch(`${API_BASE}/ai/import-recipe-file`, {
+      method: 'POST',
+      headers: getAuthOnlyHeaders(),
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Nepodařilo se importovat recept ze souboru.');
+    }
+    return res.json();
+  },
+
   async analyzePlantWithGemini(data: {
     plant_name?: string;
     image_base64?: string;
