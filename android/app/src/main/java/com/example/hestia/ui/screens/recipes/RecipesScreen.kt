@@ -29,6 +29,8 @@ import com.example.hestia.ui.components.EmptyStateCard
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalContext
+import android.app.Activity
+import android.content.Intent
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.util.Base64
@@ -805,30 +807,49 @@ fun RecipesScreen(
         var importError by remember { mutableStateOf<String?>(null) }
 
         val filePickerLauncher = rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.GetContent()
-        ) { uri: Uri? ->
-            uri?.let {
-                try {
-                    var name = "recipe_file"
-                    var size = 0L
-                    context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-                        val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                        val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
-                        if (cursor.moveToFirst()) {
-                            if (nameIndex >= 0) name = cursor.getString(nameIndex)
-                            if (sizeIndex >= 0) size = cursor.getLong(sizeIndex)
+            contract = ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                val uri: Uri? = result.data?.data
+                uri?.let {
+                    try {
+                        var name = "recipe_file"
+                        var size = 0L
+                        context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                            val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                            val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
+                            if (cursor.moveToFirst()) {
+                                if (nameIndex >= 0) name = cursor.getString(nameIndex)
+                                if (sizeIndex >= 0) size = cursor.getLong(sizeIndex)
+                            }
                         }
+                        val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                        if (bytes != null) {
+                            selectedFileName = name
+                            selectedFileSize = if (size > 0) size else bytes.size.toLong()
+                            selectedFileBase64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
+                            importError = null
+                        }
+                    } catch (e: Exception) {
+                        importError = "Chyba při čtení souboru: ${e.message}"
                     }
-                    val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-                    if (bytes != null) {
-                        selectedFileName = name
-                        selectedFileSize = if (size > 0) size else bytes.size.toLong()
-                        selectedFileBase64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
-                        importError = null
-                    }
-                } catch (e: Exception) {
-                    importError = "Chyba při čtení souboru: ${e.message}"
                 }
+            }
+        }
+
+        fun openFileSelector() {
+            val openDocIntent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "*/*"
+            }
+            try {
+                filePickerLauncher.launch(openDocIntent)
+            } catch (_: Exception) {
+                val getContentIntent = Intent(Intent.ACTION_GET_CONTENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    type = "*/*"
+                }
+                filePickerLauncher.launch(Intent.createChooser(getContentIntent, "Vyberte soubor receptu"))
             }
         }
 
@@ -902,7 +923,7 @@ fun RecipesScreen(
                             )
                         } else {
                             Card(
-                                onClick = { filePickerLauncher.launch("*/*") },
+                                onClick = { openFileSelector() },
                                 colors = CardDefaults.cardColors(
                                     containerColor = if (selectedFileName != null) HestiaOrange.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                                 ),
