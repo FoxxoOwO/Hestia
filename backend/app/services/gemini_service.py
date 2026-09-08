@@ -14,6 +14,12 @@ import pypdf
 from app.config import settings
 from app.schemas.gemini import GeminiExtractedRecipe, GeminiBatchExtractedRecipes
 from app.schemas.recipe import IngredientItem, InstructionStep
+from app.utils.ingredient_parser import (
+    parse_ingredient_line,
+    sanitize_ingredients,
+    sanitize_ingredient,
+    is_section_header
+)
 
 logger = logging.getLogger(__name__)
 
@@ -103,10 +109,10 @@ Pravidla:
    - tags: pole kategorií (např. ["Oběd", "Rychlovka", "Česká kuchyně", "Těstoviny"])
    - utensils: pole potřebného nádobí a nástrojů (např. ["Velký hrnec", "Pánev", "Cedník", "Struhadlo"])
    - ingredients: pole objektů, kde každý obsahuje:
-       * name: název suroviny (např. "Špagety", "Česnek", "Olivový olej")
+       * name: ČISTÝ název suroviny bez množství, bez jednotky, bez poznámky o zpracování (např. "Špagety", "Česnek", "Olivový olej", "Moučkový cukr"). DŮLEŽITÉ: 'name' nesmí obsahovat množství, jednotku, ani úpravu (např. NIKDY 'g moučkového cukru', 'nakrájený česnek', '200g mouky', '/2 balení'). Množství patří do 'amount', jednotka do 'unit', zpracování/poznámka do 'note'! Mezinadpisy jako 'Na krém', 'Na těsto' vynech. Pokud je surovina definována jen popisem, použij amount=1 a unit="dle chuti".
        * amount: číselné množství (float, např. 500, 3, 0.5; pokud není specifikováno, použij 1)
-       * unit: jednotka (např. "g", "ml", "ks", "lžíce", "stroužek", "špetka")
-       * note: doplňující poznámka (např. "nakrájený nadrobno", "extra panenský")
+       * unit: jednotka (např. "g", "ml", "ks", "lžíce", "lžička", "stroužek", "špetka", "balení")
+       * note: doplňující poznámka (např. "nakrájený nadrobno", "extra panenský", "čerstvý")
        * category: jedna z kategorií ("produce", "dairy", "meat", "pantry", "spices", "bakery", "other")
    - instructions: pole kroků, kde každý má:
        * step: číslo kroku (1, 2, 3...)
@@ -133,6 +139,9 @@ Pravidla:
         extracted_dict = json.loads(response.text)
         if source_url:
             extracted_dict["source_url"] = source_url
+
+        if "ingredients" in extracted_dict and isinstance(extracted_dict["ingredients"], list):
+            extracted_dict["ingredients"] = [i.model_dump() for i in sanitize_ingredients(extracted_dict["ingredients"])]
 
         return GeminiExtractedRecipe(**extracted_dict)
 
@@ -276,7 +285,10 @@ Pravidla:
         if isinstance(raw_ings, list):
             for ing in raw_ings:
                 if isinstance(ing, str) and ing.strip():
-                    ingredients.append(IngredientItem(name=ing.strip(), amount=1.0, unit="ks"))
+                    parsed_ing = parse_ingredient_line(ing.strip())
+                    if parsed_ing:
+                        ingredients.append(parsed_ing)
+        ingredients = sanitize_ingredients(ingredients)
 
         instructions: List[InstructionStep] = []
         raw_steps = data.get("recipeInstructions", [])
@@ -359,7 +371,10 @@ Pravidla:
             for ing in re.split(r"[,;\n]", ings_str):
                 clean_ing = ing.strip()
                 if clean_ing:
-                    ingredients.append(IngredientItem(name=clean_ing, amount=1.0, unit="ks"))
+                    parsed_ing = parse_ingredient_line(clean_ing)
+                    if parsed_ing:
+                        ingredients.append(parsed_ing)
+            ingredients = sanitize_ingredients(ingredients)
 
             instructions = []
             for s_idx, st in enumerate(re.split(r"[\n|]", insts_str), 1):
@@ -407,19 +422,22 @@ Pravidla:
                 continue
 
             if in_ingredients:
-                cleaned = re.sub(r"^[-*•\d.]+\s*", "", line)
-                if cleaned:
-                    ingredients.append(IngredientItem(name=cleaned, amount=1.0, unit="ks"))
+                parsed_ing = parse_ingredient_line(line)
+                if parsed_ing:
+                    ingredients.append(parsed_ing)
             elif in_instructions:
-                cleaned = re.sub(r"^[-*•\d.]+\s*", "", line)
+                cleaned = re.sub(r"^\d+[.)\]]\s*", "", line).strip()
+                cleaned = re.sub(r"^[-*•]\s*", "", cleaned).strip()
                 if cleaned:
                     instructions.append(InstructionStep(step=step_counter, text=cleaned))
                     step_counter += 1
             else:
-                if line.startswith(("-", "*", "•")):
-                    cleaned = re.sub(r"^[-*•]\s*", "", line)
-                    ingredients.append(IngredientItem(name=cleaned, amount=1.0, unit="ks"))
+                if line.startswith(("-", "*", "•")) or re.match(r"^\d", line):
+                    parsed_ing = parse_ingredient_line(line)
+                    if parsed_ing:
+                        ingredients.append(parsed_ing)
 
+        ingredients = sanitize_ingredients(ingredients)
         if not ingredients:
             ingredients = [IngredientItem(name="Suroviny z receptu", amount=1.0, unit="porce")]
         if not instructions:
@@ -509,6 +527,8 @@ Pravidla:
         if not self.api_key:
             fallback_res = self._try_local_fallback(file_bytes, filename, ext)
             if fallback_res:
+                for r in fallback_res:
+                    r.ingredients = sanitize_ingredients(r.ingredients)
                 return fallback_res
             raise ValueError("GEMINI_API_KEY není nakonfigurován pro AI analýzu tohoto typu souboru.")
 
@@ -539,9 +559,9 @@ Pravidla pro každý recept:
    - tags: pole kategorií (např. ["Oběd", "Rychlovka", "Česká kuchyně", "Těstoviny"])
    - utensils: pole potřebného nádobí a nástrojů (např. ["Velký hrnec", "Pánev", "Cedník", "Struhadlo"])
    - ingredients: pole objektů, kde každý obsahuje:
-       * name: název suroviny (např. "Špagety", "Česnek", "Olivový olej")
+       * name: ČISTÝ název suroviny bez množství a bez jednotky (např. "Špagety", "Česnek", "Olivový olej", "Moučkový cukr"). DŮLEŽITÉ: 'name' NESMÍ obsahovat jednotku ani číslo (např. NIKDY 'g moučkového cukru', '200 g mouky', 'ml mléka', 'lžíce cukru', '/2 balení'). Množství patří výhradně do 'amount' a jednotka do 'unit'! Mezinadpisy jako 'Na krém', 'Na těsto', 'Na dochucení' vynech, NEJSOU to ingredience!
        * amount: číselné množství (float, např. 500, 3, 0.5; pokud není specifikováno, použij 1)
-       * unit: jednotka (např. "g", "ml", "ks", "lžíce", "stroužek", "špetka")
+       * unit: jednotka (např. "g", "ml", "ks", "lžíce", "lžička", "stroužek", "špetka", "balení")
        * note: doplňující poznámka (např. "nakrájený nadrobno", "extra panenský")
        * category: jedna z kategorií ("produce", "dairy", "meat", "pantry", "spices", "bakery", "other")
    - instructions: pole kroků, kde každý má:
@@ -610,11 +630,15 @@ Pravidla pro každý recept:
             extracted_dict = json.loads(response.text)
             batch = GeminiBatchExtractedRecipes(**extracted_dict)
             if batch.recipes:
+                for r in batch.recipes:
+                    r.ingredients = sanitize_ingredients(r.ingredients)
                 return batch.recipes
         except Exception as gemini_err:
             logger.warning(f"Gemini API call failed for {filename} ({gemini_err}), attempting local fallback...")
             fallback_res = self._try_local_fallback(file_bytes, filename, ext)
             if fallback_res:
+                for r in fallback_res:
+                    r.ingredients = sanitize_ingredients(r.ingredients)
                 return fallback_res
             raise gemini_err
 

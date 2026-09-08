@@ -1,5 +1,17 @@
 import os
+from pathlib import Path
 from pydantic_settings import BaseSettings
+
+try:
+    from dotenv import load_dotenv
+    _backend_dir = Path(__file__).resolve().parent.parent
+    _repo_root = _backend_dir.parent
+    if (_backend_dir / ".env").exists():
+        load_dotenv(_backend_dir / ".env")
+    if (_repo_root / ".env").exists():
+        load_dotenv(_repo_root / ".env")
+except ImportError:
+    pass
 
 def _resolve_frontend_dist() -> str:
     env_dist = os.getenv("FRONTEND_DIST_DIR", "")
@@ -10,6 +22,7 @@ def _resolve_frontend_dist() -> str:
     if os.path.exists(candidate):
         return candidate
     return env_dist
+
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Hestia - Smart Home Management"

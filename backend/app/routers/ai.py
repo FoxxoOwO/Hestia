@@ -18,6 +18,7 @@ from app.services.gemini_service import GeminiRecipeService
 from app.services.gemini_plant_service import GeminiPlantService
 from app.services.gemini_pet_service import GeminiPetService
 from app.utils.auth import get_current_user
+from app.utils.ingredient_parser import sanitize_ingredients
 
 router = APIRouter(prefix="/ai", tags=["Gemini AI Assistant"])
 
@@ -52,6 +53,7 @@ async def import_recipe_with_gemini(
             raw_text=req.raw_text,
             target_language=req.target_language or current_user.preferred_language or "cs"
         )
+        extracted.ingredients = sanitize_ingredients(extracted.ingredients)
         return extracted
     except Exception as e:
         raise HTTPException(
@@ -80,6 +82,8 @@ async def import_recipe_from_file(
             content_type=file.content_type,
             target_language=target_language or current_user.preferred_language or "cs"
         )
+        for r in recipes:
+            r.ingredients = sanitize_ingredients(r.ingredients)
         return RecipeFileImportResponse(
             recipes=recipes,
             total=len(recipes),
@@ -116,6 +120,8 @@ async def import_recipe_from_base64(
             filename=req.filename or "recept.txt",
             target_language=req.target_language or current_user.preferred_language or "cs"
         )
+        for r in recipes:
+            r.ingredients = sanitize_ingredients(r.ingredients)
         return RecipeFileImportResponse(
             recipes=recipes,
             total=len(recipes),

@@ -11,6 +11,7 @@ from app.schemas.recipe import (
     RecipeCreate, RecipeUpdate, RecipeResponse, ScaledRecipeResponse, ScaledIngredientItem
 )
 from app.utils.auth import get_current_user
+from app.utils.ingredient_parser import sanitize_ingredients
 
 router = APIRouter(prefix="/recipes", tags=["Recipes"])
 
@@ -24,6 +25,8 @@ def match_ingredient_in_pantry(ing_name: str, pantry_items: List[PantryItem]):
     return False, None
 
 def format_recipe_response(recipe: Recipe) -> dict:
+    raw_ings = recipe.ingredients or []
+    sanitized_ings = [i.model_dump() for i in sanitize_ingredients(raw_ings)]
     d = {
         "id": recipe.id,
         "title": recipe.title,
@@ -37,7 +40,7 @@ def format_recipe_response(recipe: Recipe) -> dict:
         "default_servings": recipe.default_servings,
         "tags": recipe.tags or [],
         "utensils": recipe.utensils or [],
-        "ingredients": recipe.ingredients or [],
+        "ingredients": sanitized_ings,
         "instructions": recipe.instructions or [],
         "source_url": recipe.source_url,
         "is_favorite": recipe.is_favorite or False,
@@ -117,7 +120,7 @@ def create_recipe(
         default_servings=recipe_in.default_servings,
         tags=recipe_in.tags,
         utensils=recipe_in.utensils,
-        ingredients=[item.model_dump() for item in recipe_in.ingredients],
+        ingredients=[item.model_dump() for item in sanitize_ingredients(recipe_in.ingredients)],
         instructions=[item.model_dump() for item in recipe_in.instructions],
         source_url=recipe_in.source_url,
         is_favorite=recipe_in.is_favorite,
@@ -141,7 +144,7 @@ def update_recipe(
 
     update_data = recipe_in.model_dump(exclude_unset=True)
     if "ingredients" in update_data and update_data["ingredients"] is not None:
-        update_data["ingredients"] = [item.model_dump() if hasattr(item, "model_dump") else item for item in recipe_in.ingredients]
+        update_data["ingredients"] = [item.model_dump() for item in sanitize_ingredients(recipe_in.ingredients)]
     if "instructions" in update_data and update_data["instructions"] is not None:
         update_data["instructions"] = [item.model_dump() if hasattr(item, "model_dump") else item for item in recipe_in.instructions]
 
@@ -196,22 +199,23 @@ def scale_recipe_servings(
     pantry_items = db.query(PantryItem).all()
     scaled_ingredients = []
 
-    for ing in (recipe.ingredients or []):
-        orig_amount = float(ing.get("amount", 1.0))
+    clean_ings = sanitize_ingredients(recipe.ingredients or [])
+    for ing in clean_ings:
+        orig_amount = float(ing.amount)
         scaled_amount = round(orig_amount * scale_factor, 2)
         # Format whole floats cleanly e.g. 2.0 -> 2
         if scaled_amount.is_integer():
             scaled_amount = float(int(scaled_amount))
 
-        is_in_stock, p_qty = match_ingredient_in_pantry(ing.get("name", ""), pantry_items)
+        is_in_stock, p_qty = match_ingredient_in_pantry(ing.name, pantry_items)
         scaled_ingredients.append(
             ScaledIngredientItem(
-                name=ing.get("name", ""),
+                name=ing.name,
                 original_amount=orig_amount,
                 scaled_amount=scaled_amount,
-                unit=ing.get("unit", "ks"),
-                note=ing.get("note"),
-                category=ing.get("category", "other"),
+                unit=ing.unit,
+                note=ing.note,
+                category=ing.category or "other",
                 is_in_pantry=is_in_stock,
                 pantry_amount=p_qty
             )
