@@ -7,6 +7,7 @@ import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
 
 import { LoginPage } from './pages/LoginPage';
+import { DashboardPage } from './pages/DashboardPage';
 import { RecipesPage } from './pages/RecipesPage';
 import { RecipeDetailPage } from './pages/RecipeDetailPage';
 import { RecipeEditPage } from './pages/RecipeEditPage';
@@ -58,7 +59,8 @@ const AppContent: React.FC = () => {
           <Sidebar />
           <main className="flex-1 p-3 sm:p-6 lg:p-8 min-w-0 w-full max-w-full overflow-x-hidden">
             <Routes>
-              <Route path="/" element={<RecipesPage />} />
+              <Route path="/" element={<DashboardPage />} />
+              <Route path="/recipes" element={<RecipesPage />} />
               <Route path="/recipes/new" element={<RecipeEditPage />} />
               <Route path="/recipes/:id" element={<RecipeDetailPage />} />
               <Route path="/recipes/:id/edit" element={<RecipeEditPage />} />

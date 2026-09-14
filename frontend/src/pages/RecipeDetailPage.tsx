@@ -104,7 +104,7 @@ export const RecipeDetailPage: React.FC = () => {
     if (window.confirm(t('common.confirm_delete'))) {
       try {
         await api.deleteRecipe(recipe.id);
-        navigate('/');
+        navigate('/recipes');
       } catch (e) {
         console.error(e);
       }
@@ -175,7 +175,7 @@ export const RecipeDetailPage: React.FC = () => {
       {/* Top back and actions */}
       <div className="flex items-center justify-between">
         <Link
-          to="/"
+          to="/recipes"
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition"
         >
           <ArrowLeft className="w-4 h-4" />

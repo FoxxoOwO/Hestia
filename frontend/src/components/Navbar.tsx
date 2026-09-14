@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Link, useLocation } from 'react-router-dom';
 import {
   Flame, Moon, Sun, Monitor, Globe, UserCheck, ChevronDown, LogOut, History, Palette,
-  Menu, X, UtensilsCrossed, PackageOpen, ShoppingCart, Flower2, Dog, CheckSquare,
+  Menu, X, LayoutDashboard, UtensilsCrossed, PackageOpen, ShoppingCart, Flower2, Dog, CheckSquare,
   Wallet, FolderArchive, Car, HeartPulse, Settings
 } from 'lucide-react';
 import { useTranslation } from '../i18n';
@@ -25,7 +25,8 @@ export const Navbar: React.FC = () => {
   const [targetUser, setTargetUser] = useState<User | null>(null);
 
   const mobileNavItems = [
-    { to: '/', label: t('nav.recipes'), icon: UtensilsCrossed },
+    { to: '/', label: t('nav.dashboard'), icon: LayoutDashboard },
+    { to: '/recipes', label: t('nav.recipes'), icon: UtensilsCrossed },
     { to: '/pantry', label: t('nav.pantry'), icon: PackageOpen },
     { to: '/shopping', label: t('nav.shopping'), icon: ShoppingCart },
     { to: '/plants', label: t('nav.plants'), icon: Flower2 },
@@ -78,6 +79,7 @@ export const Navbar: React.FC = () => {
             >
               {mobileDrawerOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
+            <Link to="/" className="flex items-center gap-1.5 sm:gap-3 min-w-0 hover:opacity-95 transition">
             {designStyle === 'terminal' ? (
               <div className="flex items-center gap-2 font-mono">
                 <div className="w-9 h-9 border border-emerald-600 dark:border-emerald-500 bg-emerald-100 dark:bg-emerald-950/80 flex items-center justify-center text-emerald-800 dark:text-emerald-400 font-bold text-sm shadow-sm dark:shadow-[0_0_10px_rgba(34,197,94,0.4)] shrink-0">
@@ -156,6 +158,7 @@ export const Navbar: React.FC = () => {
                 </div>
               </>
             )}
+            </Link>
           </div>
 
           {/* Center layout decoration */}

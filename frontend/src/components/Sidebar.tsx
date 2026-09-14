@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-  UtensilsCrossed, PackageOpen, ShoppingCart, Settings,
+  LayoutDashboard, UtensilsCrossed, PackageOpen, ShoppingCart, Settings,
   Sparkles, Wrench, Flower2, Dog, CheckSquare, Wallet, HeartPulse,
   FolderArchive, Car, History
 } from 'lucide-react';
@@ -13,7 +13,8 @@ export const Sidebar: React.FC = () => {
   const { designStyle } = useTheme();
 
   const mainNav = [
-    { to: '/', label: t('nav.recipes'), icon: UtensilsCrossed },
+    { to: '/', label: t('nav.dashboard'), icon: LayoutDashboard },
+    { to: '/recipes', label: t('nav.recipes'), icon: UtensilsCrossed },
     { to: '/pantry', label: t('nav.pantry'), icon: PackageOpen },
     { to: '/shopping', label: t('nav.shopping'), icon: ShoppingCart },
     { to: '/plants', label: t('nav.plants'), icon: Flower2 },

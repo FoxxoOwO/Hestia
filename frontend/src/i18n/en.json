@@ -2,6 +2,7 @@
   "app_name": "Hestia",
   "app_tagline": "Smart Home Management",
   "nav": {
+    "dashboard": "Dashboard",
     "recipes": "Recipes",
     "pantry": "Pantry & Fridge",
     "shopping": "Shopping List",
@@ -784,6 +785,98 @@
     "load_more": "Load more activities",
     "empty_title": "No activities found",
     "empty_desc": "No activities match the selected filters."
+  },
+  "dashboard": {
+    "title": "Household Overview",
+    "subtitle": "Current status of your home, chores, groceries, and essential alerts in one place",
+    "customize": "Customize Dashboard",
+    "customize_desc": "Select widgets and rearrange your dashboard to match your workflow",
+    "reset_defaults": "Default Layout",
+    "save_changes": "Save Layout",
+    "refresh": "Refresh Overview",
+    "quick_actions": "Quick Actions",
+    "panic_mode": "Panic Cleanup",
+    "view_all": "View All",
+    "add": "Add",
+    "stats": {
+      "shopping_count": "To Buy",
+      "shopping_unit": "items",
+      "chores_count": "Today's Chores",
+      "chores_unit": "pending",
+      "plants_count": "Thirsty Plants",
+      "plants_unit": "need water",
+      "medicines_alert": "Medicine Expiry",
+      "medicines_unit": "to check",
+      "monthly_balance": "Monthly Balance",
+      "monthly_balance_unit": "CZK"
+    },
+    "widgets": {
+      "quick_stats": "Quick Stats (KPI Bar)",
+      "chores": "Household Chores",
+      "shopping": "Shopping List",
+      "plants": "Plant Care",
+      "finances": "Family Finances & Budgets",
+      "medicines": "Medicine Cabinet & Health",
+      "pets": "Pets",
+      "vehicles": "Fleet & Vehicle Inspections",
+      "activity": "Recent Household Activity",
+      "recipe_tip": "Cooking Inspiration"
+    },
+    "chores": {
+      "empty": "All today's chores are completed! Great job 🎉",
+      "complete_tooltip": "Mark as completed",
+      "due_today": "Today",
+      "overdue": "Overdue",
+      "panic_btn": "Panic Cleanup (15 min)"
+    },
+    "shopping": {
+      "placeholder": "What do we need to buy? (press Enter)",
+      "empty": "Shopping list is empty 👍",
+      "items_left": "{{count}} items to buy"
+    },
+    "plants": {
+      "empty": "All plants are well watered and happy 🌱",
+      "water_now": "Water",
+      "watered": "Watered",
+      "needs_water": "Needs water!",
+      "overdue_days": "Overdue by {{count}} days",
+      "due_today": "Today"
+    },
+    "finances": {
+      "income": "Income",
+      "expenses": "Expenses",
+      "balance": "Net Balance",
+      "upcoming_subs": "Upcoming Bills & Subscriptions",
+      "no_subs": "No upcoming bills in the next 14 days"
+    },
+    "medicines": {
+      "expired_count": "Expired drugs",
+      "expiring_soon": "Expiring soon",
+      "all_ok": "All medicines in your cabinet are in date 💊",
+      "schedules_today": "Today's Schedules",
+      "no_schedules": "No active medication schedules for today"
+    },
+    "pets": {
+      "empty": "No pets added yet 🐾",
+      "next_care": "Next care",
+      "status_ok": "All good"
+    },
+    "vehicles": {
+      "empty": "No vehicles registered yet 🚗",
+      "stk_valid": "Inspection valid until",
+      "stk_urgent": "Inspection due soon!",
+      "stk_expired": "Inspection expired!",
+      "mileage": "Mileage"
+    },
+    "activity": {
+      "empty": "No activity recorded yet."
+    },
+    "recipe_tip": {
+      "title": "Today's Cooking Inspiration",
+      "view_recipe": "View Recipe",
+      "prep_time": "min",
+      "no_recipes": "No recipes in your cookbook yet."
+    }
   },
   "common": {
     "loading": "Loading...",

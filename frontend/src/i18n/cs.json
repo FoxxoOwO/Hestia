@@ -2,6 +2,7 @@
   "app_name": "Hestia",
   "app_tagline": "Chytrá správa domácnosti",
   "nav": {
+    "dashboard": "Přehled domácnosti",
     "recipes": "Receptář",
     "pantry": "Spíž a lednice",
     "shopping": "Nákupní seznam",
@@ -784,6 +785,98 @@
     "load_more": "Načíst další aktivity",
     "empty_title": "Žádné aktivity nenalezeny",
     "empty_desc": "Pro zvolené filtry nebyly zaznamenány žádné události."
+  },
+  "dashboard": {
+    "title": "Přehled domácnosti",
+    "subtitle": "Aktuální stav domova, úkoly, nákupy a důležitá upozornění na jednom místě",
+    "customize": "Přizpůsobit nástěnku",
+    "customize_desc": "Vyberte si widgety a uspořádejte si nástěnku podle sebe",
+    "reset_defaults": "Výchozí uspořádání",
+    "save_changes": "Uložit uspořádání",
+    "refresh": "Obnovit přehled",
+    "quick_actions": "Rychlé akce",
+    "panic_mode": "Bleskový úklid",
+    "view_all": "Zobrazit vše",
+    "add": "Přidat",
+    "stats": {
+      "shopping_count": "K nákupu",
+      "shopping_unit": "položek",
+      "chores_count": "Dnešní úkoly",
+      "chores_unit": "k vyřešení",
+      "plants_count": "Žíznivé květiny",
+      "plants_unit": "potřebují zalít",
+      "medicines_alert": "Expirace léků",
+      "medicines_unit": "ke kontrole",
+      "monthly_balance": "Bilance měsíce",
+      "monthly_balance_unit": "Kč"
+    },
+    "widgets": {
+      "quick_stats": "Rychlý přehled (KPI pás)",
+      "chores": "Úkoly a úklid",
+      "shopping": "Nákupní seznam",
+      "plants": "Květiny a zahrada",
+      "finances": "Rodinné finance a rozpočet",
+      "medicines": "Domácí lékárnička a zdraví",
+      "pets": "Domácí mazlíčci",
+      "vehicles": "Vozový park a STK",
+      "activity": "Nedávná aktivita v domě",
+      "recipe_tip": "Inspirace k vaření"
+    },
+    "chores": {
+      "empty": "Všechny dnešní úkoly jsou hotové! Skvělá práce 🎉",
+      "complete_tooltip": "Označit jako hotovo",
+      "due_today": "Dnes",
+      "overdue": "Zpožděno",
+      "panic_btn": "Bleskový úklid (15 min)"
+    },
+    "shopping": {
+      "placeholder": "Co je potřeba koupit? (stiskni Enter)",
+      "empty": "Nákupní seznam je prázdný 👍",
+      "items_left": "{{count}} položek k nákupu"
+    },
+    "plants": {
+      "empty": "Všechny rostliny jsou zalité a spokojené 🌱",
+      "water_now": "Zalít",
+      "watered": "Zalito",
+      "needs_water": "Potřebuje zalít!",
+      "overdue_days": "Zpoždění {{count}} dní",
+      "due_today": "Dnes"
+    },
+    "finances": {
+      "income": "Příjmy",
+      "expenses": "Výdaje",
+      "balance": "Čistá bilance",
+      "upcoming_subs": "Blížící se platby a předplatná",
+      "no_subs": "Žádné platby v příštích 14 dnech"
+    },
+    "medicines": {
+      "expired_count": "Prošlých léků",
+      "expiring_soon": "Brzy expiruje",
+      "all_ok": "Všechny léky v lékárničce jsou v pořádku 💊",
+      "schedules_today": "Dnešní dávkování",
+      "no_schedules": "Žádné aktivní lékové rozvrhy na dnes"
+    },
+    "pets": {
+      "empty": "Zatím žádní přidaní mazlíčci 🐾",
+      "next_care": "Příští péče",
+      "status_ok": "Vše v pořádku"
+    },
+    "vehicles": {
+      "empty": "Zatím žádná evidovaná vozidla 🚗",
+      "stk_valid": "STK platná do",
+      "stk_urgent": "STK brzy končí!",
+      "stk_expired": "STK propadlá!",
+      "mileage": "Nájezd"
+    },
+    "activity": {
+      "empty": "Zatím žádná zaznamenaná aktivita."
+    },
+    "recipe_tip": {
+      "title": "Dnešní inspirace v kuchyni",
+      "view_recipe": "Zobrazit recept",
+      "prep_time": "min",
+      "no_recipes": "Zatím nemáte v kuchařce žádné recepty."
+    }
   },
   "common": {
     "loading": "Načítání...",

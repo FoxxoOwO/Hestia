@@ -1,13 +1,14 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { UtensilsCrossed, PackageOpen, ShoppingCart, Flower2, Dog, CheckSquare, Wallet, FolderArchive, Car, HeartPulse, History, Settings } from 'lucide-react';
+import { LayoutDashboard, UtensilsCrossed, PackageOpen, ShoppingCart, Flower2, Dog, CheckSquare, Wallet, FolderArchive, Car, HeartPulse, History, Settings } from 'lucide-react';
 import { useTranslation } from '../i18n';
 
 export const MobileNav: React.FC = () => {
   const { t } = useTranslation();
 
   const navItems = [
-    { to: '/', label: t('nav.recipes'), icon: UtensilsCrossed },
+    { to: '/', label: t('nav.dashboard'), icon: LayoutDashboard },
+    { to: '/recipes', label: t('nav.recipes'), icon: UtensilsCrossed },
     { to: '/pantry', label: t('nav.pantry'), icon: PackageOpen },
     { to: '/shopping', label: t('nav.shopping'), icon: ShoppingCart },
     { to: '/plants', label: t('nav.plants'), icon: Flower2 },
