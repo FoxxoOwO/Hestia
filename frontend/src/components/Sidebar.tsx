@@ -57,6 +57,10 @@ export const Sidebar: React.FC = () => {
                 <span className="font-serif text-[11px] text-amber-900/60 dark:text-amber-200/60 mr-[-4px] italic">
                   §{idx + 1}
                 </span>
+              ) : designStyle === 'monochrome' ? (
+                <span className="font-mono text-[10px] text-zinc-400 dark:text-zinc-500 mr-[-2px] tracking-tighter">
+                  {String(idx + 1).padStart(2, '0')}
+                </span>
               ) : null}
               <Icon className="w-4 h-4 shrink-0" />
               <span>{item.label}</span>

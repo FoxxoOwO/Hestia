@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import '@m3e/web/theme';
 
 export type Theme = 'light' | 'dark' | 'system';
-export type DesignStyle = 'classic' | 'm3e' | 'neobrutalism' | 'terminal' | 'editorial' | 'nordic' | 'cyber' | 'glass' | 'sunset';
+export type DesignStyle = 'classic' | 'm3e' | 'neobrutalism' | 'terminal' | 'editorial' | 'nordic' | 'cyber' | 'glass' | 'sunset' | 'monochrome';
 
 export interface DesignStyleOption {
   id: DesignStyle;
@@ -175,6 +175,23 @@ export const DESIGN_STYLES: DesignStyleOption[] = [
     shapeStyleEn: 'Soft terracotta contours',
     layoutStyle: 'Útulná rodinná atmosféra',
     layoutStyleEn: 'Cozy domestic atmosphere',
+  },
+  {
+    id: 'monochrome',
+    name: 'Monochromatický (Černobílý minimalismus)',
+    nameEn: 'Monochrome Minimalist',
+    description: 'Čistá černobílá a odstíny šedé bez rušivých barev pro maximální soustředění a eleganci',
+    descriptionEn: 'Pure black, white and grayscale palette without distracting colors for ultimate focus and elegance',
+    badge: 'Černobílý',
+    badgeEn: 'Monochrome',
+    primaryColor: '#18181b',
+    previewColors: ['#09090b', '#27272a', '#71717a', '#f4f4f5'],
+    fontCategory: 'Minimalist Sans / Helvetica',
+    fontCategoryEn: 'Minimalist Sans / Helvetica',
+    shapeStyle: 'Čisté geometrické linky & jemný rádius',
+    shapeStyleEn: 'Clean geometric lines & subtle radius',
+    layoutStyle: 'Soustředěná černobílá typografie & vysoký kontrast',
+    layoutStyleEn: 'Focused monochrome typography & high contrast',
   },
 ];
 

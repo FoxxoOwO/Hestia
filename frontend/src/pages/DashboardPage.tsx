@@ -316,6 +316,11 @@ export const DashboardPage: React.FC = () => {
                 [LIVE_MONITOR]
               </span>
             )}
+            {designStyle === 'monochrome' && (
+              <span className="text-xs font-mono px-2 py-0.5 border border-zinc-400 dark:border-zinc-600 text-zinc-800 dark:text-zinc-200 bg-zinc-200/60 dark:bg-zinc-800 tracking-wider">
+                MONO // OVERVIEW
+              </span>
+            )}
           </div>
           <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-1">
             {t('dashboard.subtitle')}

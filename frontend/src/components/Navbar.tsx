@@ -138,6 +138,25 @@ export const Navbar: React.FC = () => {
                   </p>
                 </div>
               </div>
+            ) : designStyle === 'monochrome' ? (
+              <div className="flex items-center gap-2 sm:gap-2.5">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 flex items-center justify-center font-bold text-sm shadow-sm shrink-0 border border-zinc-700 dark:border-zinc-300">
+                  <Flame className="w-5 h-5 sm:w-6 sm:h-6" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-lg sm:text-xl tracking-tight text-zinc-900 dark:text-white truncate">
+                      HESTIA
+                    </span>
+                    <span className="text-[10px] uppercase font-mono font-bold px-1.5 py-0.5 rounded-md bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 hidden sm:inline-block">
+                      MONO
+                    </span>
+                  </div>
+                  <p className="text-[10px] uppercase font-mono tracking-widest text-zinc-500 dark:text-zinc-400 hidden sm:block">
+                    Pure Minimalist Home
+                  </p>
+                </div>
+              </div>
             ) : (
               <>
                 <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-600 flex items-center justify-center shadow-md shadow-orange-500/20 text-white shrink-0">
@@ -177,6 +196,12 @@ export const Navbar: React.FC = () => {
             {designStyle === 'editorial' && (
               <div className="flex items-center gap-2 font-serif italic text-xs text-amber-900/80 dark:text-amber-200/80 border-y border-amber-900/30 px-3 py-0.5">
                 <span>„Ubi concordia, ibi victoria“ — Domácí almanach</span>
+              </div>
+            )}
+            {designStyle === 'monochrome' && (
+              <div className="flex items-center gap-2 font-mono text-[11px] text-zinc-600 dark:text-zinc-400 border border-zinc-300 dark:border-zinc-700 bg-zinc-100/80 dark:bg-zinc-850 px-3 py-1 rounded-md shadow-xs">
+                <span className="w-2 h-2 rounded-full bg-zinc-900 dark:bg-white" />
+                <span className="tracking-widest uppercase">MONOCHROME EDITION // FOCUS</span>
               </div>
             )}
           </div>
