@@ -219,7 +219,7 @@ export const ChoreRewardModal: React.FC<ChoreRewardModalProps> = ({
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-3 py-1.5 text-xs font-bold text-white bg-primary-600 hover:bg-primary-700 rounded-lg shadow-sm"
+                  className="px-3 py-1.5 text-xs font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-lg shadow-sm transition-all disabled:opacity-50"
                 >
                   Uložit odměnu
                 </button>

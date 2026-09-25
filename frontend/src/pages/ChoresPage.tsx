@@ -189,7 +189,7 @@ export const ChoresPage: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-            <Sparkles className="w-7 h-7 text-primary-500" />
+            <Sparkles className="w-7 h-7 text-orange-500" />
             {t('chores.title')}
           </h1>
           <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -231,7 +231,7 @@ export const ChoresPage: React.FC = () => {
           {/* New chore */}
           <button
             onClick={() => { setEditingChore(null); setIsEditModalOpen(true); }}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-primary-600 hover:bg-primary-700 shadow-sm shadow-primary-500/20 active:scale-95 transition-all"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-orange-500 hover:bg-orange-600 shadow-md shadow-orange-500/20 active:scale-95 transition-all"
           >
             <Plus className="w-4 h-4" />
             {t('chores.add_chore_btn')}
@@ -245,7 +245,7 @@ export const ChoresPage: React.FC = () => {
           onClick={() => setActiveTab('today')}
           className={`flex items-center gap-2 py-2.5 px-4 font-semibold text-xs md:text-sm border-b-2 transition-colors whitespace-nowrap ${
             activeTab === 'today'
-              ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+              ? 'border-orange-500 text-orange-600 dark:text-orange-400'
               : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
           }`}
         >
@@ -257,7 +257,7 @@ export const ChoresPage: React.FC = () => {
           onClick={() => setActiveTab('rotation')}
           className={`flex items-center gap-2 py-2.5 px-4 font-semibold text-xs md:text-sm border-b-2 transition-colors whitespace-nowrap ${
             activeTab === 'rotation'
-              ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+              ? 'border-orange-500 text-orange-600 dark:text-orange-400'
               : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
           }`}
         >
@@ -269,7 +269,7 @@ export const ChoresPage: React.FC = () => {
           onClick={() => setActiveTab('maintenance')}
           className={`flex items-center gap-2 py-2.5 px-4 font-semibold text-xs md:text-sm border-b-2 transition-colors whitespace-nowrap ${
             activeTab === 'maintenance'
-              ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+              ? 'border-orange-500 text-orange-600 dark:text-orange-400'
               : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
           }`}
         >
@@ -281,7 +281,7 @@ export const ChoresPage: React.FC = () => {
           onClick={() => setActiveTab('deep_clean')}
           className={`flex items-center gap-2 py-2.5 px-4 font-semibold text-xs md:text-sm border-b-2 transition-colors whitespace-nowrap ${
             activeTab === 'deep_clean'
-              ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+              ? 'border-orange-500 text-orange-600 dark:text-orange-400'
               : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
           }`}
         >
@@ -293,7 +293,7 @@ export const ChoresPage: React.FC = () => {
           onClick={() => setActiveTab('leaderboard')}
           className={`flex items-center gap-2 py-2.5 px-4 font-semibold text-xs md:text-sm border-b-2 transition-colors whitespace-nowrap ${
             activeTab === 'leaderboard'
-              ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+              ? 'border-orange-500 text-orange-600 dark:text-orange-400'
               : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
           }`}
         >
@@ -340,7 +340,7 @@ export const ChoresPage: React.FC = () => {
                   <div className="grid grid-cols-2 gap-2 pt-3 border-t border-gray-100 dark:border-gray-700/60 text-xs">
                     <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-700/40">
                       <span className="text-gray-400 text-[10px] block">{t('chores.leaderboard.weekly_rank')}</span>
-                      <span className="text-base font-extrabold text-primary-600 dark:text-primary-400">
+                      <span className="text-base font-extrabold text-orange-600 dark:text-orange-400">
                         +{member.weekly_points} b.
                       </span>
                     </div>
@@ -393,7 +393,7 @@ export const ChoresPage: React.FC = () => {
                 placeholder={t('chores.search_placeholder')}
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full text-xs rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 pl-9 pr-3 py-2 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full text-xs rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 pl-9 pr-3 py-2 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
               />
             </div>
 
@@ -412,7 +412,7 @@ export const ChoresPage: React.FC = () => {
                   onClick={() => setSelectedRoom(room.id)}
                   className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors ${
                     selectedRoom === room.id
-                      ? 'bg-primary-600 text-white shadow-sm'
+                      ? 'bg-orange-500 text-white shadow-sm'
                       : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
                   }`}
                 >
@@ -431,11 +431,11 @@ export const ChoresPage: React.FC = () => {
                   <div key={rm} className="p-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                     <div className="flex items-center justify-between text-xs font-semibold mb-1">
                       <span className="capitalize">{t(`chores.rooms.${rm}`) || rm}</span>
-                      <span className="text-primary-600">{percent}%</span>
+                      <span className="text-orange-600 dark:text-orange-400">{percent}%</span>
                     </div>
                     <div className="w-full bg-gray-100 dark:bg-gray-700 h-2 rounded-full overflow-hidden">
                       <div
-                        className="bg-primary-500 h-full rounded-full transition-all duration-300"
+                        className="bg-orange-500 h-full rounded-full transition-all duration-300"
                         style={{ width: `${percent}%` }}
                       />
                     </div>

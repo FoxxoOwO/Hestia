@@ -77,7 +77,7 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
 
   return (
     <div className={`relative bg-white dark:bg-gray-800 rounded-xl border p-4 shadow-sm transition-all hover:shadow-md ${
-      isAssignedToMe ? 'border-primary-300 dark:border-primary-700/60 ring-1 ring-primary-400/20' : 'border-gray-200 dark:border-gray-700'
+      isAssignedToMe ? 'border-orange-300 dark:border-orange-700/60 ring-1 ring-orange-400/20' : 'border-gray-200 dark:border-gray-700'
     }`}>
       {/* Top Header Row */}
       <div className="flex items-start justify-between gap-2 mb-2">
@@ -216,7 +216,7 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
                       onReassign(chore.id, u.id);
                     }}
                     className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left hover:bg-gray-50 dark:hover:bg-gray-700/60 ${
-                      chore.current_assignee_id === u.id ? 'font-bold text-primary-600' : 'text-gray-700 dark:text-gray-300'
+                      chore.current_assignee_id === u.id ? 'font-bold text-orange-600 dark:text-orange-400' : 'text-gray-700 dark:text-gray-300'
                     }`}
                   >
                     <div

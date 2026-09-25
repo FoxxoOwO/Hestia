@@ -147,7 +147,7 @@ export const ChoreEditModal: React.FC<ChoreEditModalProps> = ({
               onChange={e => setTitle(e.target.value)}
               placeholder="např. Vyklidit myčku, Vytřít koupelnu..."
               required
-              className="w-full text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3.5 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3.5 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
           </div>
 
@@ -161,7 +161,7 @@ export const ChoreEditModal: React.FC<ChoreEditModalProps> = ({
               onChange={e => setDescription(e.target.value)}
               rows={2}
               placeholder="Detailní postup, kam uklidit věci..."
-              className="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3.5 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3.5 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
           </div>
 
@@ -309,7 +309,7 @@ export const ChoreEditModal: React.FC<ChoreEditModalProps> = ({
                 type="checkbox"
                 checked={isRotationEnabled}
                 onChange={e => setIsRotationEnabled(e.target.checked)}
-                className="w-4 h-4 rounded text-primary-600 focus:ring-primary-500"
+                className="w-4 h-4 rounded text-orange-600 focus:ring-orange-500"
               />
             </div>
 
@@ -328,7 +328,7 @@ export const ChoreEditModal: React.FC<ChoreEditModalProps> = ({
                         onClick={() => toggleUserInRotation(u.id)}
                         className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all ${
                           isSelected
-                            ? 'bg-white dark:bg-gray-800 border-primary-500 text-gray-900 dark:text-gray-100 shadow-sm'
+                            ? 'bg-white dark:bg-gray-800 border-orange-500 text-gray-900 dark:text-gray-100 shadow-sm'
                             : 'bg-transparent border-gray-300 dark:border-gray-600 text-gray-400 opacity-60'
                         }`}
                       >
@@ -418,7 +418,7 @@ export const ChoreEditModal: React.FC<ChoreEditModalProps> = ({
             <button
               type="submit"
               disabled={isSaving}
-              className="px-5 py-2 rounded-xl bg-primary-600 hover:bg-primary-700 text-white font-bold shadow-md shadow-primary-500/20 active:scale-98"
+              className="px-5 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold shadow-md shadow-orange-500/20 active:scale-98 transition-all disabled:opacity-50"
             >
               {isSaving ? 'Ukládám...' : 'Uložit úkol'}
             </button>
