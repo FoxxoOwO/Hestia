@@ -97,7 +97,7 @@ export const BudgetLimitModal: React.FC<BudgetLimitModalProps> = ({
               className="flex-1 py-2.5 px-4 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-semibold rounded-2xl shadow-md transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-50"
             >
               <Check className="w-4 h-4" />
-              {t('common.success')}
+              {isSaving ? t('common.saving') : t('common.save')}
             </button>
           </div>
         </form>

@@ -487,7 +487,22 @@ def run_tests():
     updated_goal = add_sav_res.json()
     assert updated_goal["current_amount"] == 5000.0
     assert updated_goal["progress_percentage"] == 50.0
-    print("12.5 Spořicí cíle, prasátka a vklad úspor - OK")
+
+    # Úprava cíle spoření (PUT /goals/{id})
+    update_goal_payload = {
+        "title": "Operace očí a laserová korekce",
+        "target_amount": 60000.0,
+        "current_amount": 10000.0,
+        "color": "#10b981",
+        "icon": "Heart"
+    }
+    update_goal_res = client.put(f"/api/v1/finance/goals/{test_goal_id}", json=update_goal_payload, headers=headers)
+    assert update_goal_res.status_code == 200
+    goal_put_data = update_goal_res.json()
+    assert goal_put_data["title"] == "Operace očí a laserová korekce"
+    assert goal_put_data["target_amount"] == 60000.0
+    assert goal_put_data["current_amount"] == 10000.0
+    print("12.5 Spořicí cíle, vklad úspor a úprava cíle (PUT) - OK")
 
     # 12.6 Import bankovního výpisu (CSV)
     csv_content = (

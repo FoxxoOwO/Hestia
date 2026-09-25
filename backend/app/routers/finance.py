@@ -605,6 +605,32 @@ def create_savings_goal(
     return resp
 
 
+@router.put("/goals/{id}", response_model=SavingsGoalResponse)
+def update_savings_goal(
+    id: int,
+    payload: SavingsGoalUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    goal = db.query(SavingsGoal).filter(SavingsGoal.id == id).first()
+    if not goal:
+        raise HTTPException(status_code=404, detail="Cíl spoření nebyl nalezen")
+
+    for k, v in payload.model_dump(exclude_unset=True).items():
+        setattr(goal, k, v)
+
+    if goal.current_amount >= goal.target_amount:
+        goal.is_completed = True
+    elif payload.is_completed is None and goal.current_amount < goal.target_amount:
+        goal.is_completed = False
+
+    db.commit()
+    db.refresh(goal)
+    resp = SavingsGoalResponse.model_validate(goal)
+    resp.progress_percentage = min(100.0, round((goal.current_amount / max(1.0, goal.target_amount)) * 100.0, 1))
+    return resp
+
+
 @router.post("/goals/{id}/add-savings", response_model=SavingsGoalResponse)
 def add_savings_to_goal(
     id: int,

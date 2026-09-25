@@ -38,8 +38,10 @@ export const SavingsGoalModal: React.FC<SavingsGoalModalProps> = ({
   const [color, setColor] = useState('#10b981');
   const [notes, setNotes] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    setError(null);
     if (goal) {
       setTitle(goal.title);
       setTargetAmount(goal.target_amount);
@@ -67,6 +69,7 @@ export const SavingsGoalModal: React.FC<SavingsGoalModalProps> = ({
 
     try {
       setIsSaving(true);
+      setError(null);
       const payload: SavingsGoalCreate = {
         title: title.trim(),
         target_amount: Number(targetAmount),
@@ -78,8 +81,9 @@ export const SavingsGoalModal: React.FC<SavingsGoalModalProps> = ({
       };
       await onSave(payload, goal ? goal.id : undefined);
       onClose();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to save savings goal:', err);
+      setError(err?.message || t('common.error'));
     } finally {
       setIsSaving(false);
     }
@@ -113,6 +117,12 @@ export const SavingsGoalModal: React.FC<SavingsGoalModalProps> = ({
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="py-4 space-y-4 overflow-y-auto flex-1">
+          {error && (
+            <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-2xl text-xs text-rose-600 dark:text-rose-400">
+              {error}
+            </div>
+          )}
+
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
               Název cíle *
@@ -239,10 +249,19 @@ export const SavingsGoalModal: React.FC<SavingsGoalModalProps> = ({
             <button
               type="submit"
               disabled={isSaving}
-              className="flex-1 py-2.5 px-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-semibold rounded-2xl shadow-md transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+              className="flex-1 py-2.5 px-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-semibold rounded-2xl shadow-md transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-50 active:scale-[0.98]"
             >
-              <Check className="w-4 h-4" />
-              {t('common.success')}
+              {isSaving ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>{t('common.saving')}</span>
+                </>
+              ) : (
+                <>
+                  <Check className="w-4 h-4" />
+                  <span>{goal ? t('common.save_changes') : t('common.save')}</span>
+                </>
+              )}
             </button>
           </div>
         </form>

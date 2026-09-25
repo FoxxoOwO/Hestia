@@ -249,7 +249,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
               className="flex-1 py-2.5 px-4 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold rounded-2xl shadow-md transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-50"
             >
               <Check className="w-4 h-4" />
-              {t('common.success')}
+              {isSaving ? t('common.saving') : (subscription ? t('common.save_changes') : t('common.save'))}
             </button>
           </div>
         </form>

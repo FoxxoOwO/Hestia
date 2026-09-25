@@ -882,6 +882,9 @@
     "loading": "Načítání...",
     "error": "Došlo k chybě",
     "success": "Úspěšně uloženo",
+    "save": "Uložit",
+    "saving": "Ukládám...",
+    "save_changes": "Uložit změny",
     "confirm_delete": "Opravdu si přejete tuto položku smazat?",
     "close": "Zavřít"
   }
