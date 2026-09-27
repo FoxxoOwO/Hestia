@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, UtensilsCrossed, PackageOpen, ShoppingCart, Settings,
   Sparkles, Wrench, Flower2, Dog, CheckSquare, Wallet, HeartPulse,
-  FolderArchive, Car, History
+  FolderArchive, Car, History, CalendarDays, Zap
 } from 'lucide-react';
 import { useTranslation } from '../i18n';
 import { useTheme } from '../context/ThemeContext';
@@ -15,8 +15,10 @@ export const Sidebar: React.FC = () => {
   const mainNav = [
     { to: '/', label: t('nav.dashboard'), icon: LayoutDashboard },
     { to: '/recipes', label: t('nav.recipes'), icon: UtensilsCrossed },
+    { to: '/meal-planner', label: t('nav.meal_planner'), icon: CalendarDays },
     { to: '/pantry', label: t('nav.pantry'), icon: PackageOpen },
     { to: '/shopping', label: t('nav.shopping'), icon: ShoppingCart },
+    { to: '/assets', label: t('nav.assets'), icon: Wrench },
     { to: '/plants', label: t('nav.plants'), icon: Flower2 },
     { to: '/pets', label: t('nav.pets'), icon: Dog },
     { to: '/chores', label: t('nav.chores'), icon: CheckSquare },
@@ -30,7 +32,7 @@ export const Sidebar: React.FC = () => {
 
 
   const futureModules = [
-    { label: t('nav.assets'), icon: Wrench },
+    { label: 'Chytrá měřidla a energie', icon: Zap },
   ];
 
   return (

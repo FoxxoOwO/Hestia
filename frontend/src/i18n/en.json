@@ -10,6 +10,7 @@
     "settings": "Settings",
     "future_modules": "Future Modules",
     "assets": "Assets & Appliances",
+    "meal_planner": "Meal Planner",
     "pets": "Pets",
     "chores": "Household Chores",
     "finances": "Family Finances",
@@ -820,7 +821,9 @@
       "pets": "Pets",
       "vehicles": "Fleet & Vehicle Inspections",
       "activity": "Recent Household Activity",
-      "recipe_tip": "Cooking Inspiration"
+      "recipe_tip": "Cooking Inspiration",
+      "assets": "Assets & Warranties",
+      "meal_planner": "Today's Meal Plan"
     },
     "chores": {
       "empty": "All today's chores are completed! Great job 🎉",

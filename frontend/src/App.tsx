@@ -26,6 +26,8 @@ import { VehiclesPage } from './pages/VehiclesPage';
 import { VehicleDetailPage } from './pages/VehicleDetailPage';
 import { MedicinesPage } from './pages/MedicinesPage';
 import { ActivityHistoryPage } from './pages/ActivityHistoryPage';
+import { AssetsPage } from './pages/AssetsPage';
+import { MealPlannerPage } from './pages/MealPlannerPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { Flame } from 'lucide-react';
 
@@ -64,8 +66,10 @@ const AppContent: React.FC = () => {
               <Route path="/recipes/new" element={<RecipeEditPage />} />
               <Route path="/recipes/:id" element={<RecipeDetailPage />} />
               <Route path="/recipes/:id/edit" element={<RecipeEditPage />} />
+              <Route path="/meal-planner" element={<MealPlannerPage />} />
               <Route path="/pantry" element={<PantryPage />} />
               <Route path="/shopping" element={<ShoppingListPage />} />
+              <Route path="/assets" element={<AssetsPage />} />
               <Route path="/plants" element={<PlantsPage />} />
               <Route path="/plants/new" element={<PlantEditPage />} />
               <Route path="/plants/:id" element={<PlantDetailPage />} />

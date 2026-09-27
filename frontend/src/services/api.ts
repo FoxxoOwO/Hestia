@@ -20,7 +20,9 @@ import {
   MedicationLog, MedicationLogCreate,
   PediatricDosage, FirstAidGuide,
   ActivityLog, ActivityStats, ActivityListResponse, PublicMember,
-  ServerBackup, BackupRestoreResult
+  ServerBackup, BackupRestoreResult,
+  Asset, AssetCreatePayload, AssetStats,
+  MealPlanItem, MealPlanItemCreatePayload, GenerateShoppingPayload, GenerateShoppingResponse
 } from '../types';
 
 
@@ -1633,6 +1635,145 @@ export const api = {
       const err = await res.json().catch(() => ({ detail: 'Chyba při mazání zálohy' }));
       throw new Error(err.detail || 'Chyba při mazání zálohy');
     }
+    return res.json();
+  },
+
+  // --- Assets & Warranty Tracker ---
+  async getAssets(params?: {
+    category?: string;
+    room?: string;
+    status?: string;
+    warranty_status?: string;
+    search?: string;
+  }): Promise<Asset[]> {
+    const query = new URLSearchParams();
+    if (params?.category) query.append('category', params.category);
+    if (params?.room) query.append('room', params.room);
+    if (params?.status) query.append('status', params.status);
+    if (params?.warranty_status) query.append('warranty_status', params.warranty_status);
+    if (params?.search) query.append('search', params.search);
+
+    const qs = query.toString();
+    const res = await fetch(`${API_BASE}/assets${qs ? `?${qs}` : ''}`, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Nepodařilo se načíst seznam spotřebičů');
+    return res.json();
+  },
+
+  async getAssetStats(): Promise<AssetStats> {
+    const res = await fetch(`${API_BASE}/assets/stats`, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Nepodařilo se načíst statistiky majetku');
+    return res.json();
+  },
+
+  async getAsset(id: number): Promise<Asset> {
+    const res = await fetch(`${API_BASE}/assets/${id}`, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Nepodařilo se načíst detail spotřebiče');
+    return res.json();
+  },
+
+  async createAsset(data: AssetCreatePayload): Promise<Asset> {
+    const res = await fetch(`${API_BASE}/assets`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Nepodařilo se vytvořit spotřebič');
+    return res.json();
+  },
+
+  async updateAsset(id: number, data: Partial<AssetCreatePayload>): Promise<Asset> {
+    const res = await fetch(`${API_BASE}/assets/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Nepodařilo se upravit spotřebič');
+    return res.json();
+  },
+
+  async deleteAsset(id: number): Promise<void> {
+    const res = await fetch(`${API_BASE}/assets/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Nepodařilo se odstranit spotřebič');
+  },
+
+  async uploadAssetFile(id: number, file: File, fileType: 'invoice' | 'manual'): Promise<{ url: string; file_type: string; asset: Asset }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`${API_BASE}/assets/${id}/upload-file?file_type=${fileType}`, {
+      method: 'POST',
+      headers: getAuthOnlyHeaders(),
+      body: formData,
+    });
+    if (!res.ok) throw new Error('Nepodařilo se nahrát soubor ke spotřebiči');
+    return res.json();
+  },
+
+  // --- Weekly Meal Planner ---
+  async getMealPlans(startDate?: string, endDate?: string): Promise<MealPlanItem[]> {
+    const query = new URLSearchParams();
+    if (startDate) query.append('start_date', startDate);
+    if (endDate) query.append('end_date', endDate);
+    const qs = query.toString();
+    const res = await fetch(`${API_BASE}/meal-plans${qs ? `?${qs}` : ''}`, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Nepodařilo se načíst jídelníček');
+    return res.json();
+  },
+
+  async createMealPlanItem(data: MealPlanItemCreatePayload): Promise<MealPlanItem> {
+    const res = await fetch(`${API_BASE}/meal-plans`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Nepodařilo se přidat jídlo do plánu');
+    return res.json();
+  },
+
+  async updateMealPlanItem(id: number, data: Partial<MealPlanItemCreatePayload>): Promise<MealPlanItem> {
+    const res = await fetch(`${API_BASE}/meal-plans/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Nepodařilo se upravit položku jídelníčku');
+    return res.json();
+  },
+
+  async deleteMealPlanItem(id: number): Promise<void> {
+    const res = await fetch(`${API_BASE}/meal-plans/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Nepodařilo se odstranit položku z plánu');
+  },
+
+  async toggleCookedMealPlan(id: number): Promise<MealPlanItem> {
+    const res = await fetch(`${API_BASE}/meal-plans/${id}/toggle-cooked`, {
+      method: 'POST',
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error('Nepodařilo se změnit stav uvařeno');
+    return res.json();
+  },
+
+  async generateShoppingFromMealPlan(payload: GenerateShoppingPayload): Promise<GenerateShoppingResponse> {
+    const res = await fetch(`${API_BASE}/meal-plans/generate-shopping`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Nepodařilo se vygenerovat nákupní seznam z jídelníčku');
     return res.json();
   }
 };

@@ -5,13 +5,13 @@ import {
   Wallet, HeartPulse, Dog, Car, History, Sparkles,
   SlidersHorizontal, Plus, ArrowRight, RefreshCw, AlertCircle,
   Clock, CheckCircle2, Droplet, Flame, AlertTriangle, ChevronRight,
-  UtensilsCrossed, Calendar, Award
+  UtensilsCrossed, Calendar, Award, Wrench, CalendarDays, ShieldCheck, ShieldAlert
 } from 'lucide-react';
 import { api } from '../services/api';
 import {
   Chore, ShoppingItem, MedicineStats, Medicine, MedicationSchedule,
   FinanceMonthlySummary, Subscription, Pet, Vehicle, ActivityLog,
-  Recipe, LeaderboardMember
+  Recipe, LeaderboardMember, Asset, AssetStats, MealPlanItem
 } from '../types';
 import { useTranslation } from '../i18n';
 import { useTheme } from '../context/ThemeContext';
@@ -29,9 +29,11 @@ const STORAGE_KEY_COMPACT = 'hestia_dashboard_compact_v2';
 
 const DEFAULT_WIDGETS: DashboardWidgetConfig[] = [
   { id: 'chores', enabled: true },
+  { id: 'meal_planner', enabled: true },
   { id: 'shopping', enabled: true },
   { id: 'plants', enabled: true },
   { id: 'finances', enabled: true },
+  { id: 'assets', enabled: true },
   { id: 'medicines', enabled: true },
   { id: 'pets', enabled: true },
   { id: 'vehicles', enabled: true },
@@ -99,6 +101,9 @@ export const DashboardPage: React.FC = () => {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [activities, setActivities] = useState<ActivityLog[]>([]);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [assetStats, setAssetStats] = useState<AssetStats | null>(null);
+  const [expiringAssets, setExpiringAssets] = useState<Asset[]>([]);
+  const [todayMealPlans, setTodayMealPlans] = useState<MealPlanItem[]>([]);
 
   // Inline Quick Add Shopping Item state
   const [newShoppingName, setNewShoppingName] = useState('');
@@ -109,6 +114,8 @@ export const DashboardPage: React.FC = () => {
     try {
       if (!silent) setIsLoading(true);
       else setIsRefreshing(true);
+
+      const todayStr = new Date().toISOString().substring(0, 10);
 
       const results = await Promise.allSettled([
         api.getChores(),
@@ -124,6 +131,9 @@ export const DashboardPage: React.FC = () => {
         api.getVehicles(),
         api.getActivities({ limit: 6 }),
         api.getRecipes(),
+        api.getAssetStats(),
+        api.getAssets({ warranty_status: 'expiring_soon' }),
+        api.getMealPlans(todayStr, todayStr),
       ]);
 
       if (results[0].status === 'fulfilled') setChores(results[0].value);
@@ -139,6 +149,9 @@ export const DashboardPage: React.FC = () => {
       if (results[10].status === 'fulfilled') setVehicles(results[10].value);
       if (results[11].status === 'fulfilled') setActivities(results[11].value?.items || []);
       if (results[12].status === 'fulfilled') setRecipes(results[12].value);
+      if (results[13].status === 'fulfilled') setAssetStats(results[13].value);
+      if (results[14].status === 'fulfilled') setExpiringAssets(results[14].value);
+      if (results[15].status === 'fulfilled') setTodayMealPlans(results[15].value);
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
     } finally {
@@ -1194,6 +1207,142 @@ export const DashboardPage: React.FC = () => {
                           <span>{t('dashboard.recipe_tip.view_recipe')}</span>
                         </Link>
                       </div>
+                    </div>
+                  )}
+                </div>
+              );
+
+            // --- ASSETS WIDGET ---
+            case 'assets':
+              return (
+                <div
+                  key="assets"
+                  className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-5 shadow-xs flex flex-col"
+                >
+                  <div className="flex items-center justify-between pb-3.5 border-b border-zinc-100 dark:border-zinc-800/80 mb-3.5">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-orange-500/10 text-orange-600 dark:text-orange-400 flex items-center justify-center">
+                        <Wrench className="w-4 h-4" />
+                      </div>
+                      <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                        {t('dashboard.widgets.assets')}
+                      </h2>
+                    </div>
+
+                    <Link
+                      to="/assets"
+                      className="text-xs font-semibold text-orange-600 dark:text-orange-400 hover:text-orange-700 flex items-center gap-1 transition"
+                    >
+                      <span>{t('dashboard.view_all')}</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
+
+                  <div className="flex-1 flex flex-col justify-between">
+                    <div className="grid grid-cols-2 gap-2 mb-3">
+                      <div className="p-2.5 rounded-2xl bg-zinc-50 dark:bg-zinc-850/40 text-center">
+                        <span className="text-[10px] text-zinc-400 block font-medium">V záruce</span>
+                        <span className="text-base font-bold text-emerald-600 dark:text-emerald-400">
+                          {assetStats?.active_warranties ?? 0}
+                        </span>
+                      </div>
+                      <div className={`p-2.5 rounded-2xl text-center ${
+                        (assetStats?.expiring_soon_warranties ?? 0) > 0
+                          ? 'bg-amber-500/10 text-amber-600'
+                          : 'bg-zinc-50 dark:bg-zinc-850/40'
+                      }`}>
+                        <span className="text-[10px] text-zinc-400 block font-medium">Končí do 30 dní</span>
+                        <span className={`text-base font-bold ${
+                          (assetStats?.expiring_soon_warranties ?? 0) > 0 ? 'text-amber-600' : 'text-zinc-700 dark:text-zinc-300'
+                        }`}>
+                          {assetStats?.expiring_soon_warranties ?? 0}
+                        </span>
+                      </div>
+                    </div>
+
+                    {expiringAssets.length > 0 ? (
+                      <div className="space-y-1.5">
+                        <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider block">
+                          Pozor, končí záruka:
+                        </span>
+                        {expiringAssets.slice(0, 3).map(a => (
+                          <div key={a.id} className="flex items-center justify-between p-2 rounded-xl bg-amber-50/60 dark:bg-amber-950/20 text-xs">
+                            <span className="font-semibold text-zinc-800 dark:text-zinc-200 truncate">{a.name}</span>
+                            <span className="text-[10px] font-bold text-amber-600 shrink-0">za {a.days_until_warranty_expiry} d.</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-zinc-400 py-3 text-center">
+                        Všechny spotřebiče jsou v pořádku a žádná záruka nekončí 👍
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+
+            // --- MEAL PLANNER WIDGET ---
+            case 'meal_planner':
+              return (
+                <div
+                  key="meal_planner"
+                  className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-5 shadow-xs flex flex-col"
+                >
+                  <div className="flex items-center justify-between pb-3.5 border-b border-zinc-100 dark:border-zinc-800/80 mb-3.5">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-orange-500/10 text-orange-600 dark:text-orange-400 flex items-center justify-center">
+                        <CalendarDays className="w-4 h-4" />
+                      </div>
+                      <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                        {t('dashboard.widgets.meal_planner')}
+                      </h2>
+                    </div>
+
+                    <Link
+                      to="/meal-planner"
+                      className="text-xs font-semibold text-orange-600 dark:text-orange-400 hover:text-orange-700 flex items-center gap-1 transition"
+                    >
+                      <span>{t('dashboard.view_all')}</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
+
+                  {todayMealPlans.length === 0 ? (
+                    <div className="py-6 text-center text-zinc-400 text-xs flex-1 flex flex-col items-center justify-center">
+                      <UtensilsCrossed className="w-8 h-8 opacity-40 mb-2" />
+                      <p>Dnes nemáte naplánované žádné jídlo.</p>
+                      <Link
+                        to="/meal-planner"
+                        className="mt-2 text-xs font-semibold text-orange-600 dark:text-orange-400 hover:underline"
+                      >
+                        + Naplánovat dnešek
+                      </Link>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 flex-1">
+                      {todayMealPlans.map(m => (
+                        <div
+                          key={m.id}
+                          className="flex items-center justify-between p-2.5 rounded-2xl bg-zinc-50 dark:bg-zinc-850/50 border border-zinc-100 dark:border-zinc-800 text-xs"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-sm">
+                              {m.meal_type === 'breakfast' ? '🍳' : m.meal_type === 'lunch' ? '🍲' : m.meal_type === 'dinner' ? '🍽️' : '🍎'}
+                            </span>
+                            <div className="min-w-0 truncate">
+                              <span className={`font-semibold block truncate ${m.is_cooked ? 'line-through text-zinc-400' : 'text-zinc-800 dark:text-zinc-200'}`}>
+                                {m.recipe_title || m.custom_title}
+                              </span>
+                              <span className="text-[10px] text-zinc-400">{m.servings} porce</span>
+                            </div>
+                          </div>
+                          {m.is_cooked && (
+                            <span className="text-[10px] font-semibold text-emerald-600 px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40">
+                              Hotovo
+                            </span>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>

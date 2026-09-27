@@ -8,7 +8,7 @@ from app.config import settings
 import app.models  # Ensure all SQLAlchemy models are registered
 from app.database import engine, Base, SessionLocal
 from app.services.seed_data import seed_initial_data
-from app.routers import auth, recipes, pantry, shopping, ai, plants, pets, chores, finance, documents, vehicles, medicines, activities, system
+from app.routers import auth, recipes, pantry, shopping, ai, plants, pets, chores, finance, documents, vehicles, medicines, activities, system, assets, meal_plans
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -63,6 +63,8 @@ app.include_router(vehicles.router, prefix=api_prefix)
 app.include_router(medicines.router, prefix=api_prefix)
 app.include_router(activities.router, prefix=api_prefix)
 app.include_router(system.router, prefix=api_prefix)
+app.include_router(assets.router, prefix=api_prefix)
+app.include_router(meal_plans.router, prefix=api_prefix)
 
 @app.get("/api/health")
 def health_check():
@@ -70,7 +72,7 @@ def health_check():
         "status": "healthy",
         "app": "Hestia Smart Home OS",
         "version": "1.1.0",
-        "modules": ["recipes", "pantry", "shopping", "auth", "gemini-ai", "plants", "pets", "chores", "finance", "documents", "vehicles", "medicines", "activities"]
+        "modules": ["recipes", "pantry", "shopping", "auth", "gemini-ai", "plants", "pets", "chores", "finance", "documents", "vehicles", "medicines", "activities", "assets", "meal-plans"]
     }
 
 # Optional frontend SPA serving for single-container Docker deployments

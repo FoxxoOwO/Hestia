@@ -10,6 +10,7 @@
     "settings": "Nastavení",
     "future_modules": "Budoucí moduly",
     "assets": "Majetek a spotřebiče",
+    "meal_planner": "Plánovač jídel",
     "pets": "Domácí mazlíčci",
     "chores": "Úkoly a úklid",
     "finances": "Rodinné finance",
@@ -820,7 +821,9 @@
       "pets": "Domácí mazlíčci",
       "vehicles": "Vozový park a STK",
       "activity": "Nedávná aktivita v domě",
-      "recipe_tip": "Inspirace k vaření"
+      "recipe_tip": "Inspirace k vaření",
+      "assets": "Majetek a záruky",
+      "meal_planner": "Jídelníček na dnes"
     },
     "chores": {
       "empty": "Všechny dnešní úkoly jsou hotové! Skvělá práce 🎉",

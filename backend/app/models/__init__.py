@@ -10,6 +10,8 @@ from app.models.document import Document, VaultSetting
 from app.models.vehicle import Vehicle, VehicleRefueling, VehicleServiceRecord
 from app.models.medicine import Medicine, MedicationSchedule, MedicationLog
 from app.models.activity import ActivityLog
+from app.models.asset import Asset
+from app.models.meal_plan import MealPlanItem
 
 __all__ = [
     "User", "Recipe", "PantryItem", "ShoppingItem",
@@ -20,6 +22,6 @@ __all__ = [
     "Document", "VaultSetting",
     "Vehicle", "VehicleRefueling", "VehicleServiceRecord",
     "Medicine", "MedicationSchedule", "MedicationLog",
-    "ActivityLog"
+    "ActivityLog", "Asset", "MealPlanItem"
 ]
 

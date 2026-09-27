@@ -6,6 +6,8 @@ export * from './document';
 export * from './vehicle';
 export * from './medicine';
 export * from './activity';
+export * from './asset';
+export * from './meal_plan';
 
 export type Role = 'admin' | 'member';
 

@@ -1,8 +1,8 @@
-import React from 'react';
 import {
   X, CheckSquare, ShoppingCart, Flower2, Wallet,
   HeartPulse, Dog, Car, History, Sparkles, LayoutGrid,
-  ChevronUp, ChevronDown, Eye, EyeOff, RotateCcw, SlidersHorizontal
+  ChevronUp, ChevronDown, Eye, EyeOff, RotateCcw, SlidersHorizontal,
+  Wrench, CalendarDays
 } from 'lucide-react';
 import { useTranslation } from '../../i18n';
 
@@ -15,7 +15,9 @@ export type DashboardWidgetId =
   | 'pets'
   | 'vehicles'
   | 'activity'
-  | 'recipe_tip';
+  | 'recipe_tip'
+  | 'assets'
+  | 'meal_planner';
 
 export interface DashboardWidgetConfig {
   id: DashboardWidgetId;
@@ -46,6 +48,8 @@ const WIDGET_ICONS: Record<DashboardWidgetId, React.ElementType> = {
   vehicles: Car,
   activity: History,
   recipe_tip: Sparkles,
+  assets: Wrench,
+  meal_planner: CalendarDays,
 };
 
 export const DashboardCustomizeModal: React.FC<DashboardCustomizeModalProps> = ({
