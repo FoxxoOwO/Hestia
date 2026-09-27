@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Scale, X, Plus, Calendar, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { api } from '../services/api';
 import { Pet, PetWeightLog } from '../types';
@@ -88,7 +89,7 @@ export const PetWeightModal: React.FC<PetWeightModalProps> = ({
   const maxWeight = Math.max(...weights.map((w) => w.weight_kg), 1);
   const minWeight = Math.min(...weights.map((w) => w.weight_kg), 0);
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
       <div className="w-full max-w-lg rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
@@ -246,6 +247,7 @@ export const PetWeightModal: React.FC<PetWeightModalProps> = ({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Sparkles, Globe, FileText, Upload, X, Check, Loader2, Clock, Users, FileUp, CheckSquare, Square, ChevronDown, ChevronUp } from 'lucide-react';
 import { api } from '../services/api';
 import { Recipe } from '../types';
@@ -158,7 +159,7 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({
     }
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
       <div className="bg-white dark:bg-zinc-900 w-full max-w-2xl max-h-[90vh] rounded-3xl shadow-2xl border border-zinc-200 dark:border-zinc-800 flex flex-col overflow-hidden">
         {/* Header */}
@@ -606,6 +607,7 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { X, UploadCloud, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, ArrowRight, UserCheck } from 'lucide-react';
 import { api } from '../services/api';
 import { CsvImportPreview, CsvImportRow, User } from '../types';
@@ -72,7 +73,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     }
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-2xl w-full p-6 shadow-2xl relative overflow-hidden max-h-[90vh] flex flex-col">
         {/* Header */}
@@ -271,6 +272,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

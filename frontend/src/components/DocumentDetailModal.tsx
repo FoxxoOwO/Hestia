@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X, FileText, Calendar, Building2, MapPin, Tag,
   Clock, AlertTriangle, CheckCircle2, ShieldAlert,
@@ -76,7 +77,7 @@ export const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
 
   const fileUrl = doc.file_path.startsWith('/') ? doc.file_path : `/${doc.file_path}`;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-2xl w-full p-6 shadow-2xl relative my-8">
         {/* Header */}
@@ -364,6 +365,7 @@ export const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

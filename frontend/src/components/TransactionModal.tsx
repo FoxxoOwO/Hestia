@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, DollarSign, Calendar, Tag, User as UserIcon, Sparkles, Check, Users, FileText } from 'lucide-react';
 import { Transaction, TransactionCreate, User, ReceiptScanResponse } from '../types';
 import { useTranslation } from '../i18n';
@@ -108,7 +109,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+      {createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl relative overflow-hidden max-h-[90vh] flex flex-col">
           {/* Header */}
           <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
@@ -318,7 +320,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             </div>
           </form>
         </div>
-      </div>
+      </div>,
+      document.body
+    )}
 
       {/* Embedded receipt scanner modal */}
       <ReceiptScanModal

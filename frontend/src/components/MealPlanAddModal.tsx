@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   X, UtensilsCrossed, Sparkles, Search, Clock, 
   ChefHat, Check, Plus, AlertCircle 
@@ -113,7 +114,7 @@ export const MealPlanAddModal: React.FC<MealPlanAddModalProps> = ({
 
   const selectedRecipe = recipes.find(r => r.id === selectedRecipeId);
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white dark:bg-zinc-900 rounded-3xl max-w-xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
         
@@ -360,6 +361,7 @@ export const MealPlanAddModal: React.FC<MealPlanAddModalProps> = ({
         </form>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

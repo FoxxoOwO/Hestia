@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   Flower2, ArrowLeft, Droplets, Heart, Edit3, Trash2,
@@ -645,7 +646,7 @@ export const PlantDetailPage: React.FC = () => {
       </div>
 
       {/* Modal: Add Log Entry */}
-      {isAddLogOpen && (
+      {isAddLogOpen && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
           <div className="w-full max-w-md rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden p-6 space-y-4">
             <div className="flex items-center justify-between">
@@ -764,11 +765,12 @@ export const PlantDetailPage: React.FC = () => {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Modal: Add Care Task */}
-      {isAddTaskOpen && (
+      {isAddTaskOpen && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
           <div className="w-full max-w-md rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden p-6 space-y-4">
             <div className="flex items-center justify-between">
@@ -861,7 +863,8 @@ export const PlantDetailPage: React.FC = () => {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* AI Doctor Modal for this plant */}

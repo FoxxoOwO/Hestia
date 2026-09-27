@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Calculator, AlertTriangle, Baby, Clock, CheckCircle2, ShieldAlert } from 'lucide-react';
 import { api } from '../services/api';
 import { PediatricDosage } from '../types';
@@ -42,7 +43,7 @@ export const PediatricDosageModal: React.FC<PediatricDosageModalProps> = ({
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl my-6">
         {/* Header */}
@@ -240,6 +241,7 @@ export const PediatricDosageModal: React.FC<PediatricDosageModalProps> = ({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

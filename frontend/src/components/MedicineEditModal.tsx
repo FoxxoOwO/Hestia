@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Pill, AlertTriangle, Snowflake, FileText, Check, ShieldAlert } from 'lucide-react';
 import { Medicine, MedicineCreate, MedicineUpdate, MedicineForm, MedicineCategory, MedicineLocation, User } from '../types';
 import { useTranslation } from '../i18n';
@@ -142,7 +143,7 @@ export const MedicineEditModal: React.FC<MedicineEditModalProps> = ({
     }
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl my-8">
         {/* Header */}
@@ -581,6 +582,7 @@ export const MedicineEditModal: React.FC<MedicineEditModalProps> = ({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

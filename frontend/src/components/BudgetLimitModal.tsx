@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Sliders, Check } from 'lucide-react';
 import { useTranslation } from '../i18n';
 
@@ -41,7 +42,7 @@ export const BudgetLimitModal: React.FC<BudgetLimitModalProps> = ({
     }
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-sm w-full p-6 shadow-2xl relative overflow-hidden">
         {/* Header */}
@@ -102,6 +103,7 @@ export const BudgetLimitModal: React.FC<BudgetLimitModalProps> = ({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

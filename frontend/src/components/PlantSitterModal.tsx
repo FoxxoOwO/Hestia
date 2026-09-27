@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Luggage, X, Printer, Droplets, Ban, Wind, CheckCircle2
 } from 'lucide-react';
@@ -35,7 +36,7 @@ export const PlantSitterModal: React.FC<PlantSitterModalProps> = ({
     window.print();
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
       <div className="bg-white dark:bg-zinc-900 w-full max-w-3xl max-h-[90vh] rounded-3xl shadow-2xl border border-zinc-200 dark:border-zinc-800 flex flex-col overflow-hidden">
         {/* Header */}
@@ -132,6 +133,7 @@ export const PlantSitterModal: React.FC<PlantSitterModalProps> = ({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

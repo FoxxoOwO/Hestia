@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Sparkles, Trophy, Users } from 'lucide-react';
 import { User, Chore } from '../types';
 import { useTranslation } from '../i18n';
@@ -154,7 +155,7 @@ export const ChoreWheelModal: React.FC<ChoreWheelModalProps> = ({
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative border border-gray-200 dark:border-gray-700">
         
@@ -248,6 +249,7 @@ export const ChoreWheelModal: React.FC<ChoreWheelModalProps> = ({
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

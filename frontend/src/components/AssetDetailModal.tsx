@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   X, Wrench, Shield, ShieldAlert, ShieldCheck, FileText, 
   ExternalLink, Copy, Check, Calendar, Store, Tag, 
@@ -135,7 +136,7 @@ export const AssetDetailModal: React.FC<AssetDetailModalProps> = ({
     );
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white dark:bg-zinc-900 rounded-3xl max-w-lg w-full max-h-[92vh] flex flex-col shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
         
@@ -339,6 +340,7 @@ export const AssetDetailModal: React.FC<AssetDetailModalProps> = ({
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

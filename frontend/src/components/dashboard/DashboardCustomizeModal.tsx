@@ -1,3 +1,5 @@
+import React from 'react';
+import { createPortal } from 'react-dom';
 import {
   X, CheckSquare, ShoppingCart, Flower2, Wallet,
   HeartPulse, Dog, Car, History, Sparkles, LayoutGrid,
@@ -69,7 +71,7 @@ export const DashboardCustomizeModal: React.FC<DashboardCustomizeModalProps> = (
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white dark:bg-zinc-900 rounded-3xl max-w-xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
         {/* Modal Header */}
@@ -237,6 +239,7 @@ export const DashboardCustomizeModal: React.FC<DashboardCustomizeModalProps> = (
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

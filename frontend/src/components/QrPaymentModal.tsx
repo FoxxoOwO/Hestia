@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, QrCode, Copy, Check, ExternalLink, ShieldCheck } from 'lucide-react';
 import QRCode from 'qrcode';
 import { DebtSettlementItem } from '../types';
@@ -53,7 +54,7 @@ export const QrPaymentModal: React.FC<QrPaymentModalProps> = ({
     }
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl relative overflow-hidden">
         {/* Header */}
@@ -155,6 +156,7 @@ export const QrPaymentModal: React.FC<QrPaymentModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

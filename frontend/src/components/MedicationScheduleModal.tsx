@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Calendar, Clock, Check, AlertCircle } from 'lucide-react';
 import { MedicationSchedule, MedicationScheduleCreate, MedicationScheduleUpdate, Medicine, User } from '../types';
 
@@ -111,7 +112,7 @@ export const MedicationScheduleModal: React.FC<MedicationScheduleModalProps> = (
     }
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
         <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/40">
@@ -322,6 +323,7 @@ export const MedicationScheduleModal: React.FC<MedicationScheduleModalProps> = (
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

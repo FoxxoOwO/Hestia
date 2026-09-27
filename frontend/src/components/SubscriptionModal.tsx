@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Calendar, DollarSign, Repeat, Check, User as UserIcon } from 'lucide-react';
 import { Subscription, SubscriptionCreate, User, BillingCycle } from '../types';
 import { useTranslation } from '../i18n';
@@ -83,7 +84,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
     }
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl relative overflow-hidden max-h-[90vh] flex flex-col">
         {/* Header */}
@@ -254,6 +255,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

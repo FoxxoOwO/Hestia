@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Upload, FileText, Wrench, Shield, AlertCircle } from 'lucide-react';
 import { Asset, AssetCreatePayload, AssetCategory, AssetRoom, AssetStatus } from '../types';
 import { useTranslation } from '../i18n';
@@ -159,7 +160,7 @@ export const AssetEditModal: React.FC<AssetEditModalProps> = ({
     }
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white dark:bg-zinc-900 rounded-3xl max-w-2xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
         
@@ -453,6 +454,7 @@ export const AssetEditModal: React.FC<AssetEditModalProps> = ({
         </form>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

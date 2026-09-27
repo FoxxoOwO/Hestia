@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Wrench, Check, AlertCircle, Calendar, Gauge, Building2 } from 'lucide-react';
 import { Vehicle, VehicleServiceRecordCreate, ServiceType } from '../types';
 import { useTranslation } from '../i18n';
@@ -76,7 +77,7 @@ export const ServiceRecordModal: React.FC<ServiceRecordModalProps> = ({
     }
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl relative my-8">
         {/* Header */}
@@ -245,6 +246,7 @@ export const ServiceRecordModal: React.FC<ServiceRecordModalProps> = ({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Fuel, Check, AlertCircle, DollarSign, Gauge, Calendar, Sparkles } from 'lucide-react';
 import { Vehicle, VehicleRefuelingCreate } from '../types';
 import { useTranslation } from '../i18n';
@@ -86,7 +87,7 @@ export const RefuelingModal: React.FC<RefuelingModalProps> = ({
     }
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl relative">
         {/* Header */}
@@ -265,6 +266,7 @@ export const RefuelingModal: React.FC<RefuelingModalProps> = ({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

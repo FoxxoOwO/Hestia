@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, PhoneCall, AlertTriangle, ShieldCheck, HeartPulse, Flame, Skull, Baby, Wind, Droplets } from 'lucide-react';
 import { api } from '../services/api';
 import { FirstAidGuide } from '../types';
@@ -57,7 +58,7 @@ export const FirstAidGuideModal: React.FC<FirstAidGuideModalProps> = ({
     }
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl my-6 flex flex-col max-h-[90vh]">
         {/* Header */}
@@ -239,6 +240,7 @@ export const FirstAidGuideModal: React.FC<FirstAidGuideModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

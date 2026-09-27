@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X, PhoneCall, ShieldAlert, AlertTriangle, CheckCircle2,
   FileText, LifeBuoy, HeartPulse, HelpCircle, Phone
@@ -24,7 +25,7 @@ export const SosAssistantModal: React.FC<SosAssistantModalProps> = ({
 
   const assistancePhone = vehicle.insurance_assistance_phone || '+420 1224';
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-xl w-full p-6 shadow-2xl relative my-8">
         {/* Header */}
@@ -295,6 +296,7 @@ export const SosAssistantModal: React.FC<SosAssistantModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

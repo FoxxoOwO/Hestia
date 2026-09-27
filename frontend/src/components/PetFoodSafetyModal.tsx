@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Sparkles, X, AlertTriangle, ShieldCheck, AlertCircle,
   Loader2, Search, HeartPulse, HelpCircle, Utensils
@@ -117,7 +118,7 @@ export const PetFoodSafetyModal: React.FC<PetFoodSafetyModalProps> = ({
     }
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
       <div className="w-full max-w-xl max-h-[90vh] rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
@@ -283,6 +284,7 @@ export const PetFoodSafetyModal: React.FC<PetFoodSafetyModalProps> = ({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

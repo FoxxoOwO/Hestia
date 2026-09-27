@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Flame, Play, Pause, RotateCcw, CheckCircle2, Trophy, Sparkles } from 'lucide-react';
 import { Chore } from '../types';
 import { useTranslation } from '../i18n';
@@ -55,7 +56,7 @@ export const ChorePanicModal: React.FC<ChorePanicModalProps> = ({
   const allCompleted = tasks.length > 0 && completedIds.size === tasks.length;
   const progressPercent = tasks.length > 0 ? Math.round((completedIds.size / tasks.length) * 100) : 0;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-lg w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden border border-red-200 dark:border-red-900/50">
         
@@ -195,6 +196,7 @@ export const ChorePanicModal: React.FC<ChorePanicModalProps> = ({
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
