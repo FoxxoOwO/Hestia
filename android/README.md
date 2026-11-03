@@ -50,6 +50,40 @@ util/Errors.kt                 překlad HTTP chyb do češtiny
 cd android
 ./gradlew assembleDebug            # APK: app/build/outputs/apk/debug/app-debug.apk
 ./gradlew installDebug             # instalace do připojeného zařízení/emulátoru
+./gradlew assembleRelease          # podepsaný APK: app/build/outputs/apk/release/app-release.apk
+```
+
+## Podepisování release buildu
+
+Release APK se podepisuje vlastním klíčem, aby šel nainstalovat do telefonu a šel
+aktualizovat bez odinstalování.
+
+- Klíč (`keystore/hestia-release.jks`) a `keystore.properties` jsou v `.gitignore` –
+  repozitář je veřejný, klíč se do historie nesmí dostat. **Zálohujte je mimo repo**;
+  bez stejného klíče nepůjde publikovat aktualizaci stávající instalace.
+- Lokální build: `android/keystore.properties`
+
+  ```properties
+  storeFile=keystore/hestia-release.jks
+  storePassword=…
+  keyAlias=hestia
+  keyPassword=…
+  ```
+
+- CI build: GitHub Actions secrets `KEYSTORE_BASE64` (base64 klíče),
+  `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`. Workflow klíč dekóduje do
+  `$RUNNER_TEMP`, ověří podpis přes `apksigner verify` a publikuje
+  `hestia-release.apk`.
+- Bez klíče build projde, ale vznikne `app-release-unsigned.apk` – takže pull
+  requesty z forků, kde secrets nejsou, nepadají.
+
+Obnovení secrets po ztrátě klíče:
+
+```bash
+base64 -w0 keystore/hestia-release.jks | gh secret set KEYSTORE_BASE64
+gh secret set KEYSTORE_PASSWORD --body '…'
+gh secret set KEY_PASSWORD --body '…'
+gh secret set KEY_ALIAS --body 'hestia'
 ```
 
 ## Připojení k serveru
@@ -67,6 +101,8 @@ lokálnímu serveru bez TLS.
 ## Ověření
 
 - `./gradlew assembleDebug --offline` prochází bez chyb a varování v novém kódu.
+- `./gradlew assembleRelease` produkuje `app-release.apk` podepsaný klíčem
+  `CN=Hestia` (ověřeno `apksigner verify`, SHA-256 `00c326ae…46fc5`).
 - Všech 163 Retrofit cest bylo porovnáno se seznamem rout z `backend/app/routers/*.py`
   (skript v repu není, kontrola proběhla jednorázově) – shoda 100 %, jediná výjimka
   `/api/health` je mimo `/api/v1` prefix záměrně.
