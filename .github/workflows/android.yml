@@ -44,6 +44,29 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x android/gradlew
 
+      - name: Set up release signing
+        id: signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::warning::Secret KEYSTORE_BASE64 není nastaven – release APK zůstane nepodepsaný."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/hestia-release.jks"
+          {
+            echo "KEYSTORE_FILE=$RUNNER_TEMP/hestia-release.jks"
+            echo "KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD"
+            echo "KEY_ALIAS=$KEY_ALIAS"
+            echo "KEY_PASSWORD=$KEY_PASSWORD"
+          } >> "$GITHUB_ENV"
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+          echo "Podpisový klíč je připravený."
+
       - name: Build Debug APK
         working-directory: android
         run: ./gradlew assembleDebug --stacktrace
@@ -52,11 +75,20 @@ jobs:
         working-directory: android
         run: ./gradlew assembleRelease --stacktrace
 
+      - name: Verify Release APK signature
+        if: steps.signing.outputs.ready == 'true'
+        run: |
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | tail -1)
+          "$APKSIGNER" verify --print-certs android/app/build/outputs/apk/release/app-release.apk
+
       - name: Prepare APK artifacts
         run: |
           mkdir -p apk-output
           cp android/app/build/outputs/apk/debug/app-debug.apk apk-output/hestia-debug.apk
-          if [ -f android/app/build/outputs/apk/release/app-release-unsigned.apk ]; then
+          if [ -f android/app/build/outputs/apk/release/app-release.apk ]; then
+            cp android/app/build/outputs/apk/release/app-release.apk apk-output/hestia-release.apk
+          elif [ -f android/app/build/outputs/apk/release/app-release-unsigned.apk ]; then
+            echo "::warning::Release APK není podepsaný (chybí podpisový klíč)."
             cp android/app/build/outputs/apk/release/app-release-unsigned.apk apk-output/hestia-release-unsigned.apk
           fi
 
@@ -78,7 +110,5 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            apk-output/hestia-debug.apk
-            apk-output/hestia-release-unsigned.apk
+          files: apk-output/*.apk
           generate_release_notes: true

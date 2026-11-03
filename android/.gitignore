@@ -13,3 +13,9 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Release signing (local only, secrets live in GitHub Actions)
+/keystore/
+keystore.properties
+*.jks
+*.keystore

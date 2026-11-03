@@ -1,8 +1,43 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.compose.compiler)
   alias(libs.plugins.kotlin.serialization)
 }
+
+/*
+ * Podpisový klíč pro release build.
+ *
+ * Hodnoty se berou z `android/keystore.properties` (lokální build, soubor je
+ * v .gitignore) nebo z proměnných prostředí, které nastavuje GitHub Actions
+ * z repository secrets:
+ *   KEYSTORE_FILE, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD
+ *
+ * Pokud klíč není k dispozici, release build zůstane nepodepsaný
+ * (app-release-unsigned.apk), takže projekt jde sestavit i bez secrets.
+ */
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties().apply {
+    if (keystorePropertiesFile.exists()) {
+        FileInputStream(keystorePropertiesFile).use { load(it) }
+    }
+}
+
+fun signingValue(property: String, env: String): String? =
+    (keystoreProperties.getProperty(property) ?: System.getenv(env))?.takeIf { it.isNotBlank() }
+
+val releaseStoreFile = signingValue("storeFile", "KEYSTORE_FILE")
+    ?.let { rootProject.file(it) }
+    ?.takeIf { it.exists() }
+val releaseStorePassword = signingValue("storePassword", "KEYSTORE_PASSWORD")
+val releaseKeyAlias = signingValue("keyAlias", "KEY_ALIAS")
+val releaseKeyPassword = signingValue("keyPassword", "KEY_PASSWORD")
+val hasReleaseSigning = releaseStoreFile != null && releaseStorePassword != null &&
+    releaseKeyAlias != null && releaseKeyPassword != null
+
+logger.lifecycle("Release signing: " + if (hasReleaseSigning) "enabled (${releaseStoreFile?.name})" else "disabled (unsigned APK)")
 
 android {
     namespace = "com.example.hestia"
@@ -15,10 +50,25 @@ android {
         versionName = "1.5.0"
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = releaseStoreFile
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+                enableV1Signing = true
+                enableV2Signing = true
+                enableV3Signing = true
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.findByName("release")
         }
     }
     compileOptions {
