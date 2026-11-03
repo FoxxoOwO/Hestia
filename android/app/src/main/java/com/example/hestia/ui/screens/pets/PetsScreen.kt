@@ -1,6 +1,7 @@
 package com.example.hestia.ui.screens.pets
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -13,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -43,6 +45,9 @@ fun PetsScreen(repository: HestiaRepository) {
     var editing by remember { mutableStateOf<Pet?>(null) }
     var deleteTarget by remember { mutableStateOf<Pet?>(null) }
     var selectedPetId by remember { mutableStateOf<Int?>(null) }
+    var baseUrl by remember { mutableStateOf("") }
+
+    LaunchedEffect(Unit) { baseUrl = repository.serverUrl() }
 
     suspend fun load() {
         loading = true
@@ -102,6 +107,7 @@ fun PetsScreen(repository: HestiaRepository) {
             items(pets, key = { it.id }) { pet ->
                 PetCard(
                     pet = pet,
+                    baseUrl = baseUrl,
                     onOpen = { selectedPetId = pet.id },
                     onFeed = {
                         scope.launch {
@@ -173,6 +179,7 @@ fun PetsScreen(repository: HestiaRepository) {
 @Composable
 private fun PetCard(
     pet: Pet,
+    baseUrl: String,
     onOpen: () -> Unit,
     onFeed: () -> Unit,
     onToggleFavorite: () -> Unit,
@@ -182,14 +189,26 @@ private fun PetCard(
     Card(shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
         Column(Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(
-                    shape = androidx.compose.foundation.shape.CircleShape,
-                    color = HestiaOrange.copy(alpha = 0.12f),
-                    modifier = Modifier.size(44.dp)
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .clip(RoundedCornerShape(14.dp))
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Pets, null, tint = HestiaOrange)
-                    }
+                    RemoteImage(
+                        url = resolveImageUrl(pet.primary_image_url, baseUrl),
+                        contentDescription = pet.name,
+                        modifier = Modifier.fillMaxSize(),
+                        placeholder = {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(HestiaOrange.copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.Pets, null, tint = HestiaOrange, modifier = Modifier.size(24.dp))
+                            }
+                        }
+                    )
                 }
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
@@ -241,6 +260,69 @@ private fun PetCard(
 }
 
 @Composable
+private fun PetHero(pet: Pet?, baseUrl: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 6.dp)
+            .height(180.dp)
+            .clip(RoundedCornerShape(18.dp))
+    ) {
+        RemoteImage(
+            url = resolveImageUrl(pet?.primary_image_url, baseUrl),
+            contentDescription = pet?.name,
+            modifier = Modifier.fillMaxSize(),
+            placeholder = {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(HestiaOrange.copy(alpha = 0.10f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Default.Pets, null, tint = HestiaOrange, modifier = Modifier.size(44.dp))
+                        Text(
+                            "Hestia mazlíček",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        )
+        Row(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            pet?.let { p ->
+                Surface(shape = RoundedCornerShape(8.dp), color = Color.Black.copy(alpha = 0.45f)) {
+                    Text(
+                        Labels.label(Labels.petSpecies, p.species),
+                        color = Color.White,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
+                if (p.age_formatted.isNotBlank()) {
+                    Surface(shape = RoundedCornerShape(8.dp), color = HestiaOrange.copy(alpha = 0.85f)) {
+                        Text(
+                            p.age_formatted,
+                            color = Color.White,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun PetDetailScreen(
     repository: HestiaRepository,
     petId: Int,
@@ -255,6 +337,7 @@ private fun PetDetailScreen(
     var message by remember { mutableStateOf<String?>(null) }
     var tab by remember { mutableStateOf(0) }
     var dialog by remember { mutableStateOf<String?>(null) }
+    var baseUrl by remember { mutableStateOf("") }
 
     suspend fun reload() {
         repository.getPet(petId).onSuccess { pet = it }.onFailure { error = it.friendly() }
@@ -262,6 +345,7 @@ private fun PetDetailScreen(
 
     LaunchedEffect(petId) {
         loading = true
+        baseUrl = repository.serverUrl()
         reload()
         repository.getPetSitterProfile(petId).onSuccess { sitter = it }
         repository.getPetSosFlyer(petId).onSuccess { flyer = it }
@@ -277,6 +361,8 @@ private fun PetDetailScreen(
             Text(pet?.name ?: "Mazlíček", fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.weight(1f))
             IconButton(onClick = { scope.launch { reload() } }) { Icon(Icons.Default.Refresh, "Obnovit") }
         }
+
+        PetHero(pet = pet, baseUrl = baseUrl)
 
         ScrollableTabRow(selectedTabIndex = tab, edgePadding = 8.dp) {
             listOf("Info", "Zdraví", "Léky", "Váhy", "Úkoly", "Deník").forEachIndexed { i, label ->
@@ -720,6 +806,7 @@ private fun PetFormDialog(
     var vetPhone by remember { mutableStateOf(initial?.vet_phone ?: "") }
     var emergencyPhone by remember { mutableStateOf(initial?.emergency_vet_phone ?: "") }
     var notes by remember { mutableStateOf(initial?.notes ?: "") }
+    var imageUrl by remember { mutableStateOf(initial?.primary_image_url ?: "") }
     var weight by remember { mutableStateOf("") }
 
     DialogScaffold(
@@ -733,6 +820,7 @@ private fun PetFormDialog(
                     birth_date = birthDate, gender = gender, is_neutered = neutered,
                     color = color.ifBlank { null }, microchip_number = chip.ifBlank { null },
                     passport_number = passport.ifBlank { null },
+                    primary_image_url = imageUrl.trim().ifBlank { null },
                     dietary_needs = dietary.ifBlank { null },
                     allergies_and_intolerances = allergies.ifBlank { null },
                     vet_name = vetName.ifBlank { null }, vet_clinic = vetClinic.ifBlank { null },
@@ -765,6 +853,18 @@ private fun PetFormDialog(
         }
         Spacer(Modifier.height(8.dp))
         HestiaNumberField(weight, { weight = it }, "Počáteční váha (kg)", decimal = true)
+        Spacer(Modifier.height(8.dp))
+        HestiaField(imageUrl, { imageUrl = it }, "Fotka (URL)")
+        if (imageUrl.startsWith("http")) {
+            Spacer(Modifier.height(6.dp))
+            RemoteImage(
+                url = imageUrl.trim(),
+                contentDescription = "Náhled fotky",
+                modifier = Modifier
+                    .size(96.dp)
+                    .clip(RoundedCornerShape(12.dp))
+            )
+        }
         Spacer(Modifier.height(8.dp))
         HestiaField(dietary, { dietary = it }, "Strava / dieta", singleLine = false, minLines = 2)
         Spacer(Modifier.height(8.dp))
