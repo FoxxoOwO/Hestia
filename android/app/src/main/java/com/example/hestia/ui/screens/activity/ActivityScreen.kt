@@ -12,229 +12,141 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.hestia.data.models.ActivityLog
+import com.example.hestia.data.models.*
 import com.example.hestia.data.repository.HestiaRepository
 import com.example.hestia.theme.HestiaOrange
-import com.example.hestia.ui.components.EmptyStateCard
+import com.example.hestia.theme.StatusBlue
+import com.example.hestia.theme.StatusGreen
+import com.example.hestia.theme.StatusRed
+import com.example.hestia.theme.StatusYellow
+import com.example.hestia.ui.components.*
+import com.example.hestia.util.Fmt
+import com.example.hestia.util.Labels
+import com.example.hestia.util.friendly
 import kotlinx.coroutines.launch
 
 @Composable
-fun ActivityScreen(
-    repository: HestiaRepository,
-    modifier: Modifier = Modifier
-) {
-    val coroutineScope = rememberCoroutineScope()
-    var activities by remember { mutableStateOf<List<ActivityLog>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(true) }
+fun ActivityScreen(repository: HestiaRepository) {
+    val scope = rememberCoroutineScope()
+    var items by remember { mutableStateOf<List<ActivityLog>>(emptyList()) }
+    var stats by remember { mutableStateOf<ActivityStats?>(null) }
+    var loading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var module by remember { mutableStateOf("") }
+    var search by remember { mutableStateOf("") }
+    var total by remember { mutableStateOf(0) }
+    var showClear by remember { mutableStateOf(false) }
+    var clearDays by remember { mutableStateOf("30") }
 
-    fun refreshActivities() {
-        coroutineScope.launch {
-            isLoading = true
-            repository.getActivities(50).onSuccess {
-                activities = it
+    suspend fun load(limit: Int = 100) {
+        loading = true
+        repository.getActivities(limit = limit, module = module.ifBlank { null }, search = search.ifBlank { null })
+            .onSuccess { items = it.items; total = it.total; error = null }
+            .onFailure { error = it.friendly() }
+        repository.getActivityStats().onSuccess { stats = it }
+        loading = false
+    }
+
+    LaunchedEffect(module, search) {
+        if (search.isNotBlank()) kotlinx.coroutines.delay(300)
+        load()
+    }
+
+    Column(Modifier.fillMaxSize()) {
+        Column(Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
+            HestiaField(search, { search = it }, "Hledat v historii")
+            Spacer(Modifier.height(6.dp))
+            ChipSelector(Labels.activityModules, module, { module = it }, includeAll = true)
+        }
+        stats?.let { s ->
+            Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                StatCard("Celkem", s.total_activities.toString(), Icons.Default.History, HestiaOrange, Modifier.weight(1f))
+                StatCard("Dnes", s.activities_today.toString(), Icons.Default.Today, StatusBlue, Modifier.weight(1f))
+                s.most_active_member?.let {
+                    StatCard("Nejaktivnější", it, Icons.Default.EmojiEvents, StatusYellow, Modifier.weight(1f))
+                }
             }
-            isLoading = false
+            Spacer(Modifier.height(4.dp))
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("$total záznamů", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.weight(1f))
+                TextButton(onClick = { showClear = true }) { Text("Vyčistit historii", fontSize = 11.sp, color = StatusRed) }
+            }
+        }
+        ErrorBox(error, onRetry = { scope.launch { load() } })
+        if (loading) {
+            LoadingBox()
+        } else {
+            LazyColumn(contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)) {
+                if (items.isEmpty()) {
+                    item { EmptyState(Icons.Default.History, "Žádná aktivita", "Jakmile začnete používat Hestii, objeví se tu historie.") }
+                }
+                items(items, key = { it.id }) { log -> ActivityRow(log) }
+                if (items.size < total) {
+                    item {
+                        TextButton(onClick = { scope.launch { load(items.size + 100) } }, modifier = Modifier.fillMaxWidth()) {
+                            Text("Načíst další")
+                        }
+                    }
+                }
+                item { Spacer(Modifier.height(20.dp)) }
+            }
         }
     }
 
-    LaunchedEffect(Unit) {
-        refreshActivities()
-    }
-
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        containerColor = MaterialTheme.colorScheme.background
-    ) { paddingValues ->
-        if (isLoading && activities.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(color = HestiaOrange)
-            }
-        } else if (activities.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                EmptyStateCard(
-                    message = "Zatím nebyly zaznamenány žádné aktivity v domácnosti.",
-                    icon = Icons.Default.History
-                )
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(vertical = 16.dp)
-            ) {
-                item {
-                    Text(
-                        text = "Poslední události a historie (${activities.size})",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                items(activities, key = { it.id }) { log ->
-                    ActivityLogCard(log = log)
+    if (showClear) {
+        DialogScaffold(
+            title = "Vyčistit historii",
+            onDismiss = { showClear = false },
+            confirmText = "Vyčistit",
+            onConfirm = {
+                scope.launch {
+                    repository.clearActivities(clearDays.toIntOrNull()).onSuccess { showClear = false; load() }
                 }
             }
+        ) {
+            Text("Smazat záznamy starší než:", fontSize = 13.sp)
+            Spacer(Modifier.height(8.dp))
+            HestiaNumberField(clearDays, { clearDays = it }, "Dní (prázdné = vše)")
         }
     }
 }
 
 @Composable
-fun ActivityLogCard(log: ActivityLog) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            verticalAlignment = Alignment.Top
+private fun ActivityRow(log: ActivityLog) {
+    val color = runCatching { Color(android.graphics.Color.parseColor(log.user_avatar_color ?: "#F97316")) }
+        .getOrDefault(HestiaOrange)
+    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+        Box(
+            Modifier.size(30.dp).background(color.copy(alpha = 0.18f), CircleShape),
+            contentAlignment = Alignment.Center
         ) {
-            // User avatar or icon
-            val avatarColor = try {
-                if (!log.user_avatar_color.isNullOrBlank() && log.user_avatar_color.startsWith("#")) {
-                    Color(android.graphics.Color.parseColor(log.user_avatar_color))
-                } else HestiaOrange
-            } catch (e: Exception) {
-                HestiaOrange
+            Text(
+                log.user_name.take(1).uppercase(),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = color
+            )
+        }
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(log.title, fontSize = 13.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+                StatusPill(Labels.moduleLabel(log.module), StatusBlue)
             }
-
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(avatarColor),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = log.user_name.take(1).uppercase(),
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
-                )
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = log.user_name,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Surface(
-                        color = getModuleColor(log.module).copy(alpha = 0.15f),
-                        shape = RoundedCornerShape(6.dp)
-                    ) {
-                        Text(
-                            text = getModuleLabel(log.module),
-                            color = getModuleColor(log.module),
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = log.title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-
-                if (!log.description.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = log.description,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = formatActivityTimestamp(log.created_at),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                )
-            }
+            Text(
+                listOfNotNull(log.user_name, log.description).joinToString(" • "),
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(Fmt.relative(log.created_at), fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
-}
-
-fun getModuleLabel(module: String): String {
-    return when (module.lowercase()) {
-        "shopping" -> "Nákupy"
-        "chores" -> "Úklid"
-        "medicines" -> "Léky"
-        "plants" -> "Rostliny"
-        "vehicles" -> "Vozidla"
-        "recipes" -> "Kuchařka"
-        "pantry" -> "Spíž"
-        "pets" -> "Mazlíčci"
-        "finance" -> "Finance"
-        "documents" -> "Dokumenty"
-        "auth" -> "Přihlášení"
-        "system" -> "Systém"
-        else -> module.replaceFirstChar { it.uppercase() }
-    }
-}
-
-fun getModuleColor(module: String): Color {
-    return when (module.lowercase()) {
-        "shopping" -> Color(0xFF10B981)
-        "chores" -> Color(0xFF3B82F6)
-        "medicines" -> Color(0xFFEF4444)
-        "plants" -> Color(0xFF22C55E)
-        "vehicles" -> Color(0xFF8B5CF6)
-        "recipes" -> Color(0xFFF97316)
-        "pantry" -> Color(0xFFD97706)
-        "pets" -> Color(0xFFEC4899)
-        "finance" -> Color(0xFF059669)
-        "documents" -> Color(0xFF6366F1)
-        "auth" -> Color(0xFF64748B)
-        "system" -> Color(0xFF475569)
-        else -> Color(0xFFF97316)
-    }
-}
-
-fun formatActivityTimestamp(isoString: String): String {
-    if (isoString.length >= 16) {
-        val datePart = isoString.substring(0, 10)
-        val timePart = isoString.substring(11, 16)
-        return "$datePart v $timePart"
-    }
-    return isoString
 }

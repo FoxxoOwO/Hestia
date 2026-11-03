@@ -2,423 +2,357 @@ package com.example.hestia.ui.screens.pantry
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.hestia.data.models.PantryItem
 import com.example.hestia.data.models.PantryItemCreate
 import com.example.hestia.data.models.PantryItemUpdate
-import com.example.hestia.data.models.ShoppingItemCreate
+import com.example.hestia.data.models.RecipePantryMatch
 import com.example.hestia.data.repository.HestiaRepository
-import com.example.hestia.theme.*
-import com.example.hestia.ui.components.EmptyStateCard
+import com.example.hestia.theme.HestiaOrange
+import com.example.hestia.theme.StatusGreen
+import com.example.hestia.theme.StatusRed
+import com.example.hestia.theme.StatusYellow
+import com.example.hestia.ui.components.*
+import com.example.hestia.ui.components.EmptyState
+import com.example.hestia.util.Fmt
+import com.example.hestia.util.Labels
+import com.example.hestia.util.friendly
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PantryScreen(
-    repository: HestiaRepository,
-    modifier: Modifier = Modifier
-) {
-    val coroutineScope = rememberCoroutineScope()
-    var pantryItems by remember { mutableStateOf<List<PantryItem>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(true) }
-    var searchQuery by remember { mutableStateOf("") }
-    var selectedCategory by remember { mutableStateOf("all") }
-    var showAddDialog by remember { mutableStateOf(false) }
-    var snackbarMessage by remember { mutableStateOf<String?>(null) }
+fun PantryScreen(repository: HestiaRepository) {
+    val scope = rememberCoroutineScope()
+    var items by remember { mutableStateOf<List<PantryItem>>(emptyList()) }
+    var matches by remember { mutableStateOf<List<RecipePantryMatch>>(emptyList()) }
+    var loading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var search by remember { mutableStateOf("") }
+    var categoryFilter by remember { mutableStateOf<String?>(null) }
+    var tab by remember { mutableStateOf(0) }
+    var editing by remember { mutableStateOf<PantryItem?>(null) }
+    var showCreate by remember { mutableStateOf(false) }
+    var deleteTarget by remember { mutableStateOf<PantryItem?>(null) }
 
-    fun refreshPantry() {
-        coroutineScope.launch {
-            isLoading = true
-            repository.getPantryItems().onSuccess { pantryItems = it }
-            isLoading = false
+    suspend fun load() {
+        loading = true
+        repository.getPantryItems(category = categoryFilter, query = search.ifBlank { null })
+            .onSuccess { items = it; error = null }
+            .onFailure { error = it.friendly() }
+        loading = false
+    }
+
+    suspend fun loadMatches() {
+        repository.getRecipePantryMatches().onSuccess { matches = it }.onFailure { error = it.friendly() }
+    }
+
+    LaunchedEffect(categoryFilter, search) {
+        if (search.isNotBlank()) kotlinx.coroutines.delay(350)
+        load()
+    }
+    LaunchedEffect(tab) { if (tab == 1) loadMatches() }
+
+    Column(Modifier.fillMaxSize()) {
+        TabRow(selectedTabIndex = tab, containerColor = MaterialTheme.colorScheme.surface) {
+            Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Spíž (${items.size})") })
+            Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Co uvařit") })
         }
-    }
 
-    LaunchedEffect(Unit) {
-        refreshPantry()
-    }
-
-    val categories = listOf(
-        "all" to "Vše",
-        "fridge" to "Lednice",
-        "freezer" to "Mrazák",
-        "pantry" to "Spíž",
-        "produce" to "Zelenina/Ovoce",
-        "other" to "Ostatní"
-    )
-
-    val filteredItems = pantryItems.filter { item ->
-        val matchesCategory = selectedCategory == "all" || item.category == selectedCategory
-        val matchesQuery = searchQuery.isBlank() || item.name.contains(searchQuery, ignoreCase = true)
-        matchesCategory && matchesQuery
-    }
-
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        containerColor = MaterialTheme.colorScheme.background,
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showAddDialog = true },
-                containerColor = HestiaOrange,
-                contentColor = Color.White,
-                shape = CircleShape
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Přidat do spíže")
-            }
-        },
-        snackbarHost = {
-            snackbarMessage?.let { msg ->
-                Snackbar(
-                    modifier = Modifier.padding(16.dp),
-                    action = {
-                        TextButton(onClick = { snackbarMessage = null }) {
-                            Text("OK", color = HestiaOrange)
-                        }
-                    }
-                ) {
-                    Text(msg)
-                }
-            }
-        }
-    ) { padding ->
-        if (isLoading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = HestiaOrange)
-            }
-        } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(horizontal = 16.dp)
-            ) {
-                // Search bar
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    placeholder = { Text("Hledat ve spíži a lednici...") },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+        if (tab == 0) {
+            Column(Modifier.padding(12.dp)) {
+                HestiaField(
+                    value = search,
+                    onValueChange = { search = it },
+                    label = "Hledat surovinu",
                     trailingIcon = {
-                        if (searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { searchQuery = "" }) {
-                                Icon(Icons.Default.Clear, contentDescription = "Vymazat")
-                            }
-                        }
-                    },
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 6.dp),
-                    singleLine = true
-                )
-
-                // Category Filter Pills
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.padding(vertical = 4.dp)
-                ) {
-                    items(categories) { (key, label) ->
-                        FilterChip(
-                            selected = selectedCategory == key,
-                            onClick = { selectedCategory = key },
-                            label = { Text(label, fontSize = 12.sp) }
-                        )
-                    }
-                }
-
-                Text(
-                    text = "Zásoby ve spíži (${filteredItems.size})",
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(vertical = 6.dp)
-                )
-
-                if (filteredItems.isEmpty()) {
-                    EmptyStateCard(
-                        message = if (searchQuery.isBlank()) "V této kategorii nejsou žádné potraviny." else "Nebyly nalezeny žádné odpovídající potraviny.",
-                        icon = Icons.Default.Inventory2
-                    )
-                } else {
-                    LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = 80.dp)
-                    ) {
-                        items(filteredItems, key = { it.id }) { item ->
-                            val statusColor = when (item.status) {
-                                "expired" -> StatusRed
-                                "expiring_soon" -> StatusYellow
-                                else -> StatusGreen
-                            }
-
-                            Card(
-                                shape = RoundedCornerShape(12.dp),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                        ) {
-                                            Text(
-                                                text = item.name,
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 15.sp
-                                            )
-                                            Surface(
-                                                shape = RoundedCornerShape(4.dp),
-                                                color = statusColor.copy(alpha = 0.15f)
-                                            ) {
-                                                Text(
-                                                    text = when (item.status) {
-                                                        "expired" -> "Prošlé"
-                                                        "expiring_soon" -> "Brzy projde"
-                                                        else -> "Čerstvé"
-                                                    },
-                                                    fontSize = 10.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = statusColor,
-                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                                )
-                                            }
-                                        }
-
-                                        Row(
-                                            modifier = Modifier.padding(top = 4.dp),
-                                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Text(
-                                                text = "${item.quantity} ${item.unit}",
-                                                fontSize = 13.sp,
-                                                fontWeight = FontWeight.SemiBold,
-                                                color = HestiaOrange
-                                            )
-                                            if (!item.expiration_date.isNullOrBlank()) {
-                                                Text(
-                                                    text = "Expirace: ${item.expiration_date}",
-                                                    fontSize = 11.sp,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
-                                            }
-                                        }
-                                    }
-
-                                    // Quick +/- Quantity & Actions
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(2.dp)
-                                    ) {
-                                        IconButton(
-                                            onClick = {
-                                                val newQty = (item.quantity - 1.0).coerceAtLeast(0.0)
-                                                coroutineScope.launch {
-                                                    repository.updatePantryItem(item.id, PantryItemUpdate(quantity = newQty))
-                                                    refreshPantry()
-                                                }
-                                            },
-                                            modifier = Modifier.size(30.dp)
-                                        ) {
-                                            Icon(Icons.Default.Remove, contentDescription = "Ubrat", modifier = Modifier.size(16.dp))
-                                        }
-
-                                        IconButton(
-                                            onClick = {
-                                                val newQty = item.quantity + 1.0
-                                                coroutineScope.launch {
-                                                    repository.updatePantryItem(item.id, PantryItemUpdate(quantity = newQty))
-                                                    refreshPantry()
-                                                }
-                                            },
-                                            modifier = Modifier.size(30.dp)
-                                        ) {
-                                            Icon(Icons.Default.Add, contentDescription = "Přidat", modifier = Modifier.size(16.dp))
-                                        }
-
-                                        IconButton(
-                                            onClick = {
-                                                coroutineScope.launch {
-                                                    repository.createShoppingItem(
-                                                        ShoppingItemCreate(
-                                                            name = item.name,
-                                                            amount = 1.0,
-                                                            unit = item.unit,
-                                                            notes = "Ze spíže (${item.category})"
-                                                        )
-                                                    ).onSuccess {
-                                                        snackbarMessage = "${item.name} přidáno do nákupu!"
-                                                    }
-                                                }
-                                            },
-                                            modifier = Modifier.size(30.dp)
-                                        ) {
-                                            Icon(
-                                                Icons.Default.AddShoppingCart,
-                                                contentDescription = "Do nákupního seznamu",
-                                                tint = HestiaOrange,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                        }
-
-                                        IconButton(
-                                            onClick = {
-                                                coroutineScope.launch {
-                                                    repository.deletePantryItem(item.id)
-                                                    refreshPantry()
-                                                    snackbarMessage = "Položka smazána"
-                                                }
-                                            },
-                                            modifier = Modifier.size(30.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Delete,
-                                                contentDescription = "Smazat",
-                                                tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                        }
-                                    }
-                                }
-                            }
+                        if (search.isNotBlank()) {
+                            IconButton(onClick = { search = "" }) { Icon(Icons.Default.Clear, null) }
                         }
                     }
-                }
+                )
+                Spacer(Modifier.height(8.dp))
+                ChipSelector(
+                    options = Labels.pantryCategories,
+                    selected = categoryFilter,
+                    onSelect = { categoryFilter = it.ifBlank { null } },
+                    includeAll = true
+                )
             }
-        }
-    }
 
-    // Add Pantry Item Dialog
-    if (showAddDialog) {
-        var name by remember { mutableStateOf("") }
-        var category by remember { mutableStateOf(if (selectedCategory != "all") selectedCategory else "pantry") }
-        var quantity by remember { mutableStateOf("1") }
-        var unit by remember { mutableStateOf("ks") }
-        var expirationDate by remember { mutableStateOf("") }
-        var note by remember { mutableStateOf("") }
+            ErrorBox(error, onRetry = { scope.launch { load() } })
 
-        AlertDialog(
-            onDismissRequest = { showAddDialog = false },
-            title = { Text("Přidat potravinu do zásob", fontWeight = FontWeight.Bold) },
-            text = {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+            if (loading) {
+                LoadingBox()
+            } else {
+                LazyColumn(
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                    modifier = Modifier.fillMaxSize()
                 ) {
-                    OutlinedTextField(
-                        value = name,
-                        onValueChange = { name = it },
-                        label = { Text("Název potraviny *") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = quantity,
-                            onValueChange = { quantity = it },
-                            label = { Text("Množství") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.weight(1f),
-                            singleLine = true
-                        )
-
-                        OutlinedTextField(
-                            value = unit,
-                            onValueChange = { unit = it },
-                            label = { Text("Jednotka") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true
-                        )
-                    }
-
-                    // Category radio pills
-                    Text("Umístění:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        items(categories.filter { it.first != "all" }) { (catKey, catLabel) ->
-                            FilterChip(
-                                selected = category == catKey,
-                                onClick = { category = catKey },
-                                label = { Text(catLabel, fontSize = 11.sp) }
+                    if (items.isEmpty()) {
+                        item {
+                            EmptyState(
+                                icon = Icons.Default.Inventory2,
+                                title = "Spíž je prázdná",
+                                subtitle = "Přidejte suroviny, ať víte, co máte doma."
                             )
                         }
                     }
-
-                    OutlinedTextField(
-                        value = expirationDate,
-                        onValueChange = { expirationDate = it },
-                        label = { Text("Datum expirace (RRRR-MM-DD)") },
-                        placeholder = { Text("2026-09-30") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-
-                    OutlinedTextField(
-                        value = note,
-                        onValueChange = { note = it },
-                        label = { Text("Poznámka") },
-                        modifier = Modifier.fillMaxWidth(),
-                        maxLines = 2
-                    )
+                    items(items, key = { it.id }) { item ->
+                        PantryRow(
+                            item = item,
+                            onMinus = {
+                                scope.launch {
+                                    val newQty = (item.quantity - 1).coerceAtLeast(0.0)
+                                    repository.updatePantryItem(item.id, PantryItemUpdate(quantity = newQty))
+                                        .onSuccess { load() }
+                                }
+                            },
+                            onPlus = {
+                                scope.launch {
+                                    repository.updatePantryItem(item.id, PantryItemUpdate(quantity = item.quantity + 1))
+                                        .onSuccess { load() }
+                                }
+                            },
+                            onEdit = { editing = item },
+                            onDelete = { deleteTarget = item }
+                        )
+                    }
+                    item { Spacer(Modifier.height(90.dp)) }
                 }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (name.isNotBlank()) {
-                            coroutineScope.launch {
-                                repository.createPantryItem(
-                                    PantryItemCreate(
-                                        name = name.trim(),
-                                        category = category,
-                                        quantity = quantity.toDoubleOrNull() ?: 1.0,
-                                        unit = unit.trim().ifBlank { "ks" },
-                                        expiration_date = expirationDate.trim().ifBlank { null },
-                                        note = note.trim().ifBlank { null }
-                                    )
-                                ).onSuccess {
-                                    showAddDialog = false
-                                    refreshPantry()
-                                    snackbarMessage = "Potravina přidána do zásob!"
+            }
+        } else {
+            ErrorBox(error, onRetry = { scope.launch { loadMatches() } })
+            LazyColumn(
+                contentPadding = PaddingValues(12.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                if (matches.isEmpty()) {
+                    item {
+                        EmptyState(
+                            icon = Icons.Default.Restaurant,
+                            title = "Zatím žádná shoda",
+                            subtitle = "Naplňte spíž a recepty — Hestia spočítá, co můžete uvařit hned."
+                        )
+                    }
+                }
+                items(matches, key = { it.recipe_id }) { m ->
+                    Card(
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                    ) {
+                        Column(Modifier.padding(12.dp)) {
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(m.recipe_title, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                                if (m.can_cook_now) {
+                                    StatusPill("Uvaříte hned", StatusGreen)
+                                } else {
+                                    StatusPill("${m.matched_ingredients_count}/${m.total_ingredients_count}", StatusYellow)
                                 }
                             }
+                            Spacer(Modifier.height(4.dp))
+                            LinearProgressIndicator(
+                                progress = { (m.match_percentage / 100.0).toFloat() },
+                                modifier = Modifier.fillMaxWidth().height(6.dp),
+                                color = if (m.can_cook_now) StatusGreen else HestiaOrange,
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
+                            if (m.missing_ingredients.isNotEmpty()) {
+                                Spacer(Modifier.height(6.dp))
+                                Text(
+                                    "Chybí: " + m.missing_ingredients.joinToString(", ") { it.ingredient_name },
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = HestiaOrange)
-                ) {
-                    Text("Přidat do zásob")
+                    }
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAddDialog = false }) {
-                    Text("Zrušit")
+                item { Spacer(Modifier.height(90.dp)) }
+            }
+        }
+    }
+
+    // FAB-like add button
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomEnd) {
+        ExtendedFloatingActionButton(
+            onClick = { showCreate = true },
+            containerColor = HestiaOrange,
+            contentColor = androidx.compose.ui.graphics.Color.White,
+            modifier = Modifier.padding(20.dp),
+            icon = { Icon(Icons.Default.Add, null) },
+            text = { Text("Přidat") }
+        )
+    }
+
+    if (showCreate) {
+        PantryFormDialog(
+            initial = null,
+            onDismiss = { showCreate = false },
+            onSave = { create ->
+                scope.launch {
+                    repository.createPantryItem(create)
+                        .onSuccess { showCreate = false; load() }
+                        .onFailure { error = it.friendly() }
                 }
             }
         )
     }
+
+    editing?.let { item ->
+        PantryFormDialog(
+            initial = item,
+            onDismiss = { editing = null },
+            onSave = { create ->
+                scope.launch {
+                    repository.updatePantryItem(
+                        item.id,
+                        PantryItemUpdate(
+                            name = create.name,
+                            category = create.category,
+                            quantity = create.quantity,
+                            unit = create.unit,
+                            expiration_date = create.expiration_date,
+                            min_quantity = create.min_quantity,
+                            note = create.note
+                        )
+                    ).onSuccess { editing = null; load() }.onFailure { error = it.friendly() }
+                }
+            }
+        )
+    }
+
+    deleteTarget?.let { item ->
+        ConfirmDialog(
+            title = "Smazat surovinu",
+            message = "Opravdu smazat „${item.name}“ ze spíže?",
+            onConfirm = {
+                scope.launch {
+                    repository.deletePantryItem(item.id).onSuccess { load() }.onFailure { error = it.friendly() }
+                }
+            },
+            onDismiss = { deleteTarget = null }
+        )
+    }
 }
+
+@Composable
+private fun PantryRow(
+    item: PantryItem,
+    onMinus: () -> Unit,
+    onPlus: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
+    val statusLabel = when (item.status) {
+        "expired" -> "Prošlé"
+        "expiring_soon" -> "Brzy prošlé"
+        "low" -> "Dochází"
+        else -> null
+    }
+    Card(
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(item.name, fontWeight = FontWeight.Medium, fontSize = 14.sp)
+                    if (statusLabel != null) {
+                        Spacer(Modifier.width(6.dp))
+                        StatusPill(statusLabel, statusColor(item.status))
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "${Fmt.number(item.quantity)} ${item.unit}",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = HestiaOrange
+                    )
+                    Text(Labels.label(Labels.pantryCategories, item.category), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    item.expiration_date?.let {
+                        Text("exp. ${Fmt.date(it)}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+            IconButton(onClick = onMinus, modifier = Modifier.size(30.dp)) {
+                Icon(Icons.Default.Remove, "Ubrat", modifier = Modifier.size(16.dp))
+            }
+            IconButton(onClick = onPlus, modifier = Modifier.size(30.dp)) {
+                Icon(Icons.Default.Add, "Přidat", modifier = Modifier.size(16.dp))
+            }
+            IconButton(onClick = onEdit, modifier = Modifier.size(30.dp)) {
+                Icon(Icons.Default.Edit, "Upravit", modifier = Modifier.size(15.dp))
+            }
+            IconButton(onClick = onDelete, modifier = Modifier.size(30.dp)) {
+                Icon(Icons.Default.Delete, "Smazat", tint = StatusRed, modifier = Modifier.size(15.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun PantryFormDialog(
+    initial: PantryItem?,
+    onDismiss: () -> Unit,
+    onSave: (PantryItemCreate) -> Unit
+) {
+    var name by remember { mutableStateOf(initial?.name ?: "") }
+    var category by remember { mutableStateOf(initial?.category ?: "pantry") }
+    var quantity by remember { mutableStateOf(initial?.quantity?.let { Fmt.number(it) } ?: "1") }
+    var unit by remember { mutableStateOf(initial?.unit ?: "ks") }
+    var expiration by remember { mutableStateOf(initial?.expiration_date) }
+    var minQuantity by remember { mutableStateOf(initial?.min_quantity?.let { Fmt.number(it) } ?: "") }
+    var note by remember { mutableStateOf(initial?.note ?: "") }
+
+    DialogScaffold(
+        title = if (initial == null) "Nová surovina" else "Upravit surovinu",
+        onDismiss = onDismiss,
+        confirmEnabled = name.isNotBlank(),
+        onConfirm = {
+            onSave(
+                PantryItemCreate(
+                    name = name.trim(),
+                    category = category,
+                    quantity = quantity.toDoubleOrNull() ?: 1.0,
+                    unit = unit.ifBlank { "ks" },
+                    expiration_date = expiration,
+                    min_quantity = minQuantity.toDoubleOrNull(),
+                    note = note.ifBlank { null }
+                )
+            )
+        }
+    ) {
+        HestiaField(name, { name = it }, "Název")
+        Spacer(Modifier.height(8.dp))
+        HestiaDropdown("Kategorie", Labels.pantryCategories, category, { category = it })
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            HestiaNumberField(quantity, { quantity = it }, "Množství", Modifier.weight(1f), decimal = true)
+            HestiaField(unit, { unit = it }, "Jednotka", Modifier.weight(1f))
+        }
+        Spacer(Modifier.height(8.dp))
+        DateField("Datum expirace", expiration, { expiration = it })
+        Spacer(Modifier.height(8.dp))
+        HestiaNumberField(minQuantity, { minQuantity = it }, "Min. množství (upozornění)", decimal = true)
+        Spacer(Modifier.height(8.dp))
+        HestiaField(note, { note = it }, "Poznámka", singleLine = false, minLines = 2)
+    }
+}
+

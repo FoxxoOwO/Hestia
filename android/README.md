@@ -1,88 +1,72 @@
-# 📱 Hestia – Nativní Android aplikace (Jetpack Compose & Material 3)
+# 📱 Hestia – nativní Android klient
 
-Nativní mobilní aplikace pro operační systém Android vytvořená pro chytrou správu domácnosti **Hestia Smart Home OS**.
+Plnohodnotný nativní klient domácnosti **Hestia** pro Android. Není to WebView obal – všechny
+obrazovky jsou napsané v **Kotlinu** a **Jetpack Compose** (Material 3) a komunikují přímo
+s backendem FastAPI přes REST API `/api/v1`.
 
-Aplikace je napsána v moderním **Kotlinu** s využitím **Jetpack Compose**, **Material 3 Expressive**, reaktivních **Coroutines / StateFlow**, **Retrofit 2** a **Jetpack DataStore**.
+- `minSdk 24`, `targetSdk 36`, `compileSdk 36`, JVM 17
+- Jetpack Compose (BOM 2026.03.01), Material 3, Navigation drawer + bottom bar
+- Retrofit 2 + OkHttp + kotlinx.serialization
+- Jetpack DataStore (uložení serveru, JWT tokenu, přihlášeného uživatele, motivu)
 
----
+## Moduly (plná parita s webem)
 
-## 🌟 Klíčové funkce mobilní aplikace
+| Modul | Co umí |
+|---|---|
+| **Dashboard** | Souhrnné karty (nákup, úkoly, rostliny, mazlíčci, léky, finance, vozidla, dokumenty), moje úkoly, panic mode, žebříček, feed aktivit, AI status |
+| **Recepty** | Filtr (hledání, obtížnost, cena, čas, oblíbené), detail s přepočtem porcí (`/scale` + „mám ve spíži“), tvorba/editace s dynamickými surovinami a kroky, AI import z URL / textu / souboru, přidání do nákupu |
+| **Jídelníček** | Týdenní přehled, plánování jídel, „uvařeno“, generování nákupního seznamu z týdne |
+| **Spíž** | Zásoby s expirací a minimem, filtry, plus „Co uvařit“ (`/pantry/match-recipes`) |
+| **Nákup** | Rychlé přidání, odškrtávání, editace, mazání, vyčištění koupeného/všeho, přidání z receptu |
+| **Úkoly** | Úkoly s filtry a rotací, dokončení s body, předání, kolo úkolů (náhodné rozdělení), žebříček, odměny a jejich uplatnění, panic mode, přidání potřeb do nákupu |
+| **Květiny** | Zálivka, zimní režim, oblíbené, detail s úkoly a logem, AI identifikace rostliny, AI diagnóza potíží, plán pro „plant sittera“ |
+| **Mazlíčci** | Krmení, oblíbené, zdravotní záznamy, léky, vážení, úkoly, deník, AI kontrola potravin, AI analýza příznaků, sitter profil, SOS leták |
+| **Finance** | Přehled měsíce, rozpočty, transakce, vyrovnání dluhů (SPAYD), předplatná, spořicí cíle, CSV import (náhled + potvrzení), skenování účtenek, profil s IBAN |
+| **Dokumenty** | Upload s AI rozpoznáním metadat, filtry a statistiky, trezor s PIN, otevírání souborů ze serveru, ruční zápis |
+| **Spotřebiče** | Záruky a jejich stav, servisní kontakty, nahrání faktury/manuálu, statistiky hodnoty |
+| **Vozidla** | STK, dálniční známka, pojištění, lékárnička, olej, pneu, tachometr, tankování s výpočtem spotřeby, servisní záznamy, statistiky flotily |
+| **Lékárnička** | Zásoby se semaforem expirace, příjem/expirace, plán dávek s „vzato“, log, dětská dávková kalkulačka, SOS první pomoc |
+| **Historie** | Auditní log s filtry modulů, statistiky a čištěním |
+| **Nastavení** | Účet a přepnutí člena, členové domácnosti (CRUD), motiv (světlý/tmavý/systém), server a health check, AI status, zálohy na serveru (vytvořit/stáhnout/obnovit/smazat), export a import dat, smazání všech dat |
 
-1. **Dashboard & Ranní přehled**:
-   - Rychlé souhrnné karty: počet položek k nákupu, dnešní urgentní úkoly, žíznivé pokojovky, léky blížící se expiraci.
-   - Bleskové akce: spuštění **Panic Mode** (15minutový úklidový sprint) a tlačítko **Zalít vše** pro žíznivé rostliny.
-   - Poslední rodinné aktivity z auditního logu.
+## Architektura
 
-2. **Nákupní seznam v supermarketu (`Nákup`)**:
-   - Rychlé odškrtávání položek přímo v obchodě.
-   - Plovoucí tlačítko (+) pro okamžité přidání položky s množstvím a jednotkou.
-   - Příznak „Spěchá / Prioritní“ s červeným odznáčkem.
-   - Tlačítko pro rychlé promazání nakoupeného zboží.
-
-3. **Domácí práce a úklid (`Úkoly`)**:
-   - Přepínání mezi záložkami **Moje úkoly** a **Všechny úkoly**.
-   - Tlačítko **„Splněno mnou“** – okamžitě připíše body do rodinného žebříčku a posune rotaci na dalšího člena.
-   - Spuštění **Panic Mode** s bleskovými úkoly po místnostech.
-
-4. **Domácí lékárnička & První pomoc (`Lékárnička`)**:
-   - Skladové zásoby léků se semaforem expirace (🟢 V pořádku, 🟡 Expiruje brzy, 🔴 Expirováno).
-   - Tlačítko **„Vzít dávku“** pro rychlý záznam a automatický odečet ze skladu.
-   - **Dětská kalkulačka antipyretik**: posuvník hmotnosti (4–45 kg) s přesným výpočtem mililitrů pro Paracetamol (Paralen sirup) i Ibuprofen (Nurofen sirup) a bezpečnostním upozorněním na koncentraci Nurofenu 4%.
-   - **SOS První pomoc**: rychlé vytáčení linek **155**, **112** a **Toxikologického informačního střediska (224 91 92 93)** s krizovými manuály krok za krokem.
-
-5. **Pokojové květiny (`Květiny`)**:
-   - Odpočet dnů do příští zálivky.
-   - Tlačítko **„Zalito“** na jedno kliknutí.
-   - Indikátory bezpečnosti pro domácí mazlíčky (*Pet friendly*).
-
-6. **Vozový park a rodinná garáž (`Garáž`)**:
-   - Přehled rodinných aut s českou SPZ.
-   - Semafor platnosti **STK** a **elektronické dálniční známky ČR**.
-   - Dialog pro rychlý zápis stavu tachometru a záznam tankování paliva.
-   - SOS tlačítko pro přímé volání Linky pomoci řidičům (**1224**).
-
-7. **Přihlašování a Nastavení serveru**:
-   - **Rychlý výběr členů rodiny** s barevnými avatary na přihlašovací obrazovce.
-   - Možnost přihlášení libovolným uživatelským jménem.
-   - Obrazovka **Nastavení serveru** s testem spojení (`/api/health`) a předvolbami pro Android emulátor (`http://10.0.2.2:8000`), místní WiFi síť (`http://192.168.1.xxx:8000`) nebo HTTPS server.
-
----
-
-## 🛠️ Požadavky a technologie
-
-- **Android SDK**: `minSdk 26` (Android 8.0 Oreo+), `targetSdk 36`, `compileSdk 36`
-- **Java / JDK**: JDK 17 nebo vyšší (JDK 21 / 25 plně podporováno)
-- **Gradle**: 9.1.0 (součástí je Gradle Wrapper `gradlew`)
-- **Jetpack Compose**: Material Design 3 Expressive
-- **Retrofit 2 & OkHttp 3**: REST API klient s automatickým JWT Bearer tokenem
-- **Kotlinx Serialization**: Typově bezpečný parsing JSON dat
-- **Jetpack DataStore Preferences**: Bezpečné ukládání relace a nastavení
-
----
-
-## 🚀 Sestavení a spuštění
-
-### 1. Sestavení debug APK
-V kořenovém adresáři `android/` spusťte:
-```bash
-# Windows
-.\gradlew.bat assembleDebug
-
-# Linux / macOS
-./gradlew assembleDebug
 ```
-Výsledný balíček APK naleznete v:
-`app/build/outputs/apk/debug/app-debug.apk`
-
-### 2. Instalace do připojeného zařízení nebo emulátoru
-Pomocí Gradle:
-```bash
-.\gradlew.bat installDebug
-```
-Nebo přímo přes Android Debug Bridge (`adb`):
-```bash
-adb install -r app/build/outputs/apk/debug/app-debug.apk
+data/models/Models.kt          DTO přesně podle backendových Pydantic schémat
+data/api/HestiaApiService.kt   163 Retrofit endpointů (1:1 s FastAPI routami)
+data/api/ApiClient.kt          Retrofit factory + Authorization: Bearer interceptor
+data/repository/HestiaRepository.kt  Result<T> obal nad každým voláním, multipart uploady, soubory
+data/local/PreferencesManager.kt     DataStore: server, token, uživatel, motiv
+ui/screens/<modul>/…           jedna obrazovka (případně s taby) na modul
+ui/components/…                HestiaField, HestiaDropdown, DateField, DialogScaffold, ChipSelector…
+Navigation.kt                  drawer + bottom bar + auth gate
+util/Format.kt                 Fmt (data, čísla, peníze, relativní čas) a Labels (číselníky)
+util/Errors.kt                 překlad HTTP chyb do češtiny
 ```
 
-### 3. Spuštění v Android Studio
-Otevřete složku `d:\repositories\Hestia\android` v Android Studiu a klikněte na zelenou šipku **Run 'app'**.
+## Sestavení
+
+```bash
+cd android
+./gradlew assembleDebug            # APK: app/build/outputs/apk/debug/app-debug.apk
+./gradlew installDebug             # instalace do připojeného zařízení/emulátoru
+```
+
+## Připojení k serveru
+
+1. Spusťte backend (`cd backend && uvicorn app.main:app --host 0.0.0.0 --port 8000`).
+2. V aplikaci na přihlašovací obrazovce otevřete **Nastavení serveru** a zadejte URL:
+   - Android emulátor: `http://10.0.2.2:8000`
+   - Telefon v domácí WiFi: `http://<IP-počítače>:8000`
+   - Produkce: `https://…`
+3. Ověřte spojení tlačítkem **Otestovat** (`/api/health`), poté se přihlaste.
+
+Aplikace povoluje cleartext HTTP (`usesCleartextTraffic="true"`), aby fungovala i proti
+lokálnímu serveru bez TLS.
+
+## Ověření
+
+- `./gradlew assembleDebug --offline` prochází bez chyb a varování v novém kódu.
+- Všech 163 Retrofit cest bylo porovnáno se seznamem rout z `backend/app/routers/*.py`
+  (skript v repu není, kontrola proběhla jednorázově) – shoda 100 %, jediná výjimka
+  `/api/health` je mimo `/api/v1` prefix záměrně.

@@ -1,28 +1,41 @@
 package com.example.hestia.ui.screens.settings
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.hestia.data.local.PreferencesManager
-import com.example.hestia.data.models.User
+import com.example.hestia.data.models.*
 import com.example.hestia.data.repository.HestiaRepository
 import com.example.hestia.theme.HestiaOrange
+import com.example.hestia.theme.StatusBlue
+import com.example.hestia.theme.StatusGreen
 import com.example.hestia.theme.StatusRed
+import com.example.hestia.theme.StatusYellow
+import com.example.hestia.ui.components.*
+import com.example.hestia.util.Fmt
+import com.example.hestia.util.friendly
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 
 @Composable
 fun SettingsScreen(
@@ -32,384 +45,511 @@ fun SettingsScreen(
     onSwitchUser: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val coroutineScope = rememberCoroutineScope()
-    val snackbarHostState = remember { SnackbarHostState() }
-    var user by remember { mutableStateOf<User?>(null) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var serverUrl by remember { mutableStateOf("") }
-    val appMode by repository.preferences.appModeFlow.collectAsState(initial = PreferencesManager.MODE_NATIVE)
-    var showResetDialog by remember { mutableStateOf(false) }
-    var resetConfirmationText by remember { mutableStateOf("") }
-    var resetError by remember { mutableStateOf<String?>(null) }
-    var isResetting by remember { mutableStateOf(false) }
+    var health by remember { mutableStateOf<HealthResponse?>(null) }
+    var aiStatus by remember { mutableStateOf<AiStatus?>(null) }
+    var me by remember { mutableStateOf<User?>(null) }
+    var backups by remember { mutableStateOf<List<BackupItem>>(emptyList()) }
+    var message by remember { mutableStateOf<String?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var busy by remember { mutableStateOf(false) }
+    var dialog by remember { mutableStateOf<String?>(null) }
+    var pendingBackup by remember { mutableStateOf<BackupItem?>(null) }
+    var pendingExport by remember { mutableStateOf<File?>(null) }
+    var importMode by remember { mutableStateOf("merge") }
+    var users by remember { mutableStateOf<List<User>>(emptyList()) }
+    var theme by remember { mutableStateOf(PreferencesManager.THEME_SYSTEM) }
+    var editingMember by remember { mutableStateOf<User?>(null) }
+    var deleteMember by remember { mutableStateOf<User?>(null) }
 
-    LaunchedEffect(Unit) {
-        user = repository.preferences.currentUserFlow.first()
-        serverUrl = repository.preferences.serverUrlFlow.first()
+    suspend fun reload() {
+        serverUrl = repository.serverUrl()
+        repository.checkHealth().onSuccess { health = it }
+        repository.getAiStatus().onSuccess { aiStatus = it }
+        repository.getMe().onSuccess { me = it }
+        repository.getBackups().onSuccess { backups = it }
+        repository.getUsers().onSuccess { users = it }
+        theme = repository.preferences.themeFlow.first()
     }
 
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = MaterialTheme.colorScheme.background
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Text(
-                text = "Nastavení",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 4.dp)
-            )
+    LaunchedEffect(Unit) { reload() }
 
-            // User Profile Card
-            if (user != null) {
-                val userColor = try {
-                    Color(android.graphics.Color.parseColor(user!!.avatar_color ?: "#F97316"))
-                } catch (_: Exception) {
-                    HestiaOrange
+    val exportPicker = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri: Uri? ->
+        val file = pendingExport
+        pendingExport = null
+        if (uri != null && file != null) {
+            scope.launch {
+                val ok = withContext(Dispatchers.IO) {
+                    runCatching {
+                        context.contentResolver.openOutputStream(uri)?.use { out ->
+                            file.inputStream().use { it.copyTo(out) }
+                        }
+                        file.delete()
+                        true
+                    }.getOrDefault(false)
                 }
-
-                Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(14.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(50.dp)
-                                    .clip(CircleShape)
-                                    .background(userColor),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = user!!.display_name.take(1).uppercase(),
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 20.sp
-                                )
-                            }
-
-                            Column {
-                                Text(
-                                    text = user!!.display_name,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp
-                                )
-                                Text(
-                                    text = "@${user!!.username} • ${if (user!!.role == "admin") "Správce" else "Člen"}",
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                if (!user!!.email.isNullOrBlank()) {
-                                    Text(
-                                        text = user!!.email!!,
-                                        fontSize = 11.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                        }
-
-                        OutlinedButton(
-                            onClick = onSwitchUser,
-                            shape = RoundedCornerShape(10.dp),
-                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
-                        ) {
-                            Icon(Icons.Default.People, contentDescription = null, modifier = Modifier.size(14.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Přepnout", fontSize = 11.sp)
-                        }
-                    }
-                }
-            }
-
-            // Application Mode Card
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Text("Režim aplikace", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    Text(
-                        "Vyberte si mezi bleskovým nativním Compose nebo plnohodnotným webovým rozhraním.",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        FilterChip(
-                            selected = appMode == PreferencesManager.MODE_NATIVE,
-                            onClick = {
-                                coroutineScope.launch {
-                                    repository.preferences.setAppMode(PreferencesManager.MODE_NATIVE)
-                                }
-                            },
-                            label = { Text("⚡ Nativní Compose", fontSize = 12.sp) },
-                            modifier = Modifier.weight(1f)
-                        )
-                        FilterChip(
-                            selected = appMode == PreferencesManager.MODE_WEB,
-                            onClick = {
-                                coroutineScope.launch {
-                                    repository.preferences.setAppMode(PreferencesManager.MODE_WEB)
-                                }
-                            },
-                            label = { Text("🌐 Webový režim", fontSize = 12.sp) },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-            }
-
-
-            // Server Settings Card
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text("Hestia Server", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            Text(serverUrl, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-
-                        OutlinedButton(
-                            onClick = onNavigateServerConfig,
-                            shape = RoundedCornerShape(10.dp),
-                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
-                        ) {
-                            Text("Změnit", fontSize = 11.sp)
-                        }
-                    }
-                }
-            }
-
-            // Application Mode & Backups Card
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Text("Správa databáze & Zálohy", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Serverová záloha", fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                            Text("Vytvoří kompletní JSON snapshot na serveru", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-
-                        Button(
-                            onClick = {
-                                coroutineScope.launch {
-                                    repository.createBackup("Záloha z mobilní aplikace").onSuccess {
-                                        snackbarHostState.showSnackbar("Snapshot zálohy byl úspěšně vytvořen na serveru!")
-                                    }.onFailure {
-                                        snackbarHostState.showSnackbar("Chyba při tvorbě zálohy: ${it.message}")
-                                    }
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = HestiaOrange),
-                            shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
-                        ) {
-                            Icon(Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(14.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Vytvořit zálohu", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-            }
-
-            // App Info Card
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Text("O aplikaci Hestia", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    Text("Nativní Android aplikace pro chytrou správu domácnosti", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("Verze: 1.1.0", fontSize = 11.sp, color = HestiaOrange, fontWeight = FontWeight.Bold)
-                }
-            }
-
-            // Danger Zone Card (Admin only)
-            if (user?.role == "admin") {
-                Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = StatusRed.copy(alpha = 0.08f)),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, StatusRed.copy(alpha = 0.3f)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(Icons.Default.Warning, contentDescription = null, tint = StatusRed, modifier = Modifier.size(20.dp))
-                            Text("Nebezpečná zóna", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = StatusRed)
-                        }
-
-                        Text(
-                            "Trvalé smazání všech dat domácnosti (recepty, zásoby, kytky, mazlíčci, finance, auta, léky). Účet správce zůstane zachován.",
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            lineHeight = 16.sp
-                        )
-
-                        Button(
-                            onClick = {
-                                resetConfirmationText = ""
-                                resetError = null
-                                showResetDialog = true
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = StatusRed, contentColor = Color.White),
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(Icons.Default.DeleteForever, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Smazat všechna data", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            // Logout Button
-            Button(
-                onClick = {
-                    coroutineScope.launch {
-                        repository.logout()
-                        onLogout()
-                    }
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = StatusRed.copy(alpha = 0.15f), contentColor = StatusRed),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)
-            ) {
-                Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("Odhlásit se z Hestie", fontWeight = FontWeight.Bold)
+                message = if (ok) "Export uložen" else "Export se nepodařil"
             }
         }
     }
 
-    if (showResetDialog) {
-        AlertDialog(
-            onDismissRequest = { if (!isResetting) showResetDialog = false },
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(Icons.Default.Warning, contentDescription = null, tint = StatusRed)
-                    Text("Opravdu smazat všechna data?", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+    val backupPicker = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri: Uri? ->
+        val item = pendingBackup
+        pendingBackup = null
+        if (uri != null && item != null) {
+            scope.launch {
+                val tmp = File(context.cacheDir, item.filename)
+                repository.downloadBackup(item.filename, tmp)
+                    .onSuccess { f ->
+                        val ok = withContext(Dispatchers.IO) {
+                            runCatching {
+                                context.contentResolver.openOutputStream(uri)?.use { out ->
+                                    f.inputStream().use { it.copyTo(out) }
+                                }
+                                f.delete()
+                                true
+                            }.getOrDefault(false)
+                        }
+                        message = if (ok) "Záloha uložena" else "Uložení se nepodařilo"
+                    }
+                    .onFailure { error = it.friendly() }
+            }
+        }
+    }
+
+    val importPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        if (uri != null) {
+            scope.launch {
+                busy = true
+                val bytes = withContext(Dispatchers.IO) {
+                    context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
                 }
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(
-                        "Tato akce je nevratná. Dojde k trvalému odstranění všech záznamů domácnosti z databáze.",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        "Pro potvrzení napište slovo SMAZAT:",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    OutlinedTextField(
-                        value = resetConfirmationText,
-                        onValueChange = { resetConfirmationText = it },
-                        placeholder = { Text("SMAZAT") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    if (resetError != null) {
-                        Text(resetError!!, color = StatusRed, fontSize = 11.sp)
+                val name = uri.lastPathSegment?.substringAfterLast('/') ?: "hestia-import.json"
+                if (bytes != null) {
+                    repository.importData(bytes, name, importMode)
+                        .onSuccess { message = it.message; reload() }
+                        .onFailure { error = it.friendly() }
+                }
+                busy = false
+            }
+        }
+    }
+
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+    ) {
+        item {
+            ErrorBox(error, onRetry = { scope.launch { reload() } })
+            if (message != null) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = StatusGreen.copy(alpha = 0.12f)),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                ) {
+                    Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.CheckCircle, null, tint = StatusGreen, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(message!!, fontSize = 12.sp, color = StatusGreen, modifier = Modifier.weight(1f))
+                        TextButton(onClick = { message = null }) { Text("OK", fontSize = 11.sp) }
                     }
                 }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val cleanText = resetConfirmationText.trim().uppercase()
-                        if (cleanText != "SMAZAT" && cleanText != "CONFIRM") {
-                            resetError = "Napište slovo SMAZAT"
-                            return@Button
-                        }
-                        isResetting = true
-                        resetError = null
-                        coroutineScope.launch {
-                            val res = repository.resetAllData("SMAZAT")
-                            isResetting = false
-                            if (res.isSuccess) {
-                                showResetDialog = false
-                                repository.logout()
-                                onLogout()
-                            } else {
-                                resetError = res.exceptionOrNull()?.message ?: "Chyba při mazání dat"
-                            }
-                        }
-                    },
-                    enabled = !isResetting && (resetConfirmationText.trim().uppercase() == "SMAZAT" || resetConfirmationText.trim().uppercase() == "CONFIRM"),
-                    colors = ButtonDefaults.buttonColors(containerColor = StatusRed, contentColor = Color.White)
-                ) {
-                    Text(if (isResetting) "Mazání..." else "Ano, smazat vše")
+            }
+
+            SectionCard(title = "Účet") {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.AccountCircle, null, tint = HestiaOrange, modifier = Modifier.size(38.dp))
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(me?.display_name ?: "Nepřihlášen", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                        Text(
+                            me?.let { "${it.username} • ${it.role}" } ?: "",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { showResetDialog = false },
-                    enabled = !isResetting
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = onSwitchUser, modifier = Modifier.weight(1f)) { Text("Přepnout", fontSize = 12.sp) }
+                    OutlinedButton(onClick = onLogout, modifier = Modifier.weight(1f)) {
+                        Text("Odhlásit", fontSize = 12.sp, color = StatusRed)
+                    }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+
+            SectionCard(title = "Vzhled") {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(
+                        PreferencesManager.THEME_SYSTEM to "Systém",
+                        PreferencesManager.THEME_LIGHT to "Světlý",
+                        PreferencesManager.THEME_DARK to "Tmavý"
+                    ).forEach { (value, label) ->
+                        FilterChip(
+                            selected = theme == value,
+                            onClick = {
+                                theme = value
+                                scope.launch { repository.preferences.setTheme(value) }
+                            },
+                            label = { Text(label, fontSize = 11.sp) }
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+
+            SectionCard(
+                title = "Členové domácnosti",
+                actionText = "Přidat",
+                onAction = { editingMember = null; dialog = "member" }
+            ) {
+                if (users.isEmpty()) {
+                    Text("Zatím žádní členové.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                users.forEach { u ->
+                    Row(
+                        Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .background(
+                                    runCatching { Color(android.graphics.Color.parseColor(u.avatar_color ?: "#F97316")) }
+                                        .getOrDefault(HestiaOrange),
+                                    RoundedCornerShape(50)
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(u.initials, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(u.display_name.ifBlank { u.username }, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                            Text(
+                                "${u.username} • ${if (u.role == "admin") "správce" else "člen"}",
+                                fontSize = 10.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        IconButton(onClick = { editingMember = u; dialog = "member" }, modifier = Modifier.size(28.dp)) {
+                            Icon(Icons.Default.Edit, "Upravit", modifier = Modifier.size(15.dp))
+                        }
+                        IconButton(
+                            onClick = { deleteMember = u },
+                            enabled = u.id != me?.id,
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Delete,
+                                "Smazat",
+                                tint = if (u.id == me?.id) MaterialTheme.colorScheme.outline else StatusRed,
+                                modifier = Modifier.size(15.dp)
+                            )
+                        }
+                    }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+
+            SectionCard(title = "Server") {
+                InfoRow("URL", serverUrl)
+                InfoRow("Aplikace", health?.app)
+                InfoRow("Verze", health?.version)
+                InfoRow("Stav", health?.status)
+                if (!health?.modules.isNullOrEmpty()) {
+                    Text(
+                        health!!.modules.joinToString(", "),
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Spacer(Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = onNavigateServerConfig, modifier = Modifier.weight(1f)) {
+                        Text("Změnit server", fontSize = 12.sp)
+                    }
+                    OutlinedButton(onClick = { scope.launch { repository.checkHealth().onSuccess { health = it }.onFailure { error = it.friendly() } } }, modifier = Modifier.weight(1f)) {
+                        Text("Otestovat", fontSize = 12.sp)
+                    }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+
+            aiStatus?.let { ai ->
+                SectionCard(title = "AI asistent") {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        StatusPill(
+                            if (ai.configured) "Aktivní" else "Nenastaveno",
+                            if (ai.configured) StatusGreen else StatusYellow
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(ai.model, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    if (ai.message.isNotBlank()) {
+                        Text(ai.message, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Text(
+                        "AI se používá pro rozpoznávání dokumentů, receptů, diagnózu rostlin a mazlíčků.",
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+
+            SectionCard(
+                title = "Zálohy na serveru",
+                actionText = "Vytvořit",
+                onAction = {
+                    scope.launch {
+                        busy = true
+                        repository.createBackup()
+                            .onSuccess { message = "Záloha vytvořena"; reload() }
+                            .onFailure { error = it.friendly() }
+                        busy = false
+                    }
+                }
+            ) {
+                if (backups.isEmpty()) {
+                    Text("Zatím žádné zálohy.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                backups.take(6).forEach { b ->
+                    Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Archive, null, tint = StatusBlue, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(b.filename, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                            Text(
+                                "${Fmt.dateTime(b.created_at)} • ${Fmt.fileSize((b.size_kb * 1024).toInt())} • ${b.items_count} položek",
+                                fontSize = 9.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        IconButton(onClick = { pendingBackup = b; backupPicker.launch(b.filename) }, modifier = Modifier.size(28.dp)) {
+                            Icon(Icons.Default.Download, "Stáhnout", modifier = Modifier.size(15.dp))
+                        }
+                        IconButton(onClick = {
+                            scope.launch {
+                                repository.restoreBackup(b.filename)
+                                    .onSuccess { message = it.message.ifBlank { "Data obnovena" }; reload() }
+                                    .onFailure { error = it.friendly() }
+                            }
+                        }, modifier = Modifier.size(28.dp)) {
+                            Icon(Icons.Default.Restore, "Obnovit", modifier = Modifier.size(15.dp))
+                        }
+                        IconButton(onClick = {
+                            scope.launch { repository.deleteBackup(b.filename).onSuccess { reload() } }
+                        }, modifier = Modifier.size(28.dp)) {
+                            Icon(Icons.Default.Delete, "Smazat", tint = StatusRed, modifier = Modifier.size(15.dp))
+                        }
+                    }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+
+            SectionCard(title = "Data") {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = {
+                            scope.launch {
+                                busy = true
+                                val tmp = File(context.cacheDir, "hestia-export.json")
+                                repository.exportData(tmp)
+                                    .onSuccess { pendingExport = it; exportPicker.launch("hestia-export-${Fmt.today()}.json") }
+                                    .onFailure { error = it.friendly() }
+                                busy = false
+                            }
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) { Text("Export", fontSize = 12.sp) }
+                    OutlinedButton(onClick = { importPicker.launch("application/json") }, modifier = Modifier.weight(1f)) {
+                        Text("Import", fontSize = 12.sp)
+                    }
+                }
+                Spacer(Modifier.height(6.dp))
+                Text("Režim importu", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(selected = importMode == "merge", onClick = { importMode = "merge" }, label = { Text("Sloučit") })
+                    FilterChip(selected = importMode == "replace", onClick = { importMode = "replace" }, label = { Text("Nahradit") })
+                }
+                Spacer(Modifier.height(10.dp))
+                Button(
+                    onClick = { dialog = "reset" },
+                    colors = ButtonDefaults.buttonColors(containerColor = StatusRed),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Zrušit")
+                    Icon(Icons.Default.DeleteForever, null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Smazat všechna data")
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+
+            SectionCard(title = "O aplikaci") {
+                InfoRow("Hestia pro Android", "nativní klient")
+                InfoRow("Server", serverUrl)
+                InfoRow("Verze serveru", health?.version)
+                Text(
+                    "Aplikace je plnohodnotný nativní klient Hestie – všechny moduly (recepty, jídelníček, spíž, nákup, úkoly, rostliny, mazlíčci, finance, dokumenty, vozidla, léky, spotřebiče, historie) běží přímo na telefonu.",
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Spacer(Modifier.height(24.dp))
+        }
+    }
+
+    if (dialog == "reset") {
+        var confirmText by remember { mutableStateOf("") }
+        var password by remember { mutableStateOf("") }
+        DialogScaffold(
+            title = "Smazat všechna data",
+            onDismiss = { dialog = null },
+            confirmText = "Smazat vše",
+            confirmEnabled = confirmText == "SMAZAT",
+            loading = busy,
+            onConfirm = {
+                scope.launch {
+                    busy = true
+                    repository.resetAllData(password.ifBlank { null })
+                        .onSuccess { dialog = null; message = "Data byla smazána"; reload() }
+                        .onFailure { error = it.friendly() }
+                    busy = false
+                }
+            }
+        ) {
+            Text(
+                "Tato akce nevratně smaže všechna data domácnosti. Napište SMAZAT pro potvrzení.",
+                fontSize = 12.sp,
+                color = StatusRed
+            )
+            Spacer(Modifier.height(8.dp))
+            HestiaField(confirmText, { confirmText = it }, "Potvrzení (SMAZAT)")
+            Spacer(Modifier.height(8.dp))
+            HestiaField(password, { password = it }, "Heslo (pokud je vyžadováno)")
+        }
+    }
+
+    if (dialog == "member") {
+        MemberFormDialog(
+            initial = editingMember,
+            loading = busy,
+            onDismiss = { dialog = null; editingMember = null },
+            onSave = { username, displayName, password, role, color ->
+                scope.launch {
+                    busy = true
+                    val initial = editingMember
+                    val res = if (initial == null) {
+                        repository.createUser(
+                            UserCreate(
+                                username = username,
+                                display_name = displayName,
+                                password = password,
+                                role = role,
+                                avatar_color = color
+                            )
+                        )
+                    } else {
+                        repository.updateUser(
+                            initial.id,
+                            UserUpdate(
+                                username = username.ifBlank { null },
+                                display_name = displayName.ifBlank { null },
+                                role = role,
+                                avatar_color = color,
+                                password = password.ifBlank { null }
+                            )
+                        )
+                    }
+                    res.onSuccess {
+                        message = if (initial == null) "Člen přidán" else "Člen upraven"
+                        dialog = null
+                        editingMember = null
+                        reload()
+                    }.onFailure { error = it.friendly() }
+                    busy = false
                 }
             }
         )
+    }
+
+    deleteMember?.let { u ->
+        ConfirmDialog(
+            title = "Smazat člena",
+            message = "Smazat „${u.display_name.ifBlank { u.username }}“? Jeho záznamy zůstanou zachovány.",
+            onDismiss = { deleteMember = null },
+            onConfirm = {
+                scope.launch {
+                    repository.deleteUser(u.id)
+                        .onSuccess { message = "Člen smazán"; deleteMember = null; reload() }
+                        .onFailure { error = it.friendly() }
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun MemberFormDialog(
+    initial: User?,
+    loading: Boolean,
+    onDismiss: () -> Unit,
+    onSave: (username: String, displayName: String, password: String, role: String, color: String) -> Unit
+) {
+    var username by remember { mutableStateOf(initial?.username ?: "") }
+    var displayName by remember { mutableStateOf(initial?.display_name ?: "") }
+    var password by remember { mutableStateOf("") }
+    var role by remember { mutableStateOf(initial?.role ?: "member") }
+    var color by remember { mutableStateOf(initial?.avatar_color ?: "#F97316") }
+
+    DialogScaffold(
+        title = if (initial == null) "Nový člen" else "Upravit člena",
+        onDismiss = onDismiss,
+        confirmEnabled = displayName.isNotBlank() &&
+            (initial != null || (username.isNotBlank() && password.length >= 4)),
+        loading = loading,
+        onConfirm = { onSave(username, displayName, password, role, color) }
+    ) {
+        HestiaField(username, { username = it }, "Uživatelské jméno")
+        Spacer(Modifier.height(8.dp))
+        HestiaField(displayName, { displayName = it }, "Jméno a příjmení")
+        Spacer(Modifier.height(8.dp))
+        HestiaField(
+            password,
+            { password = it },
+            if (initial == null) "Heslo" else "Nové heslo (nechte prázdné)"
+        )
+        Spacer(Modifier.height(8.dp))
+        Text("Role", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(selected = role == "member", onClick = { role = "member" }, label = { Text("Člen", fontSize = 11.sp) })
+            FilterChip(selected = role == "admin", onClick = { role = "admin" }, label = { Text("Správce", fontSize = 11.sp) })
+        }
+        Spacer(Modifier.height(8.dp))
+        Text("Barva avatara", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("#F97316", "#EF4444", "#10B981", "#3B82F6", "#8B5CF6", "#F59E0B").forEach { c ->
+                val selected = color == c
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .background(
+                            runCatching { Color(android.graphics.Color.parseColor(c)) }.getOrDefault(HestiaOrange),
+                            RoundedCornerShape(50)
+                        )
+                        .clickable { color = c },
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (selected) {
+                        Icon(Icons.Default.Check, null, tint = Color.White, modifier = Modifier.size(14.dp))
+                    }
+                }
+            }
+        }
     }
 }

@@ -9,7 +9,8 @@ import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import java.util.concurrent.TimeUnit
 
 class ApiClient(
-    private val tokenProvider: () -> String?
+    private val tokenProvider: () -> String?,
+    private val onUnauthorized: () -> Unit = {}
 ) {
     private val json = Json {
         ignoreUnknownKeys = true
@@ -25,7 +26,7 @@ class ApiClient(
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(20, TimeUnit.SECONDS)
             .writeTimeout(20, TimeUnit.SECONDS)
-            .addInterceptor(AuthInterceptor(tokenProvider))
+            .addInterceptor(AuthInterceptor(tokenProvider, onUnauthorized))
             .addInterceptor(HttpLoggingInterceptor().apply {
                 level = HttpLoggingInterceptor.Level.BASIC
             })

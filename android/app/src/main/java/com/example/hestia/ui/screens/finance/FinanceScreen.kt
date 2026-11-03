@@ -1,1051 +1,789 @@
 package com.example.hestia.ui.screens.finance
 
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Base64
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.TrendingDown
-import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.hestia.data.models.*
 import com.example.hestia.data.repository.HestiaRepository
 import com.example.hestia.theme.HestiaOrange
+import com.example.hestia.theme.StatusBlue
 import com.example.hestia.theme.StatusGreen
 import com.example.hestia.theme.StatusRed
-import com.example.hestia.ui.components.EmptyStateCard
-import com.example.hestia.ui.components.QrCodeImage
-import kotlinx.coroutines.flow.first
+import com.example.hestia.theme.StatusYellow
+import com.example.hestia.ui.components.*
+import com.example.hestia.util.Fmt
+import com.example.hestia.util.Labels
+import com.example.hestia.util.friendly
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.io.ByteArrayOutputStream
-import java.util.Locale
+import kotlinx.coroutines.withContext
 
 @Composable
-fun FinanceScreen(
-    repository: HestiaRepository,
-    modifier: Modifier = Modifier
-) {
+fun FinanceScreen(repository: HestiaRepository, currentUserId: Int?) {
+    val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
+    var month by remember { mutableStateOf(Fmt.monthKey(Fmt.today())) }
+    var tab by remember { mutableStateOf(0) }
     var summary by remember { mutableStateOf<FinanceSummary?>(null) }
-    var settlements by remember { mutableStateOf<DebtSettlementResponse?>(null) }
     var transactions by remember { mutableStateOf<List<TransactionItem>>(emptyList()) }
-    var savingsGoals by remember { mutableStateOf<List<SavingsGoal>>(emptyList()) }
+    var budgets by remember { mutableStateOf<List<CategoryBudget>>(emptyList()) }
+    var settlement by remember { mutableStateOf<DebtSettlementResponse?>(null) }
     var subscriptions by remember { mutableStateOf<List<Subscription>>(emptyList()) }
-    var members by remember { mutableStateOf<List<PublicMember>>(emptyList()) }
-    var currentUser by remember { mutableStateOf<User?>(null) }
+    var goals by remember { mutableStateOf<List<SavingsGoal>>(emptyList()) }
+    var profile by remember { mutableStateOf<UserFinanceProfile?>(null) }
+    var users by remember { mutableStateOf<List<User>>(emptyList()) }
+    var loading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var message by remember { mutableStateOf<String?>(null) }
 
-    var isLoading by remember { mutableStateOf(true) }
-    var selectedTab by remember { mutableIntStateOf(0) } // 0: Vyrovnání, 1: Transakce, 2: Prasátka, 3: Předplatná
+    var showTxForm by remember { mutableStateOf(false) }
+    var editingTx by remember { mutableStateOf<TransactionItem?>(null) }
+    var showBudgetForm by remember { mutableStateOf(false) }
+    var showSubForm by remember { mutableStateOf(false) }
+    var editingSub by remember { mutableStateOf<Subscription?>(null) }
+    var showGoalForm by remember { mutableStateOf(false) }
+    var editingGoal by remember { mutableStateOf<SavingsGoal?>(null) }
+    var depositGoal by remember { mutableStateOf<SavingsGoal?>(null) }
+    var settleDialog by remember { mutableStateOf<DebtSettlementItem?>(null) }
+    var csvPreview by remember { mutableStateOf<CsvImportPreview?>(null) }
+    var scanResult by remember { mutableStateOf<ReceiptScanResponse?>(null) }
 
-    var selectedSettlementForQr by remember { mutableStateOf<DebtSettlementItem?>(null) }
-    var showAddTransactionDialog by remember { mutableStateOf(false) }
-    var selectedGoalForDeposit by remember { mutableStateOf<SavingsGoal?>(null) }
-    var snackbarMessage by remember { mutableStateOf<String?>(null) }
+    suspend fun load() {
+        loading = true
+        repository.getFinanceSummary(month).onSuccess { summary = it }.onFailure { error = it.friendly() }
+        repository.getTransactions(month)
+            .onSuccess { transactions = it }
+            .onFailure { error = error ?: it.friendly() }
+        repository.getBudgets().onSuccess { budgets = it }.onFailure { error = error ?: it.friendly() }
+        repository.getDebtSettlements().onSuccess { settlement = it }
+        repository.getSubscriptions().onSuccess { subscriptions = it }
+        repository.getSavingsGoals().onSuccess { goals = it }
+        repository.getFinanceProfile().onSuccess { profile = it }
+        loading = false
+    }
 
-    fun refreshData() {
-        coroutineScope.launch {
-            isLoading = true
-            currentUser = repository.preferences.currentUserFlow.first()
-            repository.getFinanceSummary().onSuccess { summary = it }
-            repository.getDebtSettlements().onSuccess { settlements = it }
-            repository.getTransactions(50).onSuccess { transactions = it }
-            repository.getSavingsGoals().onSuccess { savingsGoals = it }
-            repository.getSubscriptions().onSuccess { subscriptions = it }
-            repository.getPublicMembers().onSuccess { members = it }
-            isLoading = false
+    LaunchedEffect(month) { load() }
+    LaunchedEffect(Unit) {
+        repository.getUsers().onSuccess { users = it }
+    }
+
+    val csvLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        if (uri != null) {
+            scope.launch {
+                val text = withContext(Dispatchers.IO) {
+                    runCatching {
+                        context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+                    }.getOrNull()
+                }
+                if (text == null) error = "CSV nelze přečíst"
+                else repository.previewCsvImport(text)
+                    .onSuccess { csvPreview = it }
+                    .onFailure { error = it.friendly() }
+            }
         }
     }
 
-    LaunchedEffect(Unit) {
-        refreshData()
+    val receiptLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        if (uri != null) {
+            scope.launch {
+                val bytes = withContext(Dispatchers.IO) {
+                    runCatching { context.contentResolver.openInputStream(uri)?.use { it.readBytes() } }.getOrNull()
+                }
+                if (bytes == null) error = "Obrázek nelze přečíst"
+                else repository.scanReceipt(Base64.encodeToString(bytes, Base64.NO_WRAP))
+                    .onSuccess { scanResult = it }
+                    .onFailure { error = it.friendly() }
+            }
+        }
     }
 
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        containerColor = MaterialTheme.colorScheme.background,
-        floatingActionButton = {
-            if (selectedTab == 1) {
-                FloatingActionButton(
-                    onClick = { showAddTransactionDialog = true },
-                    containerColor = HestiaOrange,
-                    contentColor = Color.White,
-                    shape = CircleShape
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Přidat platbu")
+    Column(Modifier.fillMaxSize()) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = { month = Fmt.monthKeyShift(month, -1) }) { Icon(Icons.Default.ChevronLeft, "Předchozí") }
+            Text(
+                Fmt.monthLabel(month),
+                fontWeight = FontWeight.Bold,
+                fontSize = 15.sp,
+                modifier = Modifier.weight(1f),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+            IconButton(onClick = { month = Fmt.monthKeyShift(month, 1) }) { Icon(Icons.Default.ChevronRight, "Další") }
+            IconButton(onClick = { scope.launch { load() } }) { Icon(Icons.Default.Refresh, "Obnovit") }
+        }
+
+        ScrollableTabRow(selectedTabIndex = tab, edgePadding = 6.dp) {
+            listOf("Přehled", "Transakce", "Vyrovnání", "Předplatné", "Cíle", "Profil").forEachIndexed { i, label ->
+                Tab(selected = tab == i, onClick = { tab = i }, text = { Text(label, fontSize = 11.sp) })
+            }
+        }
+
+        message?.let {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = StatusGreen.copy(alpha = 0.15f)),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 3.dp)
+            ) {
+                Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(it, fontSize = 11.sp, modifier = Modifier.weight(1f))
+                    IconButton(onClick = { message = null }, modifier = Modifier.size(20.dp)) {
+                        Icon(Icons.Default.Close, null, modifier = Modifier.size(14.dp))
+                    }
                 }
             }
-        },
-        snackbarHost = {
-            snackbarMessage?.let { msg ->
-                Snackbar(
-                    modifier = Modifier.padding(16.dp),
-                    action = {
-                        TextButton(onClick = { snackbarMessage = null }) {
-                            Text("OK", color = HestiaOrange)
+        }
+        ErrorBox(error, onRetry = { scope.launch { load() } })
+
+        if (loading) {
+            LoadingBox()
+        } else {
+            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp)) {
+                when (tab) {
+                    0 -> FinanceOverview(
+                        summary = summary,
+                        budgets = budgets,
+                        onAddBudget = { showBudgetForm = true },
+                        onExportCsv = { csvLauncher.launch("text/*") },
+                        onScanReceipt = { receiptLauncher.launch("image/*") }
+                    )
+
+                    1 -> {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(
+                                onClick = { showTxForm = true },
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.weight(1f)
+                            ) { Text("+ Transakce", fontSize = 12.sp) }
+                            OutlinedButton(
+                                onClick = { csvLauncher.launch("text/*") },
+                                shape = RoundedCornerShape(10.dp)
+                            ) { Text("CSV", fontSize = 12.sp) }
+                            OutlinedButton(
+                                onClick = { receiptLauncher.launch("image/*") },
+                                shape = RoundedCornerShape(10.dp)
+                            ) { Icon(Icons.Default.PhotoCamera, null, modifier = Modifier.size(14.dp)) }
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        if (transactions.isEmpty()) {
+                            EmptyState(Icons.Default.ReceiptLong, "Žádné transakce", "Za tento měsíc nejsou žádné transakce.")
+                        }
+                        transactions.forEach { tx ->
+                            TransactionCard(
+                                tx = tx,
+                                onEdit = { editingTx = tx },
+                                onDelete = { scope.launch { repository.deleteTransaction(tx.id).onSuccess { load() } } }
+                            )
                         }
                     }
-                ) {
-                    Text(msg)
-                }
-            }
-        }
-    ) { paddingValues ->
-        if (isLoading && summary == null) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(color = HestiaOrange)
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-                contentPadding = PaddingValues(top = 12.dp, bottom = 80.dp)
-            ) {
-                // Summary header KPI cards
-                item {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            FinanceKpiCard(
-                                title = "Měsíční výdaje",
-                                amount = "${String.format(Locale.getDefault(), "%.0f", summary?.current_month_expenses ?: 0.0)} Kč",
-                                icon = Icons.AutoMirrored.Filled.TrendingDown,
-                                iconColor = StatusRed,
-                                modifier = Modifier.weight(1f)
-                            )
-                            FinanceKpiCard(
-                                title = "Měsíční příjmy",
-                                amount = "${String.format(Locale.getDefault(), "%.0f", summary?.current_month_income ?: 0.0)} Kč",
-                                icon = Icons.AutoMirrored.Filled.TrendingUp,
-                                iconColor = StatusGreen,
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
 
-                        val netBalance = summary?.current_month_net ?: 0.0
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                            ),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column {
-                                    Text(
-                                        text = "Čistá bilance měsíce",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Text(
-                                        text = (if (netBalance >= 0) "+" else "") +
-                                                "${String.format(Locale.getDefault(), "%.0f", netBalance)} Kč",
-                                        style = MaterialTheme.typography.titleLarge,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (netBalance >= 0) StatusGreen else StatusRed
-                                    )
-                                }
-
-                                summary?.historical_average_monthly_expense?.let { avg ->
-                                    Column(horizontalAlignment = Alignment.End) {
+                    2 -> {
+                        settlement?.balances?.forEach { b ->
+                            Card(shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+                                Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text(b.user_name, fontWeight = FontWeight.Medium, fontSize = 13.sp)
                                         Text(
-                                            text = "Průměrný měsíc",
-                                            style = MaterialTheme.typography.bodySmall,
+                                            "Zaplaceno ${Fmt.money(b.paid_total)} • podíl ${Fmt.money(b.share_total)}",
+                                            fontSize = 10.sp,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
-                                        Text(
-                                            text = "${String.format(Locale.getDefault(), "%.0f", avg)} Kč",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.SemiBold
-                                        )
                                     }
+                                    Text(
+                                        Fmt.money(b.net_balance),
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
+                                        color = if (b.net_balance >= 0) StatusGreen else StatusRed
+                                    )
                                 }
                             }
                         }
-                    }
-                }
-
-                // 4 Navigation Tabs
-                item {
-                    PrimaryTabRow(
-                        selectedTabIndex = selectedTab,
-                        containerColor = Color.Transparent,
-                        contentColor = HestiaOrange,
-                        divider = {}
-                    ) {
-                        Tab(
-                            selected = selectedTab == 0,
-                            onClick = { selectedTab = 0 },
-                            text = { Text("Vyrovnání", fontSize = 11.sp) }
-                        )
-                        Tab(
-                            selected = selectedTab == 1,
-                            onClick = { selectedTab = 1 },
-                            text = { Text("Transakce (${transactions.size})", fontSize = 11.sp) }
-                        )
-                        Tab(
-                            selected = selectedTab == 2,
-                            onClick = { selectedTab = 2 },
-                            text = { Text("Prasátka (${savingsGoals.size})", fontSize = 11.sp) }
-                        )
-                        Tab(
-                            selected = selectedTab == 3,
-                            onClick = { selectedTab = 3 },
-                            text = { Text("Předplatná (${subscriptions.size})", fontSize = 11.sp) }
-                        )
-                    }
-                }
-
-                when (selectedTab) {
-                    // TAB 0: DEBT SETTLEMENT & MEMBER BALANCES
-                    0 -> {
-                        val balances = settlements?.balances ?: emptyList()
-                        val settlementItems = settlements?.settlements ?: emptyList()
-
-                        item {
-                            Text(
-                                text = "Bilance členů domácnosti",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
+                        Spacer(Modifier.height(8.dp))
+                        Text("Vyrovnání", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                        if (settlement?.settlements.isNullOrEmpty()) {
+                            Text("Vše vyrovnáno 🎉", fontSize = 12.sp, color = StatusGreen)
                         }
-
-                        if (balances.isEmpty()) {
-                            item {
-                                EmptyStateCard(
-                                    message = "Zatím nejsou zaznamenány žádné sdílené výdaje.",
-                                    icon = Icons.Default.AccountBalanceWallet
-                                )
-                            }
-                        } else {
-                            items(balances) { balance ->
-                                MemberBalanceRow(balance = balance)
-                            }
-                        }
-
-                        item {
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = "Návrh optimálního vyrovnání (SPAYD QR)",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-
-                        if (settlementItems.isEmpty()) {
-                            item {
-                                Card(
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(16.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                    ) {
-                                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = StatusGreen)
-                                        Text("Všechny rodinné dluhy jsou srovnané!", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        settlement?.settlements?.forEach { s ->
+                            Card(shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+                                Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text("${s.from_user_name} → ${s.to_user_name}", fontSize = 12.sp)
+                                        Text(Fmt.money(s.amount), fontWeight = FontWeight.Bold, fontSize = 14.sp, color = HestiaOrange)
+                                        s.to_user_account?.let { Text("Účet: $it", fontSize = 10.sp) }
                                     }
-                                }
-                            }
-                        } else {
-                            items(settlementItems) { item ->
-                                Card(
-                                    shape = RoundedCornerShape(14.dp),
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { selectedSettlementForQr = item }
-                                ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(14.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                                Text(text = item.from_user_name, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                                Icon(Icons.Default.ArrowForward, contentDescription = null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                                Text(text = item.to_user_name, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                            }
-                                            Text(
-                                                text = "Klepnutím zobrazíte bankovní QR kód",
-                                                fontSize = 11.sp,
-                                                color = HestiaOrange,
-                                                modifier = Modifier.padding(top = 2.dp)
-                                            )
-                                        }
-
-                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                            Text(
-                                                text = "${String.format(Locale.getDefault(), "%.0f", item.amount)} Kč",
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 16.sp,
-                                                color = HestiaOrange
-                                            )
-                                            Icon(Icons.Default.QrCode2, contentDescription = "QR kód", tint = HestiaOrange, modifier = Modifier.size(24.dp))
-                                        }
-                                    }
+                                    TextButton(onClick = { settleDialog = s }) { Text("Vyrovnat", fontSize = 11.sp) }
                                 }
                             }
                         }
                     }
 
-                    // TAB 1: TRANSACTIONS LIST
-                    1 -> {
-                        item {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text("Transakce (${transactions.size})", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    FilledTonalButton(
-                                        onClick = { showAddTransactionDialog = true },
-                                        colors = ButtonDefaults.filledTonalButtonColors(
-                                            containerColor = HestiaOrange.copy(alpha = 0.15f),
-                                            contentColor = HestiaOrange
-                                        ),
-                                        shape = RoundedCornerShape(10.dp),
-                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                                    ) {
-                                        Icon(Icons.Default.DocumentScanner, contentDescription = null, modifier = Modifier.size(14.dp))
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text("AI Účtenka", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                    }
-                                }
-                            }
-                        }
-
-                        if (transactions.isEmpty()) {
-                            item {
-                                EmptyStateCard(
-                                    message = "V historii zatím nejsou žádné transakce.",
-                                    icon = Icons.Default.Receipt
-                                )
-                            }
-                        } else {
-                            items(transactions, key = { it.id }) { tx ->
-                                Card(
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(12.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                            modifier = Modifier.weight(1f)
-                                        ) {
-                                            val isExpense = tx.transaction_type == "expense"
-                                            val txColor = if (isExpense) StatusRed else StatusGreen
-
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(36.dp)
-                                                    .clip(CircleShape)
-                                                    .background(txColor.copy(alpha = 0.12f)),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Icon(
-                                                    imageVector = if (isExpense) Icons.AutoMirrored.Filled.TrendingDown else Icons.AutoMirrored.Filled.TrendingUp,
-                                                    contentDescription = null,
-                                                    tint = txColor,
-                                                    modifier = Modifier.size(18.dp)
-                                                )
-                                            }
-
-                                            Column {
-                                                Text(text = tx.title, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                                Text(
-                                                    text = "${tx.date} • ${tx.payer?.display_name ?: "Člen"} • ${tx.category}",
-                                                    fontSize = 11.sp,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
-                                            }
-                                        }
-
-                                        Text(
-                                            text = "${if (tx.transaction_type == "expense") "-" else "+"}${String.format(Locale.getDefault(), "%.0f", tx.amount)} Kč",
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 15.sp,
-                                            color = if (tx.transaction_type == "expense") StatusRed else StatusGreen
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // TAB 2: SAVINGS GOALS (PRASÁTKA)
-                    2 -> {
-                        if (savingsGoals.isEmpty()) {
-                            item {
-                                EmptyStateCard(
-                                    message = "Zatím nemáte vytvořené žádné spořicí cíle.",
-                                    icon = Icons.Default.Savings
-                                )
-                            }
-                        } else {
-                            items(savingsGoals, key = { it.id }) { goal ->
-                                val progress = if (goal.target_amount > 0) (goal.current_amount / goal.target_amount).toFloat().coerceIn(0f, 1f) else 0f
-                                Card(
-                                    shape = RoundedCornerShape(14.dp),
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Column(modifier = Modifier.padding(14.dp)) {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                                Icon(Icons.Default.Savings, contentDescription = null, tint = StatusGreen)
-                                                Text(text = goal.title, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                                            }
-
-                                            Button(
-                                                onClick = { selectedGoalForDeposit = goal },
-                                                shape = RoundedCornerShape(8.dp),
-                                                colors = ButtonDefaults.buttonColors(containerColor = StatusGreen),
-                                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
-                                            ) {
-                                                Text("+ Vložit", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                            }
-                                        }
-
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        LinearProgressIndicator(
-                                            progress = { progress },
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .height(8.dp)
-                                                .clip(RoundedCornerShape(4.dp)),
-                                            color = StatusGreen
-                                        )
-
-                                        Spacer(modifier = Modifier.height(6.dp))
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Text(
-                                                text = "${String.format(Locale.getDefault(), "%.0f", goal.current_amount)} Kč",
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 13.sp,
-                                                color = StatusGreen
-                                            )
-                                            Text(
-                                                text = "Cíl: ${String.format(Locale.getDefault(), "%.0f", goal.target_amount)} Kč (${(progress * 100).toInt()}%)",
-                                                fontSize = 12.sp,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // TAB 3: SUBSCRIPTIONS
                     3 -> {
-                        val totalMonthly = subscriptions.filter { it.is_active }.sumOf { it.monthly_equivalent }
-                        item {
-                            Card(
-                                shape = RoundedCornerShape(12.dp),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(14.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text("Celkem za předplatná:", fontWeight = FontWeight.Medium, fontSize = 13.sp)
-                                    Text("${String.format(Locale.getDefault(), "%.0f", totalMonthly)} Kč / měsíc", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = HestiaOrange)
-                                }
-                            }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text("Předplatné", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                            TextButton(onClick = { showSubForm = true }) { Text("+ Přidat", fontSize = 11.sp) }
                         }
-
-                        if (subscriptions.isEmpty()) {
-                            item {
-                                EmptyStateCard(
-                                    message = "Zatím nemáte zaevidovaná žádná předplatná.",
-                                    icon = Icons.Default.CreditCard
-                                )
-                            }
-                        } else {
-                            items(subscriptions, key = { it.id }) { sub ->
-                                Card(
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(14.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Column {
-                                            Text(text = sub.name, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                                            Text(
-                                                text = "Platba: ${sub.next_billing_date} (${sub.billing_cycle})",
-                                                fontSize = 11.sp,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-
-                                        Column(horizontalAlignment = Alignment.End) {
-                                            Text(
-                                                text = "${String.format(Locale.getDefault(), "%.0f", sub.amount)} Kč",
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 15.sp,
-                                                color = HestiaOrange
-                                            )
-                                            Text(
-                                                text = "cca ${String.format(Locale.getDefault(), "%.0f", sub.monthly_equivalent)} Kč/měs",
-                                                fontSize = 10.sp,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
+                        subscriptions.forEach { sub ->
+                            Card(shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+                                Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text(sub.name, fontWeight = FontWeight.Medium, fontSize = 13.sp)
+                                        Text(
+                                            "${Fmt.money(sub.amount)} / ${Labels.label(Labels.billingCycles, sub.billing_cycle)} • ${Fmt.date(sub.next_billing_date)}",
+                                            fontSize = 10.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Text("Měsíčně ${Fmt.money(sub.monthly_equivalent)}", fontSize = 10.sp)
+                                    }
+                                    sub.days_until_billing?.let { d ->
+                                        StatusPill(
+                                            if (d < 0) "po splatnosti" else "za $d dní",
+                                            if (d < 3) StatusRed else if (d < 7) StatusYellow else StatusGreen
+                                        )
+                                    }
+                                    IconButton(onClick = { editingSub = sub }, modifier = Modifier.size(28.dp)) {
+                                        Icon(Icons.Default.Edit, null, modifier = Modifier.size(14.dp))
+                                    }
+                                    IconButton(onClick = {
+                                        scope.launch { repository.deleteSubscription(sub.id).onSuccess { load() } }
+                                    }, modifier = Modifier.size(28.dp)) {
+                                        Icon(Icons.Default.Delete, null, tint = StatusRed, modifier = Modifier.size(14.dp))
                                     }
                                 }
                             }
                         }
                     }
-                }
-            }
-        }
-    }
 
-    // SPAYD QR CODE MODAL DIALOG
-    selectedSettlementForQr?.let { settlement ->
-        AlertDialog(
-            onDismissRequest = { selectedSettlementForQr = null },
-            title = {
-                Text("SPAYD Platba pro bankovnictví", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            },
-            text = {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Text(
-                        text = "${settlement.from_user_name} zaplatí ${settlement.to_user_name}:",
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "${String.format(Locale.getDefault(), "%.2f", settlement.amount)} Kč",
-                        fontWeight = FontWeight.Black,
-                        fontSize = 22.sp,
-                        color = HestiaOrange
-                    )
-
-                    // Rendered QR Code
-                    QrCodeImage(
-                        data = settlement.spayd_string,
-                        modifier = Modifier.size(220.dp)
-                    )
-
-                    Text(
-                        text = "Naskenujte v aplikaci své banky (Air Bank, KB, ČSOB, Česká spořitelna...)",
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { selectedSettlementForQr = null }) {
-                    Text("Zavřít", color = HestiaOrange)
-                }
-            }
-        )
-    }
-
-    // Add Transaction Dialog
-    if (showAddTransactionDialog) {
-        var title by remember { mutableStateOf("") }
-        var amount by remember { mutableStateOf("") }
-        var type by remember { mutableStateOf("expense") }
-        var category by remember { mutableStateOf("groceries") }
-        var payerId by remember { mutableStateOf<Int?>(currentUser?.id) }
-        var isShared by remember { mutableStateOf(true) }
-
-        var isScanningReceipt by remember { mutableStateOf(false) }
-        var scanError by remember { mutableStateOf<String?>(null) }
-        var scannedItemsSummary by remember { mutableStateOf<String?>(null) }
-        var isReceiptSuccess by remember { mutableStateOf(false) }
-
-        val categories = listOf("groceries" to "Potraviny", "household" to "Domácnost", "entertainment" to "Zábava", "transport" to "Doprava", "other" to "Ostatní")
-
-        val receiptPickerLauncher = rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.GetContent()
-        ) { uri: Uri? ->
-            uri?.let {
-                coroutineScope.launch {
-                    isScanningReceipt = true
-                    scanError = null
-                    isReceiptSuccess = false
-                    try {
-                        val inputStream = context.contentResolver.openInputStream(uri)
-                        val originalBitmap = BitmapFactory.decodeStream(inputStream)
-                        inputStream?.close()
-
-                        if (originalBitmap != null) {
-                            val maxDim = 1600
-                            val width = originalBitmap.width
-                            val height = originalBitmap.height
-                            val scaledBitmap = if (width > maxDim || height > maxDim) {
-                                val ratio = width.toFloat() / height.toFloat()
-                                val (newW, newH) = if (ratio > 1f) maxDim to (maxDim / ratio).toInt() else (maxDim * ratio).toInt() to maxDim
-                                Bitmap.createScaledBitmap(originalBitmap, newW, newH, true)
-                            } else {
-                                originalBitmap
-                            }
-                            val baos = ByteArrayOutputStream()
-                            scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 85, baos)
-                            val base64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)
-
-                            repository.scanReceipt(imageBase64 = base64)
-                                .onSuccess { scanRes ->
-                                    scanRes.store_name?.let { if (it.isNotBlank()) title = it }
-                                    scanRes.total_amount?.let { amount = String.format(Locale.US, "%.2f", it) }
-                                    scanRes.category?.let { cat ->
-                                        if (categories.any { it.first == cat }) {
-                                            category = cat
-                                        }
-                                    }
-                                    scannedItemsSummary = scanRes.items_summary
-                                    isReceiptSuccess = true
-                                }
-                                .onFailure { err ->
-                                    scanError = err.localizedMessage ?: "Nepodařilo se rozpoznat účtenku."
-                                }
-                        } else {
-                            scanError = "Nepodařilo se načíst soubor obrázku."
+                    4 -> {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text("Spořicí cíle", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                            TextButton(onClick = { showGoalForm = true }) { Text("+ Přidat", fontSize = 11.sp) }
                         }
-                    } catch (e: Exception) {
-                        scanError = e.localizedMessage ?: "Chyba při zpracování obrázku."
-                    } finally {
-                        isScanningReceipt = false
+                        goals.forEach { g ->
+                            Card(shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                                Column(Modifier.padding(10.dp)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(g.title, fontWeight = FontWeight.Medium, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                                        if (g.is_completed) StatusPill("Splněno", StatusGreen)
+                                    }
+                                    Text(
+                                        "${Fmt.money(g.current_amount)} z ${Fmt.money(g.target_amount)}",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    LinearProgressIndicator(
+                                        progress = { (g.progress_percentage / 100.0).toFloat().coerceIn(0f, 1f) },
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                                        color = StatusGreen
+                                    )
+                                    Row {
+                                        TextButton(onClick = { depositGoal = g }) { Text("Vložit", fontSize = 11.sp) }
+                                        TextButton(onClick = { editingGoal = g }) { Text("Upravit", fontSize = 11.sp) }
+                                        TextButton(onClick = {
+                                            scope.launch { repository.deleteSavingsGoal(g.id).onSuccess { load() } }
+                                        }) { Text("Smazat", fontSize = 11.sp, color = StatusRed) }
+                                    }
+                                }
+                            }
+                        }
                     }
-                }
-            }
-        }
 
-        AlertDialog(
-            onDismissRequest = { showAddTransactionDialog = false },
-            title = { Text("Přidat transakci", fontWeight = FontWeight.Bold) },
-            text = {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    // Receipt scanner banner
-                    item {
-                        OutlinedCard(
+                    else -> {
+                        Text("Můj platební profil", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                        var bank by remember(profile) { mutableStateOf(profile?.bank_account ?: "") }
+                        var iban by remember(profile) { mutableStateOf(profile?.iban ?: "") }
+                        Spacer(Modifier.height(8.dp))
+                        HestiaField(bank, { bank = it }, "Číslo účtu")
+                        Spacer(Modifier.height(8.dp))
+                        HestiaField(iban, { iban = it }, "IBAN")
+                        Spacer(Modifier.height(8.dp))
+                        Button(
                             onClick = {
-                                if (!isScanningReceipt) {
-                                    receiptPickerLauncher.launch("image/*")
+                                scope.launch {
+                                    repository.updateFinanceProfile(
+                                        UserFinanceProfileUpdate(bank.ifBlank { null }, iban.ifBlank { null })
+                                    ).onSuccess { profile = it; message = "Profil uložen" }
+                                        .onFailure { error = it.friendly() }
                                 }
                             },
-                            shape = RoundedCornerShape(12.dp),
-                            colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                if (isScanningReceipt) {
-                                    CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp, color = HestiaOrange)
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text("Gemini OCR čte účtenku...", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                        Text("Rozpoznávám obchod, částku a položky...", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    }
-                                } else {
-                                    Icon(Icons.Default.DocumentScanner, contentDescription = null, tint = HestiaOrange, modifier = Modifier.size(24.dp))
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text("Skenovat účtenku (Gemini AI)", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = HestiaOrange)
-                                        Text("Nahrajte fotku účtenky pro automatické vyplnění", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    }
-                                    Icon(Icons.Default.ArrowForwardIos, contentDescription = null, modifier = Modifier.size(12.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                            }
-                        }
-                    }
-
-                    if (isReceiptSuccess) {
-                        item {
-                            Surface(
-                                color = StatusGreen.copy(alpha = 0.12f),
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Column(modifier = Modifier.padding(8.dp)) {
-                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = StatusGreen, modifier = Modifier.size(14.dp))
-                                        Text("Účtenka byla úspěšně načtena!", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = StatusGreen)
-                                    }
-                                    scannedItemsSummary?.let { summary ->
-                                        if (summary.isNotBlank()) {
-                                            Text(summary, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    if (scanError != null) {
-                        item {
-                            Text("Chyba při skenování: $scanError", color = StatusRed, fontSize = 11.sp)
-                        }
-                    }
-
-                    // Type toggle (Výdaj / Příjem)
-                    item {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            FilterChip(
-                                selected = type == "expense",
-                                onClick = { type = "expense" },
-                                label = { Text("Výdaj (-)", fontSize = 12.sp) },
-                                modifier = Modifier.weight(1f)
-                            )
-                            FilterChip(
-                                selected = type == "income",
-                                onClick = { type = "income" },
-                                label = { Text("Příjem (+)", fontSize = 12.sp) },
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                    }
-
-                    item {
-                        OutlinedTextField(
-                            value = title,
-                            onValueChange = { title = it },
-                            label = { Text("Název transakce *") },
-                            placeholder = { Text("např. Velký nákup Lidl") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
-                        )
-                    }
-
-                    item {
-                        OutlinedTextField(
-                            value = amount,
-                            onValueChange = { amount = it },
-                            label = { Text("Částka v Kč *") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
-                        )
-                    }
-
-                    item {
-                        Text("Kategorie:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            items(categories) { (k, l) ->
-                                FilterChip(
-                                    selected = category == k,
-                                    onClick = { category = k },
-                                    label = { Text(l, fontSize = 11.sp) }
-                                )
-                            }
-                        }
-                    }
-
-                    if (members.isNotEmpty()) {
-                        item {
-                            Text("Kdo platil:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                items(members) { m ->
-                                    FilterChip(
-                                        selected = payerId == m.id,
-                                        onClick = { payerId = m.id },
-                                        label = { Text(m.display_name, fontSize = 11.sp) }
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    item {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.clickable { isShared = !isShared }
-                        ) {
-                            Checkbox(
-                                checked = isShared,
-                                onCheckedChange = { isShared = it },
-                                colors = CheckboxDefaults.colors(checkedColor = HestiaOrange)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Sdílený náklad domácnosti (do vyrovnání)", fontSize = 12.sp)
-                        }
+                            shape = RoundedCornerShape(10.dp)
+                        ) { Text("Uložit") }
                     }
                 }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val parsedAmount = amount.toDoubleOrNull()
-                        if (title.isNotBlank() && parsedAmount != null && payerId != null) {
-                            coroutineScope.launch {
-                                val today = java.text.SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(java.util.Date())
-                                repository.createTransaction(
-                                    TransactionCreate(
-                                        title = title.trim(),
-                                        amount = parsedAmount,
-                                        transaction_type = type,
-                                        category = category,
-                                        date = today,
-                                        payer_id = payerId!!,
-                                        is_shared = isShared
-                                    )
-                                ).onSuccess {
-                                    showAddTransactionDialog = false
-                                    refreshData()
-                                    snackbarMessage = "Transakce byla úspěšně zaznamenána!"
-                                }
-                            }
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = HestiaOrange)
-                ) {
-                    Text("Uložit")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAddTransactionDialog = false }) {
-                    Text("Zrušit")
+                Spacer(Modifier.height(40.dp))
+            }
+        }
+    }
+
+    if (showTxForm || editingTx != null) {
+        TransactionFormDialog(
+            initial = editingTx,
+            users = users,
+            currentUserId = currentUserId,
+            defaultDate = if (month == Fmt.monthKey(Fmt.today())) Fmt.today() else "$month-01",
+            onDismiss = { showTxForm = false; editingTx = null },
+            onSave = { body ->
+                scope.launch {
+                    val current = editingTx
+                    val res = if (current == null) repository.createTransaction(body)
+                    else repository.updateTransaction(
+                        current.id,
+                        TransactionUpdate(
+                            title = body.title, amount = body.amount, transaction_type = body.transaction_type,
+                            category = body.category, date = body.date, payer_id = body.payer_id,
+                            is_shared = body.is_shared, split_type = body.split_type,
+                            receipt_url = body.receipt_url, notes = body.notes
+                        )
+                    )
+                    res.onSuccess { showTxForm = false; editingTx = null; load() }
+                        .onFailure { error = it.friendly() }
                 }
             }
         )
     }
 
-    // Add Deposit to Savings Goal Dialog
-    selectedGoalForDeposit?.let { goal ->
-        var depositAmount by remember { mutableStateOf("500") }
+    if (showBudgetForm) {
+        var category by remember { mutableStateOf("groceries") }
+        var limit by remember { mutableStateOf("") }
+        DialogScaffold(
+            title = "Nový rozpočet",
+            onDismiss = { showBudgetForm = false },
+            confirmEnabled = limit.toDoubleOrNull() != null,
+            onConfirm = {
+                scope.launch {
+                    repository.createBudget(CategoryBudgetCreate(category = category, monthly_limit = limit.toDouble()))
+                        .onSuccess { showBudgetForm = false; load() }.onFailure { error = it.friendly() }
+                }
+            }
+        ) {
+            HestiaDropdown("Kategorie", Labels.financeCategories, category, { category = it })
+            Spacer(Modifier.height(8.dp))
+            HestiaNumberField(limit, { limit = it }, "Měsíční limit (Kč)", decimal = true)
+        }
+    }
 
-        AlertDialog(
-            onDismissRequest = { selectedGoalForDeposit = null },
-            title = { Text("Vložit úspory do prasátka: ${goal.title}", fontWeight = FontWeight.Bold, fontSize = 15.sp) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlinedTextField(
-                        value = depositAmount,
-                        onValueChange = { depositAmount = it },
-                        label = { Text("Částka vkladu v Kč") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+    if (showSubForm || editingSub != null) {
+        val init = editingSub
+        var name by remember { mutableStateOf(init?.name ?: "") }
+        var amount by remember { mutableStateOf(init?.amount?.let { Fmt.number(it) } ?: "") }
+        var cycle by remember { mutableStateOf(init?.billing_cycle ?: "monthly") }
+        var nextDate by remember { mutableStateOf(init?.next_billing_date ?: Fmt.today()) }
+        var category by remember { mutableStateOf(init?.category ?: "entertainment") }
+        var payerId by remember { mutableStateOf(init?.payer_id ?: currentUserId) }
+        DialogScaffold(
+            title = if (init == null) "Nové předplatné" else "Upravit předplatné",
+            onDismiss = { showSubForm = false; editingSub = null },
+            confirmEnabled = name.isNotBlank() && amount.toDoubleOrNull() != null,
+            onConfirm = {
+                scope.launch {
+                    val res = if (init == null) repository.createSubscription(
+                        SubscriptionCreate(
+                            name = name, amount = amount.toDouble(), billing_cycle = cycle,
+                            next_billing_date = nextDate, category = category, payer_id = payerId
+                        )
+                    ) else repository.updateSubscription(
+                        init.id,
+                        SubscriptionUpdate(
+                            name = name, amount = amount.toDouble(), billing_cycle = cycle,
+                            next_billing_date = nextDate, category = category, payer_id = payerId
+                        )
                     )
+                    res.onSuccess { showSubForm = false; editingSub = null; load() }
+                        .onFailure { error = it.friendly() }
+                }
+            }
+        ) {
+            HestiaField(name, { name = it }, "Název")
+            Spacer(Modifier.height(8.dp))
+            HestiaNumberField(amount, { amount = it }, "Částka (Kč)", decimal = true)
+            Spacer(Modifier.height(8.dp))
+            HestiaDropdown("Cyklus", Labels.billingCycles, cycle, { cycle = it })
+            Spacer(Modifier.height(8.dp))
+            DateField("Další platba", nextDate, { nextDate = it ?: nextDate })
+            Spacer(Modifier.height(8.dp))
+            HestiaDropdown("Kategorie", Labels.financeCategories, category, { category = it })
+            Spacer(Modifier.height(8.dp))
+            UserDropdown(users, payerId, { payerId = it })
+        }
+    }
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        listOf("200", "500", "1000", "2000").forEach { quick ->
-                            OutlinedButton(
-                                onClick = { depositAmount = quick },
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
-                            ) {
-                                Text("+$quick Kč", fontSize = 11.sp)
-                            }
+    if (showGoalForm || editingGoal != null) {
+        val init = editingGoal
+        var title by remember { mutableStateOf(init?.title ?: "") }
+        var target by remember { mutableStateOf(init?.target_amount?.let { Fmt.number(it) } ?: "") }
+        var current by remember { mutableStateOf(init?.current_amount?.let { Fmt.number(it) } ?: "0") }
+        var targetDate by remember { mutableStateOf(init?.target_date) }
+        DialogScaffold(
+            title = if (init == null) "Nový cíl" else "Upravit cíl",
+            onDismiss = { showGoalForm = false; editingGoal = null },
+            confirmEnabled = title.isNotBlank() && target.toDoubleOrNull() != null,
+            onConfirm = {
+                scope.launch {
+                    val res = if (init == null) repository.createSavingsGoal(
+                        SavingsGoalCreate(
+                            title = title, target_amount = target.toDouble(),
+                            current_amount = current.toDoubleOrNull() ?: 0.0, target_date = targetDate
+                        )
+                    ) else repository.updateSavingsGoal(
+                        init.id,
+                        SavingsGoalUpdate(
+                            title = title, target_amount = target.toDouble(),
+                            current_amount = current.toDoubleOrNull() ?: 0.0, target_date = targetDate
+                        )
+                    )
+                    res.onSuccess { showGoalForm = false; editingGoal = null; load() }
+                        .onFailure { error = it.friendly() }
+                }
+            }
+        ) {
+            HestiaField(title, { title = it }, "Název cíle")
+            Spacer(Modifier.height(8.dp))
+            HestiaNumberField(target, { target = it }, "Cílová částka", decimal = true)
+            Spacer(Modifier.height(8.dp))
+            HestiaNumberField(current, { current = it }, "Už naspořeno", decimal = true)
+            Spacer(Modifier.height(8.dp))
+            DateField("Cílové datum", targetDate, { targetDate = it })
+        }
+    }
+
+    depositGoal?.let { g ->
+        var amount by remember { mutableStateOf("") }
+        DialogScaffold(
+            title = "Vložit do ${g.title}",
+            onDismiss = { depositGoal = null },
+            confirmEnabled = amount.toDoubleOrNull() != null,
+            onConfirm = {
+                scope.launch {
+                    repository.addSavingsDeposit(g.id, amount.toDouble())
+                        .onSuccess { depositGoal = null; load() }.onFailure { error = it.friendly() }
+                }
+            }
+        ) {
+            HestiaNumberField(amount, { amount = it }, "Částka", decimal = true)
+        }
+    }
+
+    settleDialog?.let { s ->
+        var amount by remember { mutableStateOf(Fmt.number(s.amount)) }
+        var note by remember { mutableStateOf("") }
+        DialogScaffold(
+            title = "Vyrovnat dluh",
+            onDismiss = { settleDialog = null },
+            confirmText = "Vyrovnat",
+            confirmEnabled = amount.toDoubleOrNull() != null,
+            onConfirm = {
+                scope.launch {
+                    repository.settleDebt(s.from_user_id, s.to_user_id, amount.toDouble(), note.ifBlank { null })
+                        .onSuccess { settleDialog = null; message = "Dluh vyrovnán"; load() }
+                        .onFailure { error = it.friendly() }
+                }
+            }
+        ) {
+            Text("${s.from_user_name} → ${s.to_user_name}", fontSize = 12.sp)
+            Spacer(Modifier.height(8.dp))
+            HestiaNumberField(amount, { amount = it }, "Částka", decimal = true)
+            Spacer(Modifier.height(8.dp))
+            HestiaField(note, { note = it }, "Poznámka")
+        }
+    }
+
+    csvPreview?.let { preview ->
+        AlertDialog(
+            onDismissRequest = { csvPreview = null },
+            title = { Text("Import CSV", fontSize = 15.sp) },
+            text = {
+                Column {
+                    Text("${preview.total_count} řádků", fontSize = 12.sp)
+                    Text("Příjmy: ${Fmt.money(preview.total_income)}", fontSize = 12.sp, color = StatusGreen)
+                    Text("Výdaje: ${Fmt.money(preview.total_expense)}", fontSize = 12.sp, color = StatusRed)
+                    Spacer(Modifier.height(6.dp))
+                    LazyColumn(Modifier.heightIn(max = 200.dp)) {
+                        items(preview.rows.size) { i ->
+                            val r = preview.rows[i]
+                            Text(
+                                "${r.date} • ${r.title} • ${Fmt.money(r.amount)}",
+                                fontSize = 11.sp,
+                                modifier = Modifier.padding(vertical = 2.dp)
+                            )
                         }
                     }
                 }
             },
             confirmButton = {
-                Button(
-                    onClick = {
-                        val amt = depositAmount.toDoubleOrNull()
-                        if (amt != null && amt > 0) {
-                            coroutineScope.launch {
-                                repository.addSavingsDeposit(goal.id, amt).onSuccess {
-                                    selectedGoalForDeposit = null
-                                    refreshData()
-                                    snackbarMessage = "Úspory byly úspěšně vloženy!"
-                                }
-                            }
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = StatusGreen)
-                ) {
-                    Text("Vložit úspory")
-                }
+                TextButton(onClick = {
+                    scope.launch {
+                        repository.confirmCsvImport(preview.rows, currentUserId ?: 1, true)
+                            .onSuccess { message = "Importováno ${preview.total_count} transakcí"; csvPreview = null; load() }
+                            .onFailure { error = it.friendly() }
+                    }
+                }) { Text("Importovat") }
             },
-            dismissButton = {
-                TextButton(onClick = { selectedGoalForDeposit = null }) {
-                    Text("Zrušit")
+            dismissButton = { TextButton(onClick = { csvPreview = null }) { Text("Zrušit") } }
+        )
+    }
+
+    scanResult?.let { r ->
+        var title by remember { mutableStateOf(r.store_name ?: "Nákup") }
+        var amount by remember { mutableStateOf(r.total_amount?.let { Fmt.number(it) } ?: "") }
+        var date by remember { mutableStateOf(r.date ?: Fmt.today()) }
+        var category by remember { mutableStateOf(r.category ?: "groceries") }
+        DialogScaffold(
+            title = "Účtenka",
+            onDismiss = { scanResult = null },
+            confirmText = "Vytvořit",
+            confirmEnabled = title.isNotBlank() && amount.toDoubleOrNull() != null,
+            onConfirm = {
+                scope.launch {
+                    repository.createTransaction(
+                        TransactionCreate(
+                            title = title, amount = amount.toDouble(), date = date,
+                            category = category, payer_id = currentUserId ?: 1, notes = r.items_summary
+                        )
+                    ).onSuccess { scanResult = null; message = "Transakce vytvořena"; load() }
+                        .onFailure { error = it.friendly() }
                 }
             }
-        )
+        ) {
+            HestiaField(title, { title = it }, "Obchod")
+            Spacer(Modifier.height(8.dp))
+            HestiaNumberField(amount, { amount = it }, "Částka", decimal = true)
+            Spacer(Modifier.height(8.dp))
+            DateField("Datum", date, { date = it ?: date })
+            Spacer(Modifier.height(8.dp))
+            HestiaDropdown("Kategorie", Labels.financeCategories, category, { category = it })
+            r.items_summary?.let {
+                Spacer(Modifier.height(8.dp))
+                Text(it, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
     }
 }
 
 @Composable
-private fun FinanceKpiCard(
-    title: String,
-    amount: String,
-    icon: ImageVector,
-    iconColor: Color,
-    modifier: Modifier = Modifier
+private fun FinanceOverview(
+    summary: FinanceSummary?,
+    budgets: List<CategoryBudget>,
+    onAddBudget: () -> Unit,
+    onExportCsv: () -> Unit,
+    onScanReceipt: () -> Unit
 ) {
-    Card(
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        modifier = modifier
-    ) {
-        Column(modifier = Modifier.padding(14.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = iconColor,
-                    modifier = Modifier.size(18.dp)
+    if (summary == null) {
+        EmptyState(Icons.Default.Savings, "Žádná data", "Za tento měsíc nejsou data.")
+        return
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        StatCard(
+            title = "Příjmy",
+            value = Fmt.money(summary.total_income),
+            icon = Icons.Default.TrendingUp,
+            iconColor = StatusGreen,
+            modifier = Modifier.weight(1f)
+        )
+        StatCard(
+            title = "Výdaje",
+            value = Fmt.money(summary.total_expense),
+            icon = Icons.Default.TrendingDown,
+            iconColor = StatusRed,
+            modifier = Modifier.weight(1f)
+        )
+    }
+    Spacer(Modifier.height(8.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        StatCard(
+            title = "Bilance",
+            value = Fmt.money(summary.net_balance),
+            icon = Icons.Default.AccountBalanceWallet,
+            iconColor = if (summary.net_balance >= 0) StatusGreen else StatusRed,
+            modifier = Modifier.weight(1f)
+        )
+        StatCard(
+            title = "Ø výdaje",
+            value = Fmt.money(summary.all_months_average_expense),
+            icon = Icons.Default.Insights,
+            iconColor = StatusBlue,
+            modifier = Modifier.weight(1f),
+            subtitle = "${summary.distinct_months_count} měsíců"
+        )
+    }
+
+    Spacer(Modifier.height(12.dp))
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Text("Kategorie", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+        TextButton(onClick = onAddBudget) { Text("+ Rozpočet", fontSize = 11.sp) }
+    }
+    summary.categories.sortedByDescending { it.current_month_amount }.forEach { c ->
+        val limit = c.budget_limit ?: budgets.firstOrNull { it.category == c.category }?.monthly_limit
+        val progress = if (limit != null && limit > 0) (c.current_month_amount / limit).toFloat() else 0f
+        Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(Labels.label(Labels.financeCategories, c.category), fontSize = 12.sp, modifier = Modifier.weight(1f))
+                Text(Fmt.money(c.current_month_amount), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                limit?.let {
+                    Text(" / ${Fmt.money(it)}", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            if (limit != null) {
+                LinearProgressIndicator(
+                    progress = { progress.coerceIn(0f, 1f) },
+                    modifier = Modifier.fillMaxWidth().padding(top = 3.dp),
+                    color = if (progress > 1f) StatusRed else if (progress > 0.85f) StatusYellow else StatusGreen
                 )
             }
-            Spacer(modifier = Modifier.height(6.dp))
+            val diff = c.difference_from_average_percent
+            if (diff != null && diff != 0.0) {
+                Text(
+                    (if (diff > 0) "+" else "") + "${Fmt.number(diff, 0)} % oproti průměru",
+                    fontSize = 9.sp,
+                    color = if (diff > 0) StatusRed else StatusGreen
+                )
+            }
+        }
+    }
+
+    Spacer(Modifier.height(12.dp))
+    Text("Poslední transakce", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+    summary.recent_transactions.take(5).forEach { tx ->
+        Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(tx.title, fontSize = 12.sp)
+                Text(Fmt.date(tx.date), fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             Text(
-                text = amount,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
+                (if (tx.transaction_type == "income") "+" else "-") + Fmt.money(tx.amount),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = if (tx.transaction_type == "income") StatusGreen else StatusRed
             )
         }
     }
+
+    Spacer(Modifier.height(12.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedButton(onClick = onExportCsv, shape = RoundedCornerShape(10.dp), modifier = Modifier.weight(1f)) {
+            Icon(Icons.Default.UploadFile, null, modifier = Modifier.size(14.dp))
+            Spacer(Modifier.width(4.dp))
+            Text("Import CSV", fontSize = 11.sp)
+        }
+        OutlinedButton(onClick = onScanReceipt, shape = RoundedCornerShape(10.dp), modifier = Modifier.weight(1f)) {
+            Icon(Icons.Default.PhotoCamera, null, modifier = Modifier.size(14.dp))
+            Spacer(Modifier.width(4.dp))
+            Text("Skenovat účtenku", fontSize = 11.sp)
+        }
+    }
 }
 
 @Composable
-private fun MemberBalanceRow(balance: MemberBalance) {
-    val isPositive = balance.net_balance >= 0
-    val balanceColor = if (isPositive) StatusGreen else StatusRed
-
-    val avatarColor = try {
-        Color(android.graphics.Color.parseColor(balance.avatar_color))
-    } catch (_: Exception) {
-        HestiaOrange
-    }
-
-    Card(
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(avatarColor),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = balance.user_name.take(1).uppercase(),
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
-                    )
-                }
-
-                Column {
-                    Text(text = balance.user_name, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    Text(
-                        text = "Zaplaceno celkem: ${String.format(Locale.getDefault(), "%.0f", balance.paid_total)} Kč",
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            Column(horizontalAlignment = Alignment.End) {
+private fun TransactionCard(
+    tx: TransactionItem,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Card(shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+        Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(tx.title, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                 Text(
-                    text = "${if (isPositive) "+" else ""}${String.format(Locale.getDefault(), "%.0f", balance.net_balance)} Kč",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
-                    color = balanceColor
-                )
-                Text(
-                    text = if (isPositive) "má dostat" else "má doplatit",
+                    "${Fmt.date(tx.date)} • ${Labels.label(Labels.financeCategories, tx.category)}" +
+                        (tx.payer?.display_name?.let { " • $it" } ?: ""),
                     fontSize = 10.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                if (tx.is_shared) StatusPill("Sdíleno", StatusBlue)
+            }
+            Text(
+                (if (tx.transaction_type == "income") "+" else "-") + Fmt.money(tx.amount),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (tx.transaction_type == "income") StatusGreen else StatusRed
+            )
+            IconButton(onClick = onEdit, modifier = Modifier.size(28.dp)) {
+                Icon(Icons.Default.Edit, null, modifier = Modifier.size(14.dp))
+            }
+            IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
+                Icon(Icons.Default.Delete, null, tint = StatusRed, modifier = Modifier.size(14.dp))
             }
         }
     }
+}
+
+@Composable
+private fun TransactionFormDialog(
+    initial: TransactionItem?,
+    users: List<User>,
+    currentUserId: Int?,
+    defaultDate: String,
+    onDismiss: () -> Unit,
+    onSave: (TransactionCreate) -> Unit
+) {
+    var type by remember { mutableStateOf(initial?.transaction_type ?: "expense") }
+    var title by remember { mutableStateOf(initial?.title ?: "") }
+    var amount by remember { mutableStateOf(initial?.amount?.let { Fmt.number(it) } ?: "") }
+    var category by remember { mutableStateOf(initial?.category ?: "groceries") }
+    var date by remember { mutableStateOf(initial?.date ?: defaultDate) }
+    var payerId by remember { mutableStateOf(initial?.payer_id ?: currentUserId) }
+    var shared by remember { mutableStateOf(initial?.is_shared ?: true) }
+    var notes by remember { mutableStateOf(initial?.notes ?: "") }
+
+    DialogScaffold(
+        title = if (initial == null) "Nová transakce" else "Upravit transakci",
+        onDismiss = onDismiss,
+        confirmEnabled = title.isNotBlank() && amount.toDoubleOrNull() != null && payerId != null,
+        onConfirm = {
+            onSave(
+                TransactionCreate(
+                    title = title.trim(), amount = amount.toDouble(), transaction_type = type,
+                    category = category, date = date, payer_id = payerId ?: 1,
+                    is_shared = shared, split_type = "equal",
+                    notes = notes.ifBlank { null }
+                )
+            )
+        }
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(selected = type == "expense", onClick = { type = "expense" }, label = { Text("Výdaj", fontSize = 11.sp) })
+            FilterChip(selected = type == "income", onClick = { type = "income" }, label = { Text("Příjem", fontSize = 11.sp) })
+        }
+        Spacer(Modifier.height(8.dp))
+        HestiaField(title, { title = it }, "Název")
+        Spacer(Modifier.height(8.dp))
+        HestiaNumberField(amount, { amount = it }, "Částka (Kč)", decimal = true)
+        Spacer(Modifier.height(8.dp))
+        HestiaDropdown("Kategorie", Labels.financeCategories, category, { category = it })
+        Spacer(Modifier.height(8.dp))
+        DateField("Datum", date, { date = it ?: date })
+        Spacer(Modifier.height(8.dp))
+        UserDropdown(users, payerId, { payerId = it })
+        Spacer(Modifier.height(8.dp))
+        ToggleRow("Sdílený výdaj", shared, { shared = it })
+        Spacer(Modifier.height(8.dp))
+        HestiaField(notes, { notes = it }, "Poznámky", singleLine = false, minLines = 2)
+    }
+}
+
+@Composable
+fun UserDropdown(users: List<User>, selectedId: Int?, onSelect: (Int) -> Unit) {
+    val label = users.firstOrNull { it.id == selectedId }?.display_name ?: "Vybrat člena"
+    HestiaDropdown(
+        "Plátce",
+        users.map { it.id.toString() to it.display_name },
+        selectedId?.toString(),
+        { v -> v.toIntOrNull()?.let(onSelect) }
+    )
+    if (selectedId == null) Text(label, fontSize = 10.sp, color = StatusRed)
 }

@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import com.example.hestia.data.models.PublicMember
 import com.example.hestia.data.models.User
 import com.example.hestia.data.repository.HestiaRepository
+import com.example.hestia.util.friendly
 import com.example.hestia.theme.HestiaOrange
 import com.example.hestia.theme.StatusRed
 import kotlinx.coroutines.flow.first
@@ -66,9 +67,14 @@ fun SwitchUserDialog(
                     isLoading = false
                     onUserSwitched(tokenResponse.user)
                 }
-                .onFailure { _ ->
+                .onFailure { throwable ->
                     isLoading = false
-                    errorMessage = "Nesprávné heslo pro účet ${member.display_name}."
+                    val http = throwable as? retrofit2.HttpException
+                    errorMessage = if (http != null && (http.code() == 401 || http.code() == 400)) {
+                        "Nesprávné heslo pro účet ${member.display_name}."
+                    } else {
+                        throwable.friendly()
+                    }
                 }
         }
     }

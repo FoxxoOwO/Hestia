@@ -41,8 +41,8 @@ fun LoginScreen(
     var selectedMember by remember { mutableStateOf<PublicMember?>(null) }
     var isCustomUserMode by remember { mutableStateOf(false) }
 
-    var username by remember { mutableStateOf("admin") }
-    var password by remember { mutableStateOf("hestia123") }
+    var username by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
     var isPasswordVisible by remember { mutableStateOf(false) }
 
     var isLoading by remember { mutableStateOf(false) }
@@ -55,7 +55,12 @@ fun LoginScreen(
             if (list.isNotEmpty() && selectedMember == null) {
                 selectedMember = list.first()
                 username = list.first().username
+            } else if (list.isEmpty()) {
+                isCustomUserMode = true
             }
+        }.onFailure {
+            isCustomUserMode = true
+            errorMessage = "Nepodařilo se načíst členy domácnosti – zkontrolujte adresu serveru."
         }
     }
 

@@ -1,617 +1,462 @@
 package com.example.hestia.ui.screens.documents
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import android.content.Intent
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.hestia.data.models.DocumentCreate
-import com.example.hestia.data.models.DocumentItem
-import com.example.hestia.data.models.DocumentStats
+import com.example.hestia.data.models.*
 import com.example.hestia.data.repository.HestiaRepository
 import com.example.hestia.theme.HestiaOrange
+import com.example.hestia.theme.StatusBlue
 import com.example.hestia.theme.StatusGreen
 import com.example.hestia.theme.StatusRed
 import com.example.hestia.theme.StatusYellow
-import com.example.hestia.ui.components.EmptyStateCard
+import com.example.hestia.ui.components.*
+import com.example.hestia.util.Fmt
+import com.example.hestia.util.Labels
+import com.example.hestia.util.friendly
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
-fun DocumentsScreen(
-    repository: HestiaRepository,
-    modifier: Modifier = Modifier
-) {
-    val coroutineScope = rememberCoroutineScope()
+fun DocumentsScreen(repository: HestiaRepository) {
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     var documents by remember { mutableStateOf<List<DocumentItem>>(emptyList()) }
     var stats by remember { mutableStateOf<DocumentStats?>(null) }
-    var isLoading by remember { mutableStateOf(true) }
-    var searchQuery by remember { mutableStateOf("") }
-    var selectedCategory by remember { mutableStateOf("all") }
-    var isVaultUnlocked by remember { mutableStateOf(false) }
-    var showPinDialog by remember { mutableStateOf(false) }
-    var showAddDialog by remember { mutableStateOf(false) }
-    var snackbarMessage by remember { mutableStateOf<String?>(null) }
+    var loading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var message by remember { mutableStateOf<String?>(null) }
+    var search by remember { mutableStateOf("") }
+    var category by remember { mutableStateOf<String?>(null) }
+    var statusFilter by remember { mutableStateOf<String?>(null) }
+    var showForm by remember { mutableStateOf(false) }
+    var editing by remember { mutableStateOf<DocumentItem?>(null) }
+    var deleteTarget by remember { mutableStateOf<DocumentItem?>(null) }
+    var uploadPreview by remember { mutableStateOf<DocumentUploadResult?>(null) }
+    var vaultTarget by remember { mutableStateOf<DocumentItem?>(null) }
+    var showPinSetup by remember { mutableStateOf(false) }
+    var pendingFile by remember { mutableStateOf<Pair<ByteArray, String>?>(null) }
+    var vaultUnlocked by remember { mutableStateOf(false) }
 
-    fun refreshData() {
-        coroutineScope.launch {
-            isLoading = true
-            repository.getDocumentStats().onSuccess { stats = it }
-            repository.getDocuments().onSuccess { documents = it }
-            isLoading = false
+    suspend fun load() {
+        loading = true
+        repository.getDocuments(
+            category = category,
+            query = search.ifBlank { null },
+            status = statusFilter,
+            vaultUnlocked = vaultUnlocked
+        )
+            .onSuccess { documents = it; error = null }
+            .onFailure { error = it.friendly() }
+        repository.getDocumentStats().onSuccess { stats = it }
+        loading = false
+    }
+
+    LaunchedEffect(category, statusFilter, vaultUnlocked, search) {
+        if (search.isNotBlank()) kotlinx.coroutines.delay(350)
+        load()
+    }
+
+    suspend fun openFile(path: String) {
+        val base = repository.serverUrl().trimEnd('/')
+        val normalized = if (path.startsWith("/uploads/") || path.startsWith("http")) path
+        else "/uploads/" + path.trimStart('/')
+        val url = if (normalized.startsWith("http")) normalized else base + normalized
+        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
+            .onFailure { error = "Nelze otevřít soubor – chybí aplikace pro tento typ" }
+    }
+
+    fun upload(bytes: ByteArray, name: String, mime: String, meta: DocumentUploadResult?) {
+        scope.launch {
+            repository.uploadDocument(bytes, name, mime, autoAnalyze = true)
+                .onSuccess { result ->
+                    if (meta == null && result.ai_metadata != null) {
+                        uploadPreview = result
+                    } else {
+                        message = "Dokument nahrán"
+                        load()
+                    }
+                }
+                .onFailure { error = it.friendly() }
         }
     }
 
-    LaunchedEffect(Unit) {
-        refreshData()
-    }
-
-    val categories = listOf(
-        "all" to "Vše",
-        "warranty" to "Záruky a účtenky",
-        "contract" to "Smlouvy",
-        "manual" to "Návody",
-        "personal" to "Osobní",
-        "other" to "Ostatní"
-    )
-
-    val filteredDocuments = remember(documents, searchQuery, selectedCategory, isVaultUnlocked) {
-        documents.filter { doc ->
-            // If vault is locked, hide vault-protected documents
-            if (doc.is_vault_protected && !isVaultUnlocked) {
-                return@filter false
-            }
-
-            val matchesCategory = selectedCategory == "all" || doc.category.equals(selectedCategory, ignoreCase = true)
-            val matchesQuery = searchQuery.isBlank() ||
-                    doc.title.contains(searchQuery, ignoreCase = true) ||
-                    (doc.issuer?.contains(searchQuery, ignoreCase = true) == true) ||
-                    (doc.physical_location?.contains(searchQuery, ignoreCase = true) == true)
-            matchesCategory && matchesQuery
-        }
-    }
-
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        containerColor = MaterialTheme.colorScheme.background,
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showAddDialog = true },
-                containerColor = HestiaOrange,
-                contentColor = Color.White,
-                shape = CircleShape
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Přidat doklad")
-            }
-        },
-        snackbarHost = {
-            snackbarMessage?.let { msg ->
-                Snackbar(
-                    modifier = Modifier.padding(16.dp),
-                    action = {
-                        TextButton(onClick = { snackbarMessage = null }) {
-                            Text("OK", color = HestiaOrange)
-                        }
-                    }
-                ) {
-                    Text(msg)
+    val fileLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        if (uri != null) {
+            scope.launch {
+                val bytes = withContext(Dispatchers.IO) {
+                    runCatching { context.contentResolver.openInputStream(uri)?.use { it.readBytes() } }.getOrNull()
                 }
-            }
-        }
-    ) { paddingValues ->
-        if (isLoading && documents.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(color = HestiaOrange)
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-                contentPadding = PaddingValues(top = 12.dp, bottom = 80.dp)
-            ) {
-                // Stats cards + Trezor toggle
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        DocumentStatCard(
-                            label = "Dokumentů",
-                            value = "${stats?.total_documents ?: documents.size}",
-                            icon = Icons.Default.Description,
-                            color = HestiaOrange,
-                            modifier = Modifier.weight(1f)
-                        )
-                        DocumentStatCard(
-                            label = "Končící záruky",
-                            value = "${stats?.expiring_soon ?: 0}",
-                            icon = Icons.Default.WarningAmber,
-                            color = StatusYellow,
-                            modifier = Modifier.weight(1f)
-                        )
-                        DocumentStatCard(
-                            label = if (isVaultUnlocked) "Trezor (Odemčen)" else "Trezor (Zamčen)",
-                            value = "${stats?.vault_protected ?: 0}",
-                            icon = if (isVaultUnlocked) Icons.Default.LockOpen else Icons.Default.Lock,
-                            color = if (isVaultUnlocked) StatusGreen else Color(0xFF6366F1),
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable {
-                                    if (isVaultUnlocked) {
-                                        isVaultUnlocked = false
-                                        snackbarMessage = "Trezor byl uzamčen"
-                                    } else {
-                                        showPinDialog = true
-                                    }
-                                }
-                        )
-                    }
-                }
-
-                // Vault status banner if locked
-                if (!isVaultUnlocked && (stats?.vault_protected ?: 0) > 0) {
-                    item {
-                        Card(
-                            shape = RoundedCornerShape(12.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color(0xFF6366F1).copy(alpha = 0.1f)),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { showPinDialog = true }
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Icon(Icons.Default.Security, contentDescription = null, tint = Color(0xFF6366F1), modifier = Modifier.size(20.dp))
-                                    Text(
-                                        text = "Trezor obsahuje chráněné doklady",
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                }
-                                Text(
-                                    text = "Odemknout PINem",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF6366F1)
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // Search field
-                item {
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Hledat v archivu dokladů...") },
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                        trailingIcon = {
-                            if (searchQuery.isNotEmpty()) {
-                                IconButton(onClick = { searchQuery = "" }) {
-                                    Icon(Icons.Default.Clear, contentDescription = "Vymazat")
-                                }
-                            }
-                        },
-                        singleLine = true,
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                }
-
-                // Category chips
-                item {
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(categories) { (key, label) ->
-                            FilterChip(
-                                selected = selectedCategory == key,
-                                onClick = { selectedCategory = key },
-                                label = { Text(label, fontSize = 11.sp) }
-                            )
-                        }
-                    }
-                }
-
-                // Document list
-                if (filteredDocuments.isEmpty()) {
-                    item {
-                        EmptyStateCard(
-                            message = if (searchQuery.isNotBlank() || selectedCategory != "all")
-                                "Žádné dokumenty neodpovídají zadanému filtru."
-                            else
-                                "V archivu zatím nejsou uloženy žádné dokumenty.",
-                            icon = Icons.Default.FolderOpen
-                        )
-                    }
+                if (bytes == null) {
+                    error = "Soubor nelze přečíst"
                 } else {
-                    items(filteredDocuments, key = { it.id }) { doc ->
-                        val warrantyColor = when {
-                            (doc.days_until_expiry ?: 999) < 0 -> StatusRed
-                            (doc.days_until_expiry ?: 999) <= 30 -> StatusYellow
-                            else -> StatusGreen
-                        }
-
-                        Card(
-                            shape = RoundedCornerShape(14.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(modifier = Modifier.padding(14.dp)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                        modifier = Modifier.weight(1f)
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(38.dp)
-                                                .clip(CircleShape)
-                                                .background(
-                                                    if (doc.is_vault_protected) Color(0xFF6366F1).copy(alpha = 0.15f)
-                                                    else HestiaOrange.copy(alpha = 0.15f)
-                                                ),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Icon(
-                                                imageVector = if (doc.is_vault_protected) Icons.Default.Lock else Icons.Default.Description,
-                                                contentDescription = null,
-                                                tint = if (doc.is_vault_protected) Color(0xFF6366F1) else HestiaOrange,
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                        }
-
-                                        Column {
-                                            Text(text = doc.title, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                                            if (!doc.issuer.isNullOrBlank()) {
-                                                Text(
-                                                    text = "Vystavitel: ${doc.issuer}",
-                                                    fontSize = 11.sp,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
-                                            }
-                                        }
-                                    }
-
-                                    IconButton(
-                                        onClick = {
-                                            coroutineScope.launch {
-                                                repository.deleteDocument(doc.id).onSuccess {
-                                                    refreshData()
-                                                    snackbarMessage = "Doklad smazán"
-                                                }
-                                            }
-                                        },
-                                        modifier = Modifier.size(28.dp)
-                                    ) {
-                                        Icon(Icons.Default.Delete, contentDescription = "Smazat", tint = MaterialTheme.colorScheme.error.copy(alpha = 0.6f), modifier = Modifier.size(18.dp))
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(8.dp))
-
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    if (doc.days_until_expiry != null) {
-                                        Surface(
-                                            shape = RoundedCornerShape(6.dp),
-                                            color = warrantyColor.copy(alpha = 0.15f)
-                                        ) {
-                                            Text(
-                                                text = when {
-                                                    doc.days_until_expiry < 0 -> "Záruka vypršela"
-                                                    doc.days_until_expiry == 0 -> "Záruka končí dnes"
-                                                    else -> "Záruka: zbývá ${doc.days_until_expiry} dní"
-                                                },
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = warrantyColor,
-                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                            )
-                                        }
-                                    } else {
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                    }
-
-                                    if (!doc.physical_location.isNullOrBlank()) {
-                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                            Icon(Icons.Default.Folder, contentDescription = null, modifier = Modifier.size(13.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                            Text(
-                                                text = doc.physical_location,
-                                                fontSize = 11.sp,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    val name = uri.lastPathSegment?.substringAfterLast('/') ?: "dokument.pdf"
+                    val mime = context.contentResolver.getType(uri) ?: "application/octet-stream"
+                    pendingFile = bytes to name
+                    upload(bytes, name, mime, null)
                 }
             }
         }
     }
 
-    // Vault PIN Dialog
-    if (showPinDialog) {
-        var pin by remember { mutableStateOf("") }
-        var pinError by remember { mutableStateOf(false) }
-
-        AlertDialog(
-            onDismissRequest = { showPinDialog = false },
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(Icons.Default.Lock, contentDescription = null, tint = Color(0xFF6366F1))
-                    Text("Odemknout Trezor", fontWeight = FontWeight.Bold)
+    Column(Modifier.fillMaxSize()) {
+        Column(Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
+            HestiaField(search, { search = it }, "Hledat dokument")
+            Spacer(Modifier.height(6.dp))
+            ChipSelector(Labels.documentCategories, category, { category = it.ifBlank { null } }, includeAll = true)
+            Spacer(Modifier.height(4.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                FilterChip(
+                    selected = statusFilter == "expiring_soon",
+                    onClick = { statusFilter = if (statusFilter == "expiring_soon") null else "expiring_soon" },
+                    label = { Text("Brzy expiruje", fontSize = 10.sp) }
+                )
+                FilterChip(
+                    selected = statusFilter == "expired",
+                    onClick = { statusFilter = if (statusFilter == "expired") null else "expired" },
+                    label = { Text("Expirované", fontSize = 10.sp) }
+                )
+                Spacer(Modifier.weight(1f))
+                IconButton(onClick = { showPinSetup = true }) {
+                    Icon(Icons.Default.Lock, "Trezor PIN", modifier = Modifier.size(18.dp))
                 }
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = "Zadejte 4-místný PIN trezoru (výchozí kód: 1234):",
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+            }
+        }
 
-                    OutlinedTextField(
-                        value = pin,
-                        onValueChange = {
-                            if (it.length <= 6) {
-                                pin = it
-                                pinError = false
-                            }
-                        },
-                        label = { Text("PIN kód") },
-                        visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                        isError = pinError,
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
+        stats?.let { s ->
+            Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                StatCard("Celkem", s.total_documents.toString(), Icons.Default.Description, StatusBlue, Modifier.weight(1f))
+                StatCard("Brzy", s.expiring_soon_count.toString(), Icons.Default.Schedule, StatusYellow, Modifier.weight(1f))
+                StatCard("Expirované", s.expired_count.toString(), Icons.Default.Error, StatusRed, Modifier.weight(1f))
+                StatCard("Trezor", s.vault_count.toString(), Icons.Default.Lock, HestiaOrange, Modifier.weight(1f))
+            }
+        }
 
-                    if (pinError) {
-                        Text("Nesprávný PIN kód!", color = StatusRed, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        message?.let {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = StatusGreen.copy(alpha = 0.15f)),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 3.dp)
+            ) {
+                Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(it, fontSize = 11.sp, modifier = Modifier.weight(1f))
+                    IconButton(onClick = { message = null }, modifier = Modifier.size(20.dp)) {
+                        Icon(Icons.Default.Close, null, modifier = Modifier.size(14.dp))
                     }
                 }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        coroutineScope.launch {
-                            repository.verifyVaultPin(pin.trim()).onSuccess {
-                                isVaultUnlocked = true
-                                showPinDialog = false
-                                snackbarMessage = "Trezor byl úspěšně odemčen!"
-                            }.onFailure {
-                                if (pin.trim() == "1234") {
-                                    isVaultUnlocked = true
-                                    showPinDialog = false
-                                    snackbarMessage = "Trezor byl úspěšně odemčen!"
-                                } else {
-                                    pinError = true
-                                }
-                            }
+            }
+        }
+        ErrorBox(error, onRetry = { scope.launch { load() } })
+
+        if (loading) LoadingBox() else LazyColumn(
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            if (documents.isEmpty()) {
+                item { EmptyState(Icons.Default.FolderOpen, "Žádné dokumenty", "Nahrajte fakturu, smlouvu nebo záruční list.") }
+            }
+            items(documents, key = { it.id }) { doc ->
+                DocumentCard(
+                    doc = doc,
+                    onOpen = {
+                        if (doc.is_vault_protected) {
+                            vaultTarget = doc
+                        } else {
+                            scope.launch { openFile(doc.file_path) }
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6366F1))
-                ) {
-                    Text("Odemknout")
+                    onEdit = { editing = doc },
+                    onDelete = { deleteTarget = doc }
+                )
+            }
+            item { Spacer(Modifier.height(90.dp)) }
+        }
+    }
+
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomEnd) {
+        Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.End) {
+            SmallFloatingActionButton(
+                onClick = { showForm = true },
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+            ) { Icon(Icons.Default.Edit, "Ručně") }
+            Spacer(Modifier.height(10.dp))
+            ExtendedFloatingActionButton(
+                onClick = { fileLauncher.launch("*/*") },
+                containerColor = HestiaOrange,
+                contentColor = Color.White,
+                icon = { Icon(Icons.Default.CloudUpload, null) },
+                text = { Text("Nahrát") }
+            )
+        }
+    }
+
+    uploadPreview?.let { result ->
+        val meta = result.ai_metadata
+        var title by remember { mutableStateOf(meta?.title ?: result.file_name) }
+        var cat by remember { mutableStateOf(meta?.category ?: "other") }
+        var issuer by remember { mutableStateOf(meta?.issuer ?: "") }
+        var docDate by remember { mutableStateOf(meta?.document_date) }
+        var expiry by remember { mutableStateOf(meta?.expiry_date) }
+        var amount by remember { mutableStateOf(meta?.amount?.let { Fmt.number(it) } ?: "") }
+        var vault by remember { mutableStateOf(false) }
+        DialogScaffold(
+            title = "AI rozpoznala dokument",
+            onDismiss = { uploadPreview = null },
+            confirmEnabled = title.isNotBlank(),
+            onConfirm = {
+                scope.launch {
+                    repository.createDocument(
+                        DocumentCreate(
+                            title = title, category = cat,
+                            file_path = result.file_path, file_name = result.file_name,
+                            file_size = result.file_size, file_type = result.file_type,
+                            issuer = issuer.ifBlank { null }, document_date = docDate,
+                            expiry_date = expiry, amount = amount.toDoubleOrNull(),
+                            is_vault_protected = vault, tags = meta?.tags,
+                            summary = meta?.summary
+                        )
+                    ).onSuccess { uploadPreview = null; message = "Dokument uložen"; load() }
+                        .onFailure { error = it.friendly() }
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { showPinDialog = false }) {
-                    Text("Zrušit")
+            }
+        ) {
+            HestiaField(title, { title = it }, "Název")
+            Spacer(Modifier.height(8.dp))
+            HestiaDropdown("Kategorie", Labels.documentCategories, cat, { cat = it })
+            Spacer(Modifier.height(8.dp))
+            HestiaField(issuer, { issuer = it }, "Vystavitel")
+            Spacer(Modifier.height(8.dp))
+            DateField("Datum dokumentu", docDate, { docDate = it })
+            Spacer(Modifier.height(8.dp))
+            DateField("Platnost do", expiry, { expiry = it })
+            Spacer(Modifier.height(8.dp))
+            HestiaNumberField(amount, { amount = it }, "Částka", decimal = true)
+            Spacer(Modifier.height(8.dp))
+            ToggleRow("Uzamknout do trezoru", vault, { vault = it })
+            meta?.summary?.let {
+                Spacer(Modifier.height(8.dp))
+                Text(it, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+
+    if (showForm || editing != null) {
+        DocumentFormDialog(
+            initial = editing,
+            onDismiss = { showForm = false; editing = null },
+            onSave = { create ->
+                scope.launch {
+                    val current = editing
+                    val res = if (current == null) repository.createDocument(create)
+                    else repository.updateDocument(
+                        current.id,
+                        DocumentUpdate(
+                            title = create.title, category = create.category, issuer = create.issuer,
+                            document_date = create.document_date, expiry_date = create.expiry_date,
+                            warranty_months = create.warranty_months, contract_number = create.contract_number,
+                            amount = create.amount, physical_location = create.physical_location,
+                            is_vault_protected = create.is_vault_protected, tags = create.tags,
+                            summary = create.summary
+                        )
+                    )
+                    res.onSuccess { showForm = false; editing = null; load() }
+                        .onFailure { error = it.friendly() }
                 }
             }
         )
     }
 
-    // Add Document Dialog
-    if (showAddDialog) {
-        var title by remember { mutableStateOf("") }
-        var category by remember { mutableStateOf("warranty") }
-        var issuer by remember { mutableStateOf("") }
-        var expiryDate by remember { mutableStateOf("") }
-        var warrantyMonths by remember { mutableStateOf("24") }
-        var amount by remember { mutableStateOf("") }
-        var location by remember { mutableStateOf("Šanon Dokladů - Police 1") }
-        var isVault by remember { mutableStateOf(false) }
-
-        val categoryList = listOf("warranty" to "Záruka", "contract" to "Smlouva", "manual" to "Návod", "personal" to "Osobní", "other" to "Ostatní")
-
-        AlertDialog(
-            onDismissRequest = { showAddDialog = false },
-            title = { Text("Zaevidovat nový doklad", fontWeight = FontWeight.Bold) },
-            text = {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    item {
-                        OutlinedTextField(
-                            value = title,
-                            onValueChange = { title = it },
-                            label = { Text("Název dokladu *") },
-                            placeholder = { Text("např. Záruční list Lednice Samsung") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
-                        )
-                    }
-
-                    item {
-                        Text("Kategorie:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            items(categoryList) { (k, l) ->
-                                FilterChip(
-                                    selected = category == k,
-                                    onClick = { category = k },
-                                    label = { Text(l, fontSize = 11.sp) }
-                                )
-                            }
+    vaultTarget?.let { doc ->
+        var pin by remember { mutableStateOf("") }
+        DialogScaffold(
+            title = "Trezor",
+            onDismiss = { vaultTarget = null },
+            confirmText = "Odemknout",
+            confirmEnabled = pin.length >= 4,
+            onConfirm = {
+                scope.launch {
+                    repository.verifyVaultPin(pin).onSuccess { r ->
+                        if (r.success) {
+                            vaultUnlocked = true
+                            openFile(doc.file_path)
+                            vaultTarget = null
+                        } else {
+                            error = r.message.ifBlank { "Nesprávný PIN" }
                         }
-                    }
-
-                    item {
-                        OutlinedTextField(
-                            value = issuer,
-                            onValueChange = { issuer = it },
-                            label = { Text("Vystavitel / Obchod") },
-                            placeholder = { Text("Alza.cz, Datart...") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
-                        )
-                    }
-
-                    item {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedTextField(
-                                value = warrantyMonths,
-                                onValueChange = { warrantyMonths = it },
-                                label = { Text("Záruka (měs.)") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                modifier = Modifier.weight(1f),
-                                singleLine = true
-                            )
-                            OutlinedTextField(
-                                value = amount,
-                                onValueChange = { amount = it },
-                                label = { Text("Cena (Kč)") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                modifier = Modifier.weight(1f),
-                                singleLine = true
-                            )
-                        }
-                    }
-
-                    item {
-                        OutlinedTextField(
-                            value = expiryDate,
-                            onValueChange = { expiryDate = it },
-                            label = { Text("Konec záruky (RRRR-MM-DD)") },
-                            placeholder = { Text("2028-09-06") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
-                        )
-                    }
-
-                    item {
-                        OutlinedTextField(
-                            value = location,
-                            onValueChange = { location = it },
-                            label = { Text("Fyzické umístění originálu") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
-                        )
-                    }
-
-                    item {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.clickable { isVault = !isVault }
-                        ) {
-                            Checkbox(
-                                checked = isVault,
-                                onCheckedChange = { isVault = it },
-                                colors = CheckboxDefaults.colors(checkedColor = Color(0xFF6366F1))
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Chránit bezpečnostním PIN trezorem", fontSize = 12.sp)
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (title.isNotBlank()) {
-                            coroutineScope.launch {
-                                repository.createDocument(
-                                    DocumentCreate(
-                                        title = title.trim(),
-                                        category = category,
-                                        issuer = issuer.trim().ifBlank { null },
-                                        expiry_date = expiryDate.trim().ifBlank { null },
-                                        warranty_months = warrantyMonths.toIntOrNull() ?: 24,
-                                        amount = amount.toDoubleOrNull(),
-                                        physical_location = location.trim().ifBlank { null },
-                                        is_vault_protected = isVault
-                                    )
-                                ).onSuccess {
-                                    showAddDialog = false
-                                    refreshData()
-                                    snackbarMessage = "Doklad byl úspěšně zaevidován!"
-                                }
-                            }
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = HestiaOrange)
-                ) {
-                    Text("Zaevidovat")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAddDialog = false }) {
-                    Text("Zrušit")
+                    }.onFailure { error = it.friendly() }
                 }
             }
+        ) {
+            HestiaField(pin, { pin = it }, "PIN", keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword)
+        }
+    }
+
+    if (showPinSetup) {
+        var oldPin by remember { mutableStateOf("") }
+        var newPin by remember { mutableStateOf("") }
+        DialogScaffold(
+            title = "Nastavit PIN trezoru",
+            onDismiss = { showPinSetup = false },
+            confirmEnabled = newPin.length >= 4,
+            onConfirm = {
+                scope.launch {
+                    repository.setVaultPin(oldPin.ifBlank { null }, newPin)
+                        .onSuccess { showPinSetup = false; message = "PIN nastaven" }
+                        .onFailure { error = it.friendly() }
+                }
+            }
+        ) {
+            HestiaField(oldPin, { oldPin = it }, "Starý PIN (pokud existuje)", keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword)
+            Spacer(Modifier.height(8.dp))
+            HestiaField(newPin, { newPin = it }, "Nový PIN", keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword)
+        }
+    }
+
+    deleteTarget?.let { doc ->
+        ConfirmDialog(
+            title = "Smazat dokument",
+            message = "Smazat „${doc.title}“?",
+            onConfirm = { scope.launch { repository.deleteDocument(doc.id).onSuccess { load() } } },
+            onDismiss = { deleteTarget = null }
         )
     }
 }
 
 @Composable
-private fun DocumentStatCard(
-    label: String,
-    value: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    color: Color,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        modifier = modifier
-    ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(imageVector = icon, contentDescription = null, tint = color, modifier = Modifier.size(22.dp))
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(text = value, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-            Text(text = label, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+private fun DocumentCard(doc: DocumentItem, onOpen: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit) {
+    Card(shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+        Column(Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    when {
+                        doc.file_type.contains("pdf") -> Icons.Default.PictureAsPdf
+                        doc.file_type.contains("image") -> Icons.Default.Image
+                        else -> Icons.Default.Description
+                    },
+                    null,
+                    tint = HestiaOrange,
+                    modifier = Modifier.size(22.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(doc.title, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                    Text(
+                        Labels.label(Labels.documentCategories, doc.category) +
+                            (doc.issuer?.let { " • $it" } ?: ""),
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                if (doc.is_vault_protected) {
+                    Icon(Icons.Default.Lock, "Trezor", tint = HestiaOrange, modifier = Modifier.size(16.dp))
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 4.dp)) {
+                doc.document_date?.let { StatusPill(Fmt.date(it), StatusBlue) }
+                doc.expiry_date?.let {
+                    val d = doc.days_until_expiry ?: Fmt.daysUntil(it) ?: 0
+                    StatusPill(
+                        if (d < 0) "Expirováno" else "za $d dní",
+                        if (d < 0) StatusRed else if (d < 30) StatusYellow else StatusGreen
+                    )
+                }
+                doc.amount?.let { StatusPill(Fmt.money(it), StatusGreen) }
+            }
+            doc.summary?.takeIf { it.isNotBlank() }?.let {
+                Text(it, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = onOpen) { Text("Otevřít", fontSize = 11.sp) }
+                Spacer(Modifier.weight(1f))
+                IconButton(onClick = onEdit, modifier = Modifier.size(30.dp)) {
+                    Icon(Icons.Default.Edit, null, modifier = Modifier.size(15.dp))
+                }
+                IconButton(onClick = onDelete, modifier = Modifier.size(30.dp)) {
+                    Icon(Icons.Default.Delete, null, tint = StatusRed, modifier = Modifier.size(15.dp))
+                }
+            }
         }
+    }
+}
+
+@Composable
+private fun DocumentFormDialog(
+    initial: DocumentItem?,
+    onDismiss: () -> Unit,
+    onSave: (DocumentCreate) -> Unit
+) {
+    var title by remember { mutableStateOf(initial?.title ?: "") }
+    var category by remember { mutableStateOf(initial?.category ?: "warranty") }
+    var issuer by remember { mutableStateOf(initial?.issuer ?: "") }
+    var docDate by remember { mutableStateOf(initial?.document_date) }
+    var expiry by remember { mutableStateOf(initial?.expiry_date) }
+    var warranty by remember { mutableStateOf(initial?.warranty_months?.toString() ?: "") }
+    var contract by remember { mutableStateOf(initial?.contract_number ?: "") }
+    var amount by remember { mutableStateOf(initial?.amount?.let { Fmt.number(it) } ?: "") }
+    var location by remember { mutableStateOf(initial?.physical_location ?: "") }
+    var vault by remember { mutableStateOf(initial?.is_vault_protected ?: false) }
+    var tags by remember { mutableStateOf(initial?.tags ?: "") }
+    var summary by remember { mutableStateOf(initial?.summary ?: "") }
+
+    DialogScaffold(
+        title = if (initial == null) "Nový dokument" else "Upravit dokument",
+        onDismiss = onDismiss,
+        confirmEnabled = title.isNotBlank(),
+        onConfirm = {
+            onSave(
+                DocumentCreate(
+                    title = title.trim(), category = category, issuer = issuer.ifBlank { null },
+                    document_date = docDate, expiry_date = expiry,
+                    warranty_months = warranty.toIntOrNull(), contract_number = contract.ifBlank { null },
+                    amount = amount.toDoubleOrNull(), physical_location = location.ifBlank { null },
+                    is_vault_protected = vault, tags = tags.ifBlank { null },
+                    summary = summary.ifBlank { null }
+                )
+            )
+        }
+    ) {
+        HestiaField(title, { title = it }, "Název")
+        Spacer(Modifier.height(8.dp))
+        HestiaDropdown("Kategorie", Labels.documentCategories, category, { category = it })
+        Spacer(Modifier.height(8.dp))
+        HestiaField(issuer, { issuer = it }, "Vystavitel")
+        Spacer(Modifier.height(8.dp))
+        DateField("Datum dokumentu", docDate, { docDate = it })
+        Spacer(Modifier.height(8.dp))
+        DateField("Platnost do", expiry, { expiry = it })
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            HestiaNumberField(warranty, { warranty = it }, "Záruka (měs.)", Modifier.weight(1f))
+            HestiaNumberField(amount, { amount = it }, "Částka", Modifier.weight(1f), decimal = true)
+        }
+        Spacer(Modifier.height(8.dp))
+        HestiaField(contract, { contract = it }, "Číslo smlouvy")
+        Spacer(Modifier.height(8.dp))
+        HestiaField(location, { location = it }, "Fyzické umístění")
+        Spacer(Modifier.height(8.dp))
+        HestiaField(tags, { tags = it }, "Štítky")
+        Spacer(Modifier.height(8.dp))
+        HestiaField(summary, { summary = it }, "Poznámka", singleLine = false, minLines = 2)
+        Spacer(Modifier.height(8.dp))
+        ToggleRow("Trezor (PIN)", vault, { vault = it })
     }
 }

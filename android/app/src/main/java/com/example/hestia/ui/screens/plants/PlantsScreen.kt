@@ -2,11 +2,9 @@ package com.example.hestia.ui.screens.plants
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -15,729 +13,531 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.hestia.data.models.*
 import com.example.hestia.data.repository.HestiaRepository
-import com.example.hestia.theme.*
-import com.example.hestia.ui.components.EmptyStateCard
+import com.example.hestia.theme.HestiaOrange
+import com.example.hestia.theme.StatusBlue
+import com.example.hestia.theme.StatusGreen
+import com.example.hestia.theme.StatusRed
+import com.example.hestia.theme.StatusYellow
+import com.example.hestia.ui.components.*
+import com.example.hestia.util.Fmt
+import com.example.hestia.util.Labels
+import com.example.hestia.util.friendly
 import kotlinx.coroutines.launch
 
 @Composable
-fun PlantsScreen(
-    repository: HestiaRepository,
-    modifier: Modifier = Modifier
-) {
-    val coroutineScope = rememberCoroutineScope()
+fun PlantsScreen(repository: HestiaRepository) {
+    val scope = rememberCoroutineScope()
     var plants by remember { mutableStateOf<List<Plant>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(true) }
-    var selectedFilter by remember { mutableStateOf("all") } // "all", "thirsty", "pet_friendly"
-    var showAddDialog by remember { mutableStateOf(false) }
-    var showDoctorDialog by remember { mutableStateOf(false) }
-    var showSitterDialog by remember { mutableStateOf(false) }
-    var showAiBotanikDialog by remember { mutableStateOf(false) }
-    var snackbarMessage by remember { mutableStateOf<String?>(null) }
+    var sitter by remember { mutableStateOf<List<PlantSitterItem>>(emptyList()) }
+    var loading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var tab by remember { mutableStateOf(0) }
+    var onlyThirsty by remember { mutableStateOf(false) }
+    var search by remember { mutableStateOf("") }
+    var detail by remember { mutableStateOf<Plant?>(null) }
+    var showCreate by remember { mutableStateOf(false) }
+    var editing by remember { mutableStateOf<Plant?>(null) }
+    var deleteTarget by remember { mutableStateOf<Plant?>(null) }
+    var showAiIdentify by remember { mutableStateOf(false) }
 
-    fun refreshPlants() {
-        coroutineScope.launch {
-            isLoading = true
-            repository.getPlants().onSuccess { plants = it }
-            isLoading = false
+    suspend fun load() {
+        loading = true
+        repository.getPlants(query = search.ifBlank { null }, needsWatering = onlyThirsty.takeIf { it })
+            .onSuccess { plants = it; error = null }
+            .onFailure { error = it.friendly() }
+        loading = false
+    }
+
+    suspend fun loadSitter() {
+        repository.getPlantSitterSchedule().onSuccess { sitter = it }.onFailure { error = it.friendly() }
+    }
+
+    LaunchedEffect(onlyThirsty, search) {
+        if (search.isNotBlank()) kotlinx.coroutines.delay(350)
+        load()
+    }
+    LaunchedEffect(tab) { if (tab == 1) loadSitter() }
+
+    Column(Modifier.fillMaxSize()) {
+        TabRow(selectedTabIndex = tab, containerColor = MaterialTheme.colorScheme.surface) {
+            Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Květiny (${plants.size})") })
+            Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Zálivka / Hlídač") })
         }
-    }
 
-    LaunchedEffect(Unit) {
-        refreshPlants()
-    }
+        ErrorBox(error, onRetry = { scope.launch { load() } })
 
-    val filteredPlants = plants.filter { plant ->
-        when (selectedFilter) {
-            "thirsty" -> plant.days_until_watering <= 0
-            "pet_friendly" -> plant.is_pet_friendly
-            else -> true
-        }
-    }
+        if (tab == 0) {
+            Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                HestiaField(search, { search = it }, "Hledat rostlinu")
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    FilterChip(
+                        selected = onlyThirsty,
+                        onClick = { onlyThirsty = !onlyThirsty },
+                        label = { Text("Jen žíznivé") },
+                        leadingIcon = { Icon(Icons.Default.WaterDrop, null, modifier = Modifier.size(14.dp)) }
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    AssistChip(
+                        onClick = { showAiIdentify = true },
+                        label = { Text("AI určení") },
+                        leadingIcon = { Icon(Icons.Default.AutoAwesome, null, modifier = Modifier.size(16.dp)) }
+                    )
+                }
+            }
 
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        containerColor = MaterialTheme.colorScheme.background,
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showAddDialog = true },
-                containerColor = HestiaOrange,
-                contentColor = Color.White,
-                shape = CircleShape
+            if (loading) LoadingBox() else LazyColumn(
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                modifier = Modifier.fillMaxSize()
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Přidat květinu")
-            }
-        },
-        snackbarHost = {
-            snackbarMessage?.let { msg ->
-                Snackbar(
-                    modifier = Modifier.padding(16.dp),
-                    action = {
-                        TextButton(onClick = { snackbarMessage = null }) {
-                            Text("OK", color = HestiaOrange)
-                        }
-                    }
-                ) {
-                    Text(msg)
+                if (plants.isEmpty()) {
+                    item { EmptyState(Icons.Default.LocalFlorist, "Žádné rostliny", "Přidejte květiny a Hestia pohlídá zálivku.") }
                 }
-            }
-        }
-    ) { padding ->
-        if (isLoading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = HestiaOrange)
-            }
-        } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(horizontal = 16.dp)
-            ) {
-                // Header & Action buttons
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Pokojové květiny (${plants.size})",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        FilledTonalButton(
-                            onClick = { showAiBotanikDialog = true },
-                            colors = ButtonDefaults.filledTonalButtonColors(
-                                containerColor = StatusGreen.copy(alpha = 0.15f),
-                                contentColor = StatusGreen
-                            ),
-                            shape = RoundedCornerShape(10.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(14.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("AI Botanik", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        }
-
-                        FilledTonalButton(
-                            onClick = { showDoctorDialog = true },
-                            colors = ButtonDefaults.filledTonalButtonColors(
-                                containerColor = StatusGreen.copy(alpha = 0.15f),
-                                contentColor = StatusGreen
-                            ),
-                            shape = RoundedCornerShape(10.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Icon(Icons.Default.MedicalServices, contentDescription = null, modifier = Modifier.size(14.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Lékař", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        }
-
-                        FilledTonalButton(
-                            onClick = { showSitterDialog = true },
-                            colors = ButtonDefaults.filledTonalButtonColors(
-                                containerColor = HestiaOrange.copy(alpha = 0.15f),
-                                contentColor = HestiaOrange
-                            ),
-                            shape = RoundedCornerShape(10.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Icon(Icons.Default.BeachAccess, contentDescription = null, modifier = Modifier.size(14.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Dovolená", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-
-                // Filter Pills
-                Row(
-                    modifier = Modifier.padding(bottom = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    FilterChip(
-                        selected = selectedFilter == "all",
-                        onClick = { selectedFilter = "all" },
-                        label = { Text("Vše (${plants.size})", fontSize = 11.sp) }
-                    )
-                    FilterChip(
-                        selected = selectedFilter == "thirsty",
-                        onClick = { selectedFilter = "thirsty" },
-                        leadingIcon = { Icon(Icons.Default.WaterDrop, contentDescription = null, modifier = Modifier.size(12.dp)) },
-                        label = { Text("Žíznivé (${plants.count { it.days_until_watering <= 0 }})", fontSize = 11.sp) }
-                    )
-                    FilterChip(
-                        selected = selectedFilter == "pet_friendly",
-                        onClick = { selectedFilter = "pet_friendly" },
-                        leadingIcon = { Icon(Icons.Default.Pets, contentDescription = null, modifier = Modifier.size(12.dp)) },
-                        label = { Text("Pet friendly", fontSize = 11.sp) }
-                    )
-                }
-
-                if (filteredPlants.isEmpty()) {
-                    EmptyStateCard(
-                        message = if (selectedFilter == "thirsty") "Žádná květina dnes nepotřebuje zalít!" else "Nebyly nalezeny žádné květiny.",
-                        icon = Icons.Default.LocalFlorist
-                    )
-                } else {
-                    LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = 80.dp)
-                    ) {
-                        items(filteredPlants, key = { it.id }) { plant ->
-                            val isThirsty = plant.days_until_watering <= 0
-                            val statusColor = when {
-                                plant.days_until_watering <= 0 -> StatusRed
-                                plant.days_until_watering <= 2 -> StatusYellow
-                                else -> StatusGreen
-                            }
-
-                            Card(
-                                shape = RoundedCornerShape(14.dp),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(14.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = plant.name,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 15.sp,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-
-                                        Text(
-                                            text = "${plant.room} ${if (!plant.species.isNullOrBlank()) "• ${plant.species}" else ""}",
-                                            fontSize = 12.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.padding(top = 2.dp)
-                                        )
-
-                                        Spacer(modifier = Modifier.height(6.dp))
-
-                                        Row(
-                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Badge(
-                                                containerColor = statusColor.copy(alpha = 0.15f),
-                                                contentColor = statusColor
-                                            ) {
-                                                Text(
-                                                    text = if (isThirsty) "Zalít dnes!" else "Zálivka za ${plant.days_until_watering} dní",
-                                                    fontSize = 10.sp,
-                                                    fontWeight = FontWeight.Bold
-                                                )
-                                            }
-
-                                            if (plant.is_pet_friendly) {
-                                                Badge(
-                                                    containerColor = StatusGreen.copy(alpha = 0.15f),
-                                                    contentColor = StatusGreen
-                                                ) {
-                                                    Text("Pet friendly", fontSize = 9.sp)
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        Button(
-                                            onClick = {
-                                                coroutineScope.launch {
-                                                    repository.waterPlant(plant.id)
-                                                    refreshPlants()
-                                                    snackbarMessage = "${plant.name} byla označena jako zalitá!"
-                                                }
-                                            },
-                                            colors = ButtonDefaults.buttonColors(
-                                                containerColor = if (isThirsty) StatusGreen else HestiaOrange
-                                            ),
-                                            shape = RoundedCornerShape(10.dp),
-                                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
-                                        ) {
-                                            Icon(Icons.Default.WaterDrop, contentDescription = null, modifier = Modifier.size(14.dp))
-                                            Spacer(modifier = Modifier.width(4.dp))
-                                            Text("Zalito", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                        }
-
-                                        IconButton(
-                                            onClick = {
-                                                coroutineScope.launch {
-                                                    repository.deletePlant(plant.id)
-                                                    refreshPlants()
-                                                    snackbarMessage = "Květina odstraněna"
-                                                }
-                                            },
-                                            modifier = Modifier.size(28.dp)
-                                        ) {
-                                            Icon(Icons.Default.Delete, contentDescription = "Smazat", tint = MaterialTheme.colorScheme.error.copy(alpha = 0.6f), modifier = Modifier.size(18.dp))
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // Add Plant Dialog
-    if (showAddDialog) {
-        var name by remember { mutableStateOf("") }
-        var species by remember { mutableStateOf("") }
-        var room by remember { mutableStateOf("Obývací pokoj") }
-        var intervalDays by remember { mutableStateOf("7") }
-        var isPetFriendly by remember { mutableStateOf(true) }
-        var notes by remember { mutableStateOf("") }
-
-        val rooms = listOf("Obývací pokoj", "Kuchyně", "Ložnice", "Chodba", "Koupelna", "Balkon / Terasa")
-
-        AlertDialog(
-            onDismissRequest = { showAddDialog = false },
-            title = { Text("Přidat novou květinu", fontWeight = FontWeight.Bold) },
-            text = {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    item {
-                        OutlinedTextField(
-                            value = name,
-                            onValueChange = { name = it },
-                            label = { Text("Název květiny *") },
-                            placeholder = { Text("např. Monstera deliciosa") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
-                        )
-                    }
-
-                    item {
-                        OutlinedTextField(
-                            value = species,
-                            onValueChange = { species = it },
-                            label = { Text("Druh / Odrůda") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
-                        )
-                    }
-
-                    item {
-                        Text("Umístění:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            items(rooms) { r ->
-                                FilterChip(
-                                    selected = room == r,
-                                    onClick = { room = r },
-                                    label = { Text(r, fontSize = 11.sp) }
-                                )
-                            }
-                        }
-                    }
-
-                    item {
-                        OutlinedTextField(
-                            value = intervalDays,
-                            onValueChange = { intervalDays = it },
-                            label = { Text("Interval zálivky (dny)") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
-                        )
-                    }
-
-                    item {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Checkbox(
-                                checked = isPetFriendly,
-                                onCheckedChange = { isPetFriendly = it },
-                                colors = CheckboxDefaults.colors(checkedColor = StatusGreen)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Bezpečná pro domácí mazlíčky (Pet friendly)", fontSize = 12.sp)
-                        }
-                    }
-
-                    item {
-                        OutlinedTextField(
-                            value = notes,
-                            onValueChange = { notes = it },
-                            label = { Text("Poznámka / Péče") },
-                            modifier = Modifier.fillMaxWidth(),
-                            maxLines = 2
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (name.isNotBlank()) {
-                            coroutineScope.launch {
-                                repository.createPlant(
-                                    PlantCreate(
-                                        name = name.trim(),
-                                        species_czech = species.trim().ifBlank { null },
-                                        room = room,
-                                        watering_interval_days = intervalDays.toIntOrNull() ?: 7,
-                                        pet_toxicity = if (isPetFriendly) "safe" else "toxic",
-                                        notes = notes.trim().ifBlank { null }
-                                    )
-                                ).onSuccess {
-                                    showAddDialog = false
-                                    refreshPlants()
-                                    snackbarMessage = "Květina byla úspěšně přidána!"
-                                }
-                            }
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = HestiaOrange)
-                ) {
-                    Text("Přidat květinu")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAddDialog = false }) {
-                    Text("Zrušit")
-                }
-            }
-        )
-    }
-
-    // Plant Doctor Dialog
-    if (showDoctorDialog) {
-        val diagnoses = listOf(
-            Triple("Žloutnutí listů", "Často způsobeno přelitím nebo nedostatkem živin.", "Zkontrolujte vlhkost kořenového balu. Omezte zálivku a přihnojte hnojivem na pokojovky."),
-            Triple("Suché hnědé konečky", "Nízká vzdušná vlhkost v místnosti nebo přímé polední slunce.", "Pravidelně roste listy vlažnou vodou a přesuňte rostlinu na rozptýlené světlo."),
-            Triple("Padání listů", "Šok ze změny teploty, průvanu nebo přelití v zimním období.", "Udržujte stálou teplotu, chraňte před větráním v mrazech a zalévejte vlažnou vodou."),
-            Triple("Škůdci (svilušky, třásněnky)", "Drobný hmyz nebo jemné pavučinky na spodní straně listů.", "Osprchujte celou rostlinu vlažnou vodou a aplikujte postřik z neemového oleje nebo mýdlový roztok.")
-        )
-
-        AlertDialog(
-            onDismissRequest = { showDoctorDialog = false },
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(Icons.Default.MedicalServices, contentDescription = null, tint = StatusGreen)
-                    Text("Rostlinný lékař & Diagnostika", fontWeight = FontWeight.Bold, fontSize = 17.sp)
-                }
-            },
-            text = {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    items(diagnoses) { (title, cause, advice) ->
-                        Card(
-                            shape = RoundedCornerShape(10.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(modifier = Modifier.padding(10.dp)) {
-                                Text(text = "🌿 $title", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = StatusGreen)
-                                Text(text = cause, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
-                                Text(text = "💡 Řešení: $advice", fontSize = 11.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 4.dp))
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showDoctorDialog = false }) {
-                    Text("Rozumím", color = StatusGreen)
-                }
-            }
-        )
-    }
-
-    // Plant Sitter Dialog
-    if (showSitterDialog) {
-        AlertDialog(
-            onDismissRequest = { showSitterDialog = false },
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(Icons.Default.BeachAccess, contentDescription = null, tint = HestiaOrange)
-                    Text("Plant Sitter Checklist", fontWeight = FontWeight.Bold, fontSize = 17.sp)
-                }
-            },
-            text = {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    item {
-                        Text(
-                            text = "Přehled péče o rostliny pro opatrovníka během vaší dovolené:",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    items(plants) { plant ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(text = plant.name, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                Text(text = "${plant.room} • interval: ${plant.watering_interval_days} dní", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                            Text(
-                                text = if (plant.days_until_watering <= 0) "Zalít ihned!" else "za ${plant.days_until_watering} d.",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (plant.days_until_watering <= 0) StatusRed else StatusGreen
-                            )
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showSitterDialog = false }) {
-                    Text("Zavřít", color = HestiaOrange)
-                }
-            }
-        )
-    }
-
-    // AI Botanik Dialog
-    if (showAiBotanikDialog) {
-        var queryPlant by remember { mutableStateOf("") }
-        var isAnalyzing by remember { mutableStateOf(false) }
-        var analysisResult by remember { mutableStateOf<PlantAiExtracted?>(null) }
-        var analysisError by remember { mutableStateOf<String?>(null) }
-        var selectedRoom by remember { mutableStateOf("Obývací pokoj") }
-        val rooms = listOf("Obývací pokoj", "Kuchyně", "Ložnice", "Chodba", "Koupelna", "Balkon / Terasa")
-        val suggestions = listOf("Monstera Deliciosa", "Ficus Elastica", "Pothos (Šplhavnice)", "Sansevieria", "Zamioculcas", "Calathea")
-
-        AlertDialog(
-            onDismissRequest = { showAiBotanikDialog = false },
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = StatusGreen)
-                    Text("AI Botanik (Gemini)", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                }
-            },
-            text = {
-                LazyColumn(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    item {
-                        Text(
-                            text = "Zadejte název pokojové rostliny a Gemini AI automaticky vygeneruje harmonogram zálivky, nároky na světlo, substrát i toxicitu pro zvířata.",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    item {
-                        OutlinedTextField(
-                            value = queryPlant,
-                            onValueChange = { queryPlant = it },
-                            label = { Text("Název rostliny") },
-                            placeholder = { Text("např. Monstera deliciosa") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
-                        )
-                    }
-
-                    item {
-                        Text("Populární rostliny:", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            items(suggestions) { sugg ->
-                                SuggestionChip(
-                                    onClick = { queryPlant = sugg },
-                                    label = { Text(sugg, fontSize = 11.sp) }
-                                )
-                            }
-                        }
-                    }
-
-                    item {
-                        Button(
-                            onClick = {
-                                if (queryPlant.isNotBlank()) {
-                                    coroutineScope.launch {
-                                        isAnalyzing = true
-                                        analysisError = null
-                                        repository.aiAnalyzePlant(plantName = queryPlant.trim())
-                                            .onSuccess {
-                                                analysisResult = it
-                                                isAnalyzing = false
-                                            }
-                                            .onFailure {
-                                                analysisError = it.localizedMessage ?: "Nepodařilo se analyzovat rostlinu."
-                                                isAnalyzing = false
-                                            }
-                                    }
-                                }
-                            },
-                            enabled = queryPlant.isNotBlank() && !isAnalyzing,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(containerColor = StatusGreen),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            if (isAnalyzing) {
-                                CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Analyzuji botanická data...")
-                            } else {
-                                Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Analyzovat s Gemini")
-                            }
-                        }
-                    }
-
-                    if (analysisError != null) {
-                        item {
-                            Text(
-                                text = "Chyba: $analysisError",
-                                color = StatusRed,
-                                fontSize = 12.sp
-                            )
-                        }
-                    }
-
-                    analysisResult?.let { res ->
-                        item {
-                            Card(
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    Text(
-                                        text = res.common_name,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 16.sp
-                                    )
-                                    if (res.species_latin.isNotBlank()) {
-                                        Text(
-                                            text = res.species_latin,
-                                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
-                                            fontSize = 12.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    if (res.description.isNotBlank()) {
-                                        Text(text = res.description, fontSize = 12.sp)
-                                    }
-
-                                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text("💧 Zálivka v létě:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                                        Text("každých ${res.watering_interval_days} dní", fontSize = 12.sp)
-                                    }
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text("❄️ Zálivka v zimě:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                                        Text("každých ${res.winter_watering_interval_days} dní", fontSize = 12.sp)
-                                    }
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text("🌿 Substrát:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                                        Text(res.substrate_recommendation, fontSize = 11.sp)
-                                    }
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text("🐾 Pro zvířata:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                                        Text(
-                                            text = if (res.pet_toxicity == "safe") "Bezpečná (Pet Friendly) ✅" else "Pozor: Toxická ⚠️",
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = if (res.pet_toxicity == "safe") StatusGreen else StatusRed
-                                        )
-                                    }
-                                    if (res.pet_toxicity_details.isNotBlank()) {
-                                        Text(
-                                            text = res.pet_toxicity_details,
-                                            fontSize = 11.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        item {
-                            Text("Vyberte umístění:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                items(rooms) { r ->
-                                    FilterChip(
-                                        selected = selectedRoom == r,
-                                        onClick = { selectedRoom = r },
-                                        label = { Text(r, fontSize = 11.sp) }
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                if (analysisResult != null) {
-                    Button(
-                        onClick = {
-                            val res = analysisResult ?: return@Button
-                            coroutineScope.launch {
-                                repository.createPlant(
-                                    PlantCreate(
-                                        name = res.common_name,
-                                        species_latin = res.species_latin.ifBlank { null },
-                                        species_czech = res.species_czech.ifBlank { null },
-                                        room = selectedRoom,
-                                        light_requirement = res.light_requirement,
-                                        watering_interval_days = res.watering_interval_days,
-                                        winter_watering_interval_days = res.winter_watering_interval_days,
-                                        fertilizing_interval_days = res.fertilizing_interval_days,
-                                        misting_required = res.misting_required,
-                                        substrate_type = res.substrate_recommendation,
-                                        pet_toxicity = res.pet_toxicity,
-                                        pet_toxicity_notes = res.pet_toxicity_details.ifBlank { null },
-                                        health_notes = res.initial_health_assessment.ifBlank { null },
-                                        notes = res.description.ifBlank { null }
-                                    )
-                                ).onSuccess {
-                                    showAiBotanikDialog = false
-                                    refreshPlants()
-                                    snackbarMessage = "Květina '${res.common_name}' byla uložena s AI péčí!"
-                                }
+                items(plants, key = { it.id }) { plant ->
+                    PlantCard(
+                        plant = plant,
+                        onOpen = { detail = plant },
+                        onWater = {
+                            scope.launch {
+                                repository.waterPlant(plant.id)
+                                    .onSuccess { load() }
+                                    .onFailure { error = it.friendly() }
                             }
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = StatusGreen)
-                    ) {
-                        Text("Uložit do rostlin")
+                        onToggleWinter = {
+                            scope.launch {
+                                repository.togglePlantWinterMode(plant.id).onSuccess { load() }.onFailure { error = it.friendly() }
+                            }
+                        },
+                        onToggleFavorite = {
+                            scope.launch {
+                                repository.togglePlantFavorite(plant.id).onSuccess { load() }.onFailure { error = it.friendly() }
+                            }
+                        },
+                        onEdit = { editing = plant },
+                        onDelete = { deleteTarget = plant }
+                    )
+                }
+                item { Spacer(Modifier.height(90.dp)) }
+            }
+        } else {
+            LazyColumn(contentPadding = PaddingValues(12.dp)) {
+                if (sitter.isEmpty()) {
+                    item { EmptyState(Icons.Default.EventAvailable, "Nic k zalití", "Všechny rostliny jsou zalité.") }
+                }
+                items(sitter) { item ->
+                    Card(shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.LocalFlorist, null, tint = StatusGreen)
+                            Spacer(Modifier.width(10.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(item.plant_name, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                                Text(
+                                    "${Labels.label(Labels.rooms, item.room)} • ${Labels.label(Labels.plantTaskTypes, item.action_required)}",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                if (item.recommended_water_amount.isNotBlank()) {
+                                    Text(item.recommended_water_amount, fontSize = 11.sp, color = StatusBlue)
+                                }
+                                if (item.instructions.isNotBlank()) {
+                                    Text(item.instructions, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
                     }
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAiBotanikDialog = false }) {
-                    Text("Zavřít")
+                item { Spacer(Modifier.height(20.dp)) }
+            }
+        }
+    }
+
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomEnd) {
+        if (tab == 0) {
+            ExtendedFloatingActionButton(
+                onClick = { showCreate = true },
+                containerColor = HestiaOrange,
+                contentColor = Color.White,
+                modifier = Modifier.padding(20.dp),
+                icon = { Icon(Icons.Default.Add, null) },
+                text = { Text("Rostlina") }
+            )
+        }
+    }
+
+    detail?.let { plant ->
+        PlantDetailDialog(
+            repository = repository,
+            plantId = plant.id,
+            onDismiss = { detail = null },
+            onChanged = { scope.launch { load() } }
+        )
+    }
+
+    if (showCreate || editing != null) {
+        PlantFormDialog(
+            initial = editing,
+            onDismiss = { showCreate = false; editing = null },
+            onSave = { create ->
+                scope.launch {
+                    val initial = editing
+                    val res = if (initial == null) repository.createPlant(create)
+                    else repository.updatePlant(
+                        initial.id,
+                        PlantUpdate(
+                            name = create.name, species_latin = create.species_latin, species_czech = create.species_czech,
+                            room = create.room, light_requirement = create.light_requirement,
+                            watering_interval_days = create.watering_interval_days,
+                            winter_watering_interval_days = create.winter_watering_interval_days,
+                            fertilizing_interval_days = create.fertilizing_interval_days,
+                            misting_required = create.misting_required, pot_diameter_cm = create.pot_diameter_cm,
+                            substrate_type = create.substrate_type, pet_toxicity = create.pet_toxicity,
+                            pet_toxicity_notes = create.pet_toxicity_notes, health_status = create.health_status,
+                            health_notes = create.health_notes, last_watered_date = create.last_watered_date,
+                            next_watering_date = create.next_watering_date, is_winter_mode = create.is_winter_mode,
+                            is_favorite = create.is_favorite, notes = create.notes
+                        )
+                    )
+                    res.onSuccess { showCreate = false; editing = null; load() }.onFailure { error = it.friendly() }
                 }
             }
         )
+    }
+
+    deleteTarget?.let { plant ->
+        ConfirmDialog(
+            title = "Smazat rostlinu",
+            message = "Smazat „${plant.name}“?",
+            onConfirm = { scope.launch { repository.deletePlant(plant.id).onSuccess { load() } } },
+            onDismiss = { deleteTarget = null }
+        )
+    }
+
+    if (showAiIdentify) {
+        AiPlantDialog(
+            repository = repository,
+            onDismiss = { showAiIdentify = false },
+            onResult = { extracted ->
+                showAiIdentify = false
+                editing = null
+                scope.launch {
+                    repository.createPlant(
+                        PlantCreate(
+                            name = extracted.common_name.ifBlank { "Nová rostlina" },
+                            species_latin = extracted.species_latin.ifBlank { null },
+                            species_czech = extracted.species_czech.ifBlank { null },
+                            room = "living_room",
+                            light_requirement = extracted.light_requirement,
+                            watering_interval_days = extracted.watering_interval_days,
+                            winter_watering_interval_days = extracted.winter_watering_interval_days,
+                            fertilizing_interval_days = extracted.fertilizing_interval_days,
+                            misting_required = extracted.misting_required,
+                            pet_toxicity = extracted.pet_toxicity,
+                            pet_toxicity_notes = extracted.pet_toxicity_details.ifBlank { null },
+                            notes = extracted.description.ifBlank { null }
+                        )
+                    ).onSuccess { load() }.onFailure { error = it.friendly() }
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun PlantCard(
+    plant: Plant,
+    onOpen: () -> Unit,
+    onWater: () -> Unit,
+    onToggleWinter: () -> Unit,
+    onToggleFavorite: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
+    val statusColor = when (plant.watering_status) {
+        "overdue", "thirsty" -> StatusRed
+        "soon" -> StatusYellow
+        else -> StatusGreen
+    }
+    Card(
+        shape = RoundedCornerShape(14.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+    ) {
+        Column(Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(plant.name, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                        if (plant.is_winter_mode) {
+                            Spacer(Modifier.width(6.dp))
+                            StatusPill("Zima", StatusBlue)
+                        }
+                        if (plant.pet_toxicity != "safe") {
+                            Spacer(Modifier.width(6.dp))
+                            StatusPill("Pro zvířata", StatusRed)
+                        }
+                    }
+                    Text(
+                        listOfNotNull(plant.species_czech, Labels.label(Labels.rooms, plant.room)).joinToString(" • "),
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        if (plant.days_until_watering <= 0) "Zalít hned!" else "Zalít za ${plant.days_until_watering} dní",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = statusColor
+                    )
+                }
+                IconButton(onClick = onToggleFavorite) {
+                    Icon(
+                        if (plant.is_favorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                        "Oblíbená",
+                        tint = if (plant.is_favorite) StatusRed else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                FilledTonalButton(
+                    onClick = onWater,
+                    shape = RoundedCornerShape(10.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Icon(Icons.Default.WaterDrop, null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Zalít", fontSize = 12.sp)
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = onOpen) { Text("Detail", fontSize = 12.sp) }
+                TextButton(onClick = onToggleWinter) {
+                    Text(if (plant.is_winter_mode) "Vypnout zimu" else "Zimní režim", fontSize = 12.sp)
+                }
+                Spacer(Modifier.weight(1f))
+                IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
+                    Icon(Icons.Default.Edit, "Upravit", modifier = Modifier.size(16.dp))
+                }
+                IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
+                    Icon(Icons.Default.Delete, "Smazat", tint = StatusRed, modifier = Modifier.size(16.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PlantDetailDialog(
+    repository: HestiaRepository,
+    plantId: Int,
+    onDismiss: () -> Unit,
+    onChanged: () -> Unit
+) {
+    val scope = rememberCoroutineScope()
+    var plant by remember { mutableStateOf<Plant?>(null) }
+    var loading by remember { mutableStateOf(true) }
+    var diagnosis by remember { mutableStateOf<PlantDiagnosisResponse?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(plantId) {
+        repository.getPlant(plantId).onSuccess { plant = it }.onFailure { error = it.friendly() }
+        loading = false
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(plant?.name ?: "Rostlina") },
+        text = {
+            Column(Modifier.heightIn(max = 460.dp).verticalScroll(androidx.compose.foundation.rememberScrollState())) {
+                if (loading) {
+                    LinearProgressIndicator(Modifier.fillMaxWidth(), color = HestiaOrange)
+                } else plant?.let { p ->
+                    Text("${p.species_czech ?: "-"} (${p.species_latin ?: "-"})", fontSize = 12.sp)
+                    Spacer(Modifier.height(6.dp))
+                    Text("Zálivka: každých ${p.watering_interval_days} dní (zima ${p.winter_watering_interval_days})", fontSize = 12.sp)
+                    Text("Hnojení: každých ${p.fertilizing_interval_days} dní", fontSize = 12.sp)
+                    Text("Světlo: ${Labels.label(Labels.lightRequirements, p.light_requirement)}", fontSize = 12.sp)
+                    Text("Poslední zálivka: ${p.last_watered_date?.let { Fmt.date(it) } ?: "—"}", fontSize = 12.sp)
+                    Text("Toxicita: ${Labels.label(Labels.petToxicity, p.pet_toxicity)}", fontSize = 12.sp)
+                    if (!p.notes.isNullOrBlank()) {
+                        Spacer(Modifier.height(6.dp))
+                        Text(p.notes, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+
+                    HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                    Text("Úkoly", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                    p.tasks.filter { !it.is_completed }.forEach { task ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                "${Labels.label(Labels.plantTaskTypes, task.task_type)} • ${Fmt.date(task.due_date)}",
+                                fontSize = 12.sp,
+                                modifier = Modifier.weight(1f)
+                            )
+                            TextButton(onClick = {
+                                scope.launch {
+                                    repository.completePlantTask(p.id, task.id).onSuccess {
+                                        repository.getPlant(plantId).onSuccess { plant = it }
+                                        onChanged()
+                                    }
+                                }
+                            }) { Text("Splnit", fontSize = 11.sp) }
+                        }
+                    }
+
+                    HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            onClick = {
+                                scope.launch {
+                                    repository.aiDiagnosePlant(
+                                        PlantDiagnosisRequest(
+                                            plant_id = p.id,
+                                            plant_name = p.name,
+                                            symptoms_description = p.health_notes ?: "Žloutnoucí listy, opadávání",
+                                            image_url = p.primary_image_url
+                                        )
+                                    ).onSuccess { diagnosis = it }.onFailure { error = it.friendly() }
+                                }
+                            },
+                            shape = RoundedCornerShape(10.dp)
+                        ) { Text("AI diagnóza", fontSize = 11.sp) }
+                    }
+                    diagnosis?.let { d ->
+                        Spacer(Modifier.height(8.dp))
+                        Card(colors = CardDefaults.cardColors(containerColor = StatusGreen.copy(alpha = 0.1f))) {
+                            Column(Modifier.padding(10.dp)) {
+                                Text(d.diagnosis, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                                if (d.cause.isNotBlank()) Text("Příčina: ${d.cause}", fontSize = 11.sp)
+                                d.action_steps.forEach { Text("• $it", fontSize = 11.sp) }
+                                if (d.prevention_tips.isNotBlank()) Text("Prevence: ${d.prevention_tips}", fontSize = 11.sp)
+                                Text("Naléhavost: ${d.severity}", fontSize = 11.sp)
+                            }
+                        }
+                    }
+                }
+                error?.let { Text(it, color = StatusRed, fontSize = 12.sp) }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Zavřít") } }
+    )
+}
+
+@Composable
+private fun PlantFormDialog(
+    initial: Plant?,
+    onDismiss: () -> Unit,
+    onSave: (PlantCreate) -> Unit
+) {
+    var name by remember { mutableStateOf(initial?.name ?: "") }
+    var speciesCzech by remember { mutableStateOf(initial?.species_czech ?: "") }
+    var speciesLatin by remember { mutableStateOf(initial?.species_latin ?: "") }
+    var room by remember { mutableStateOf(initial?.room ?: "living_room") }
+    var light by remember { mutableStateOf(initial?.light_requirement ?: "bright_indirect") }
+    var watering by remember { mutableStateOf((initial?.watering_interval_days ?: 7).toString()) }
+    var winterWatering by remember { mutableStateOf((initial?.winter_watering_interval_days ?: 14).toString()) }
+    var fertilizing by remember { mutableStateOf((initial?.fertilizing_interval_days ?: 14).toString()) }
+    var misting by remember { mutableStateOf(initial?.misting_required ?: false) }
+    var potSize by remember { mutableStateOf(initial?.pot_diameter_cm?.let { Fmt.number(it) } ?: "") }
+    var toxicity by remember { mutableStateOf(initial?.pet_toxicity ?: "safe") }
+    var health by remember { mutableStateOf(initial?.health_status ?: "healthy") }
+    var notes by remember { mutableStateOf(initial?.notes ?: "") }
+    var winterMode by remember { mutableStateOf(initial?.is_winter_mode ?: false) }
+
+    DialogScaffold(
+        title = if (initial == null) "Nová rostlina" else "Upravit rostlinu",
+        onDismiss = onDismiss,
+        confirmEnabled = name.isNotBlank(),
+        onConfirm = {
+            onSave(
+                PlantCreate(
+                    name = name.trim(),
+                    species_czech = speciesCzech.ifBlank { null },
+                    species_latin = speciesLatin.ifBlank { null },
+                    room = room,
+                    light_requirement = light,
+                    watering_interval_days = watering.toIntOrNull() ?: 7,
+                    winter_watering_interval_days = winterWatering.toIntOrNull() ?: 14,
+                    fertilizing_interval_days = fertilizing.toIntOrNull() ?: 14,
+                    misting_required = misting,
+                    pot_diameter_cm = potSize.toDoubleOrNull(),
+                    pet_toxicity = toxicity,
+                    health_status = health,
+                    notes = notes.ifBlank { null },
+                    is_winter_mode = winterMode
+                )
+            )
+        }
+    ) {
+        HestiaField(name, { name = it }, "Název")
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            HestiaField(speciesCzech, { speciesCzech = it }, "Druh (CZ)", Modifier.weight(1f))
+            HestiaField(speciesLatin, { speciesLatin = it }, "Latinsky", Modifier.weight(1f))
+        }
+        Spacer(Modifier.height(8.dp))
+        HestiaDropdown("Místnost", Labels.rooms, room, { room = it })
+        Spacer(Modifier.height(8.dp))
+        HestiaDropdown("Světlo", Labels.lightRequirements, light, { light = it })
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            HestiaNumberField(watering, { watering = it }, "Zálivka (dny)", Modifier.weight(1f))
+            HestiaNumberField(winterWatering, { winterWatering = it }, "Zima (dny)", Modifier.weight(1f))
+        }
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            HestiaNumberField(fertilizing, { fertilizing = it }, "Hnojení (dny)", Modifier.weight(1f))
+            HestiaNumberField(potSize, { potSize = it }, "Květináč (cm)", Modifier.weight(1f), decimal = true)
+        }
+        Spacer(Modifier.height(8.dp))
+        HestiaDropdown("Toxicita pro zvířata", Labels.petToxicity, toxicity, { toxicity = it })
+        Spacer(Modifier.height(8.dp))
+        HestiaDropdown("Zdraví", Labels.healthStatus, health, { health = it })
+        Spacer(Modifier.height(8.dp))
+        ToggleRow("Vyžaduje rosení", misting, { misting = it })
+        ToggleRow("Zimní režim", winterMode, { winterMode = it })
+        Spacer(Modifier.height(8.dp))
+        HestiaField(notes, { notes = it }, "Poznámky", singleLine = false, minLines = 2)
+    }
+}
+
+@Composable
+private fun AiPlantDialog(
+    repository: HestiaRepository,
+    onDismiss: () -> Unit,
+    onResult: (PlantAiExtracted) -> Unit
+) {
+    val scope = rememberCoroutineScope()
+    var name by remember { mutableStateOf("") }
+    var photoUrl by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    DialogScaffold(
+        title = "AI určení rostliny",
+        onDismiss = onDismiss,
+        confirmText = if (busy) "Analyzuji…" else "Zjistit",
+        confirmEnabled = !busy && (name.isNotBlank() || photoUrl.isNotBlank()),
+        onConfirm = {
+            busy = true
+            scope.launch {
+                repository.aiAnalyzePlant(
+                    PlantAiRequest(
+                        plant_name = name.ifBlank { null },
+                        image_url = photoUrl.ifBlank { null }
+                    )
+                ).onSuccess { onResult(it) }.onFailure { error = it.friendly() }
+                busy = false
+            }
+        }
+    ) {
+        Text("Zadejte název nebo odkaz na fotografii rostliny. AI doplní druh, nároky na světlo, zálivku a toxicitu.", fontSize = 12.sp)
+        Spacer(Modifier.height(8.dp))
+        HestiaField(name, { name = it }, "Název / popis")
+        Spacer(Modifier.height(8.dp))
+        HestiaField(photoUrl, { photoUrl = it }, "URL fotografie")
+        if (busy) {
+            Spacer(Modifier.height(8.dp))
+            LinearProgressIndicator(Modifier.fillMaxWidth(), color = HestiaOrange)
+        }
+        error?.let { Text(it, color = StatusRed, fontSize = 12.sp) }
     }
 }

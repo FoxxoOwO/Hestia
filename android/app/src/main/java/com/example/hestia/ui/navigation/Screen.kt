@@ -8,9 +8,10 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector?
     object ServerConfig : Screen("server_config", "Server")
     object Login : Screen("login", "Přihlášení")
 
-    // --- 12 CORE HESTIA MODULES ---
+    // --- CORE HESTIA MODULES ---
     object Dashboard : Screen("dashboard", "Přehled", Icons.Filled.Home)
     object Recipes : Screen("recipes", "Recepty & Vaření", Icons.Filled.Restaurant)
+    object MealPlanner : Screen("meal_planner", "Jídelníček", Icons.Filled.CalendarMonth)
     object Pantry : Screen("pantry", "Spíž & Lednice", Icons.Filled.Inventory2)
     object Shopping : Screen("shopping", "Nákupní seznam", Icons.Filled.ShoppingCart)
     object Plants : Screen("plants", "Květiny & Zálivka", Icons.Filled.LocalFlorist)
@@ -18,6 +19,7 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector?
     object Chores : Screen("chores", "Úkoly & Úklid", Icons.Filled.CheckCircle)
     object Finance : Screen("finance", "Rodinné finance", Icons.Filled.AccountBalanceWallet)
     object Documents : Screen("documents", "Digitální archiv", Icons.Filled.Folder)
+    object Assets : Screen("assets", "Spotřebiče & Vybavení", Icons.Filled.Kitchen)
     object Vehicles : Screen("vehicles", "Vozový park & Garáž", Icons.Filled.DirectionsCar)
     object Medicines : Screen("medicines", "Lékárnička & SOS", Icons.Filled.MedicalServices)
     object Activity : Screen("activity", "Historie aktivit", Icons.Filled.History)
@@ -25,19 +27,11 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector?
     object Settings : Screen("settings", "Nastavení & Zálohy", Icons.Filled.Settings)
 }
 
-// 5 primary screens on bottom bar
-val bottomNavScreens = listOf(
-    Screen.Dashboard,
-    Screen.Shopping,
-    Screen.Chores,
-    Screen.Medicines,
-    Screen.Vehicles
-)
-
-// All 12 modules for the side Navigation Drawer
+// All modules for the side Navigation Drawer
 val drawerModuleScreens = listOf(
     Screen.Dashboard,
     Screen.Recipes,
+    Screen.MealPlanner,
     Screen.Pantry,
     Screen.Shopping,
     Screen.Plants,
@@ -45,6 +39,7 @@ val drawerModuleScreens = listOf(
     Screen.Chores,
     Screen.Finance,
     Screen.Documents,
+    Screen.Assets,
     Screen.Vehicles,
     Screen.Medicines,
     Screen.Activity
