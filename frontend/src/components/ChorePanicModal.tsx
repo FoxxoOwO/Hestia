@@ -58,7 +58,7 @@ export const ChorePanicModal: React.FC<ChorePanicModalProps> = ({
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-lg w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden border border-red-200 dark:border-red-900/50">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl max-w-lg w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden border border-red-200 dark:border-red-900/50">
         
         {/* Header with fiery panic theme */}
         <div className="bg-gradient-to-r from-red-600 via-orange-600 to-amber-600 p-5 text-white flex items-start justify-between relative overflow-hidden">
@@ -85,11 +85,11 @@ export const ChorePanicModal: React.FC<ChorePanicModalProps> = ({
         <div className="p-4 bg-red-50/50 dark:bg-red-950/20 border-b border-red-100 dark:border-red-900/30 flex items-center justify-between">
           <div className="flex items-baseline gap-2">
             <span className={`text-4xl font-extrabold tracking-tight font-mono ${
-              timeLeft < 180 ? 'text-red-600 dark:text-red-400 animate-pulse' : 'text-gray-900 dark:text-gray-100'
+              timeLeft < 180 ? 'text-red-600 dark:text-red-400 animate-pulse' : 'text-zinc-900 dark:text-zinc-100'
             }`}>
               {timeFormatted}
             </span>
-            <span className="text-xs text-gray-500 font-medium">zbývá času</span>
+            <span className="text-xs text-zinc-500 font-medium">zbývá času</span>
           </div>
 
           <div className="flex items-center gap-2">
@@ -105,7 +105,7 @@ export const ChorePanicModal: React.FC<ChorePanicModalProps> = ({
             <button
               onClick={() => { setIsActive(false); setTimeLeft(15 * 60); }}
               title={t('chores.panic_modal.reset_timer')}
-              className="p-1.5 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200"
+              className="p-1.5 rounded-lg bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 text-zinc-700 dark:text-zinc-200"
             >
               <RotateCcw className="w-4 h-4" />
             </button>
@@ -113,7 +113,7 @@ export const ChorePanicModal: React.FC<ChorePanicModalProps> = ({
         </div>
 
         {/* Progress bar */}
-        <div className="w-full bg-gray-100 dark:bg-gray-700 h-1.5">
+        <div className="w-full bg-zinc-100 dark:bg-zinc-700 h-1.5">
           <div
             className="bg-emerald-500 h-1.5 transition-all duration-300"
             style={{ width: `${progressPercent}%` }}
@@ -135,7 +135,7 @@ export const ChorePanicModal: React.FC<ChorePanicModalProps> = ({
             </div>
           ) : (
             <>
-              <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-2">
+              <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 mb-2">
                 <span>Rychlé prioritní úkoly ({completedIds.size} / {tasks.length})</span>
                 <span>+{tasks.reduce((sum, t) => sum + t.points, 0)} b. celkem</span>
               </div>
@@ -148,19 +148,19 @@ export const ChorePanicModal: React.FC<ChorePanicModalProps> = ({
                     className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
                       isDone
                         ? 'bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/40 opacity-70'
-                        : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-red-300 dark:hover:border-red-700'
+                        : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-red-300 dark:hover:border-red-700'
                     }`}
                   >
                     <button
                       className={`mt-0.5 w-5 h-5 rounded flex items-center justify-center transition-colors ${
-                        isDone ? 'text-emerald-600' : 'text-gray-300 hover:text-gray-500'
+                        isDone ? 'text-emerald-600' : 'text-zinc-300 hover:text-zinc-500'
                       }`}
                     >
                       <CheckCircle2 className="w-5 h-5" />
                     </button>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
-                        <span className={`text-sm font-semibold ${isDone ? 'line-through text-gray-400' : 'text-gray-900 dark:text-gray-100'}`}>
+                        <span className={`text-sm font-semibold ${isDone ? 'line-through text-zinc-400' : 'text-zinc-900 dark:text-zinc-100'}`}>
                           {task.title}
                         </span>
                         <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400 whitespace-nowrap">
@@ -168,11 +168,11 @@ export const ChorePanicModal: React.FC<ChorePanicModalProps> = ({
                         </span>
                       </div>
                       {task.description && (
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 line-clamp-1">
                           {task.description}
                         </p>
                       )}
-                      <div className="flex items-center gap-2 mt-1 text-[10px] text-gray-400">
+                      <div className="flex items-center gap-2 mt-1 text-[10px] text-zinc-400">
                         <span>⏱️ {task.estimated_minutes} min</span>
                         <span>•</span>
                         <span>📍 {task.room}</span>
@@ -186,10 +186,10 @@ export const ChorePanicModal: React.FC<ChorePanicModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-gray-50 dark:bg-gray-900/40 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+        <div className="p-4 bg-zinc-50 dark:bg-zinc-900/40 border-t border-zinc-200 dark:border-zinc-800 flex justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg text-xs font-semibold bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200"
+            className="px-4 py-2 rounded-lg text-xs font-semibold bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 text-zinc-800 dark:text-zinc-200"
           >
             {t('common.close')}
           </button>

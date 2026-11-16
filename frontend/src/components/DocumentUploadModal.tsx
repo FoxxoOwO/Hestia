@@ -165,26 +165,26 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-2xl w-full p-6 shadow-2xl relative overflow-hidden max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-900/60 backdrop-blur-sm animate-fade-in">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-2xl w-full p-6 shadow-2xl relative overflow-hidden max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex items-center justify-between pb-4 border-b border-zinc-100 dark:border-zinc-800">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-2xl">
               <UploadCloud className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="font-bold text-lg text-slate-800 dark:text-white">
+              <h3 className="font-bold text-lg text-zinc-800 dark:text-white">
                 {t('documents.upload_btn')}
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
                 Digitalizace a archivace do rodinného šanonu
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -204,10 +204,10 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
                 <div className="p-4 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300 rounded-2xl mb-3 group-hover:scale-110 transition-transform">
                   <UploadCloud className="w-9 h-9" />
                 </div>
-                <p className="font-semibold text-slate-700 dark:text-slate-200 text-sm mb-1">
+                <p className="font-semibold text-zinc-700 dark:text-zinc-200 text-sm mb-1">
                   {t('documents.drop_file_zone')}
                 </p>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-zinc-400">
                   Podporovány jsou soubory PDF, JPEG, PNG, WEBP
                 </p>
                 <input
@@ -226,9 +226,9 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
                   id="auto_analyze"
                   checked={autoAnalyze}
                   onChange={(e) => setAutoAnalyze(e.target.checked)}
-                  className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 border-slate-300"
+                  className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 border-zinc-300"
                 />
-                <label htmlFor="auto_analyze" className="text-xs text-slate-700 dark:text-slate-300 cursor-pointer flex items-center gap-1.5 font-medium">
+                <label htmlFor="auto_analyze" className="text-xs text-zinc-700 dark:text-zinc-300 cursor-pointer flex items-center gap-1.5 font-medium">
                   <Sparkles className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                   <span>{t('documents.auto_extract_label')}</span>
                 </label>
@@ -246,7 +246,7 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
               <button
                 type="button"
                 onClick={handleReset}
-                className="text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 underline"
+                className="text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 underline"
               >
                 Změnit soubor
               </button>
@@ -257,10 +257,10 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
           {isUploading && (
             <div className="py-10 flex flex-col items-center justify-center text-center space-y-3">
               <Loader2 className="w-10 h-10 text-purple-600 animate-spin" />
-              <p className="font-semibold text-slate-700 dark:text-slate-200 text-sm">
+              <p className="font-semibold text-zinc-700 dark:text-zinc-200 text-sm">
                 {t('documents.ai_analyzing')}
               </p>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-zinc-400">
                 Gemini vytěžuje název, vystavitele, datum nákupu, záruku a text...
               </p>
             </div>
@@ -278,7 +278,7 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
             <form id="document-form" onSubmit={handleSubmit} className="space-y-4">
               {/* Title */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
                   Název dokumentu *
                 </label>
                 <input
@@ -287,20 +287,20 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="např. Záruční list – Sušička Bosch Serie 8"
-                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
+                  className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
                 />
               </div>
 
               {/* Category & Issuer */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
                     Šanon (Kategorie)
                   </label>
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value as DocumentCategory)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
+                    className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
                   >
                     {DOCUMENT_CATEGORIES.map((c) => (
                       <option key={c.id} value={c.id}>
@@ -311,7 +311,7 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
                     {t('documents.issuer')}
                   </label>
                   <input
@@ -319,7 +319,7 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
                     value={issuer}
                     onChange={(e) => setIssuer(e.target.value)}
                     placeholder="např. Alza.cz, Allianz, ČEZ..."
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
+                    className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
                   />
                 </div>
               </div>
@@ -327,31 +327,31 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
               {/* Dates & Warranty */}
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
                     Datum vystavení
                   </label>
                   <input
                     type="date"
                     value={documentDate}
                     onChange={(e) => setDocumentDate(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
+                    className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
                     Konec záruky / Expirace
                   </label>
                   <input
                     type="date"
                     value={expiryDate}
                     onChange={(e) => setExpiryDate(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
+                    className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
                     Záruka (měsíců)
                   </label>
                   <input
@@ -359,7 +359,7 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
                     value={warrantyMonths}
                     onChange={(e) => setWarrantyMonths(e.target.value === '' ? '' : parseInt(e.target.value))}
                     placeholder="24"
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
+                    className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
                   />
                 </div>
               </div>
@@ -367,7 +367,7 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
               {/* Contract Number & Amount */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
                     {t('documents.contract_num')}
                   </label>
                   <input
@@ -375,12 +375,12 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
                     value={contractNumber}
                     onChange={(e) => setContractNumber(e.target.value)}
                     placeholder="Sériové číslo nebo číslo smlouvy"
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
+                    className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
                     {t('documents.amount')} (Kč)
                   </label>
                   <input
@@ -389,14 +389,14 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
                     value={amount}
                     onChange={(e) => setAmount(e.target.value === '' ? '' : parseFloat(e.target.value))}
                     placeholder="0.00"
-                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
+                    className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
                   />
                 </div>
               </div>
 
               {/* Physical Location (Kde leží papírový originál) */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
                   📦 {t('documents.physical_location')}
                 </label>
                 <input
@@ -404,14 +404,14 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
                   value={physicalLocation}
                   onChange={(e) => setPhysicalLocation(e.target.value)}
                   placeholder={t('documents.location_placeholder')}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
+                  className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
                 />
               </div>
 
               {/* Tags & AI Summary */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
                     {t('documents.tags_label')}
                   </label>
                   <input
@@ -419,12 +419,12 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
                     value={tags}
                     onChange={(e) => setTags(e.target.value)}
                     placeholder="pračka, bosch, elektro, záruka..."
-                    className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
+                    className="w-full px-3.5 py-2 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
                     {t('documents.summary_label')}
                   </label>
                   <textarea
@@ -432,7 +432,7 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
                     value={summary}
                     onChange={(e) => setSummary(e.target.value)}
                     placeholder="Stručný popis obsahu dokumentu..."
-                    className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
+                    className="w-full px-3.5 py-2 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
                   />
                 </div>
               </div>
@@ -444,9 +444,9 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
                   id="vault_protected"
                   checked={isVaultProtected}
                   onChange={(e) => setIsVaultProtected(e.target.checked)}
-                  className="w-4 h-4 rounded text-rose-600 focus:ring-rose-500 border-slate-300"
+                  className="w-4 h-4 rounded text-rose-600 focus:ring-rose-500 border-zinc-300"
                 />
-                <label htmlFor="vault_protected" className="text-xs text-slate-700 dark:text-slate-300 cursor-pointer flex items-center gap-1.5 font-semibold">
+                <label htmlFor="vault_protected" className="text-xs text-zinc-700 dark:text-zinc-300 cursor-pointer flex items-center gap-1.5 font-semibold">
                   <Lock className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
                   <span>{t('documents.vault_toggle_label')}</span>
                 </label>
@@ -456,11 +456,11 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex gap-3">
+        <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 flex gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="py-2.5 px-4 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-2xl transition-colors text-sm"
+            className="py-2.5 px-4 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-semibold rounded-2xl transition-colors text-sm"
           >
             {t('common.close')}
           </button>

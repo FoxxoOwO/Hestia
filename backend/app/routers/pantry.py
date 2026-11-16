@@ -19,7 +19,7 @@ def compute_pantry_status(expiration_date_str: Optional[str]) -> str:
     if not expiration_date_str:
         return "fresh"
     try:
-        exp_date = datetime.date.fromisoformat(expiration_date_str)
+        exp_date = datetime.date.fromisoformat(expiration_date_str[:10])
         today = datetime.date.today()
         if exp_date < today:
             return "expired"
@@ -124,7 +124,11 @@ def match_recipes_with_pantry(
     current_user: User = Depends(get_current_user)
 ):
     recipes = db.query(Recipe).all()
-    pantry_items = db.query(PantryItem).all()
+    pantry_items = [
+        (p.name.strip().lower(), p.quantity)
+        for p in db.query(PantryItem).all()
+        if p.name and p.name.strip() and (p.quantity is None or p.quantity > 0)
+    ]
 
     matches = []
     for recipe in recipes:
@@ -133,21 +137,28 @@ def match_recipes_with_pantry(
             continue
 
         matched_count = 0
+        valid_count = 0
         missing_list = []
 
         for ing in recipe_ingredients:
-            ing_name = ing.get("name", "").strip().lower()
-            req_amount = float(ing.get("amount", 1.0))
+            if not isinstance(ing, dict):
+                continue
+            raw_name = (ing.get("name") or "").strip()
+            ing_name = raw_name.lower()
+            if not ing_name:
+                continue
+            valid_count += 1
+            try:
+                req_amount = float(ing.get("amount") or 1.0)
+            except (TypeError, ValueError):
+                req_amount = 1.0
             req_unit = ing.get("unit", "")
 
-            # Match against pantry
+            # Match against stocked pantry items
             found = False
-            p_qty = None
-            for p in pantry_items:
-                p_name = p.name.strip().lower()
+            for p_name, _p_qty in pantry_items:
                 if p_name in ing_name or ing_name in p_name:
                     found = True
-                    p_qty = p.quantity
                     break
 
             if found:
@@ -155,7 +166,7 @@ def match_recipes_with_pantry(
             else:
                 missing_list.append(
                     RecipeMatchIngredient(
-                        ingredient_name=ing.get("name", ""),
+                        ingredient_name=raw_name,
                         required_amount=req_amount,
                         unit=req_unit,
                         available_in_pantry=False,
@@ -163,19 +174,20 @@ def match_recipes_with_pantry(
                     )
                 )
 
-        total_count = len(recipe_ingredients)
-        pct = round((matched_count / total_count) * 100, 1) if total_count > 0 else 0.0
+        if valid_count == 0:
+            continue
+        pct = round((matched_count / valid_count) * 100, 1)
 
         matches.append(
             RecipePantryMatch(
                 recipe_id=recipe.id,
                 recipe_title=recipe.title,
-                total_ingredients_count=total_count,
+                total_ingredients_count=valid_count,
                 matched_ingredients_count=matched_count,
                 missing_ingredients_count=len(missing_list),
                 match_percentage=pct,
                 missing_ingredients=missing_list,
-                can_cook_now=(matched_count == total_count)
+                can_cook_now=(matched_count == valid_count)
             )
         )
 

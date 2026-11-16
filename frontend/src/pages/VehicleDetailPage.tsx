@@ -131,15 +131,15 @@ export const VehicleDetailPage: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <RefreshCw className="w-8 h-8 text-indigo-500 animate-spin mb-3" />
-        <p className="text-sm text-slate-500">{t('common.loading')}</p>
+        <p className="text-sm text-zinc-500">{t('common.loading')}</p>
       </div>
     );
   }
 
   if (!vehicle) {
     return (
-      <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800">
-        <p className="text-slate-500 mb-4">Vozidlo nebylo nalezeno.</p>
+      <div className="p-8 text-center bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800">
+        <p className="text-zinc-500 mb-4">Vozidlo nebylo nalezeno.</p>
         <button
           onClick={() => navigate('/vehicles')}
           className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-semibold"
@@ -157,23 +157,23 @@ export const VehicleDetailPage: React.FC = () => {
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/vehicles')}
-            className="p-2.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 transition shadow-sm"
+            className="p-2.5 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 transition shadow-sm"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
             <div className="flex items-center gap-2.5">
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+              <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">
                 {vehicle.name}
               </h1>
               <button
                 onClick={handleToggleFavorite}
-                className="p-1 text-slate-400 hover:text-rose-500 transition"
+                className="p-1 text-zinc-400 hover:text-rose-500 transition"
               >
                 <Heart className={`w-5 h-5 ${vehicle.is_favorite ? 'fill-rose-500 text-rose-500' : ''}`} />
               </button>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
               {vehicle.make} {vehicle.model} {vehicle.year ? `• Rok ${vehicle.year}` : ''} {vehicle.color ? `• ${vehicle.color}` : ''}
             </p>
           </div>
@@ -181,13 +181,13 @@ export const VehicleDetailPage: React.FC = () => {
 
         {/* Action Controls */}
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="px-3.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl font-mono font-bold text-sm tracking-wider text-slate-900 dark:text-slate-100 shadow-sm">
+          <div className="px-3.5 py-1.5 bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 rounded-xl font-mono font-bold text-sm tracking-wider text-zinc-900 dark:text-zinc-100 shadow-sm">
             {vehicle.license_plate}
           </div>
 
           <button
             onClick={() => setIsMileageOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-xs font-semibold transition"
+            className="flex items-center gap-1.5 px-3 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-xl text-xs font-semibold transition"
             title="Aktualizovat stav tachometru"
           >
             <Gauge className="w-4 h-4 text-indigo-500" />
@@ -196,7 +196,7 @@ export const VehicleDetailPage: React.FC = () => {
 
           <button
             onClick={() => setIsEditOpen(true)}
-            className="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition border border-slate-200 dark:border-slate-800"
+            className="p-2 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition border border-zinc-200 dark:border-zinc-800"
             title="Upravit vozidlo"
           >
             <Edit3 className="w-4 h-4" />
@@ -213,13 +213,13 @@ export const VehicleDetailPage: React.FC = () => {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2 overflow-x-auto text-xs font-semibold">
+      <div className="flex items-center gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2 overflow-x-auto text-xs font-semibold">
         <button
           onClick={() => setActiveTab('overview')}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl transition whitespace-nowrap ${
             activeTab === 'overview'
               ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+              : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
           }`}
         >
           <Calendar className="w-4 h-4" />
@@ -231,7 +231,7 @@ export const VehicleDetailPage: React.FC = () => {
           className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl transition whitespace-nowrap ${
             activeTab === 'services'
               ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+              : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
           }`}
         >
           <Wrench className="w-4 h-4" />
@@ -246,7 +246,7 @@ export const VehicleDetailPage: React.FC = () => {
           className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl transition whitespace-nowrap ${
             activeTab === 'refuelings'
               ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+              : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
           }`}
         >
           <Fuel className="w-4 h-4" />
@@ -261,7 +261,7 @@ export const VehicleDetailPage: React.FC = () => {
           className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl transition whitespace-nowrap ${
             activeTab === 'sos'
               ? 'bg-rose-600 text-white shadow-md shadow-rose-500/20'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+              : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
           }`}
         >
           <PhoneCall className="w-4 h-4" />
@@ -277,10 +277,10 @@ export const VehicleDetailPage: React.FC = () => {
           {/* Key Deadlines Cards Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* MOT / STK */}
-            <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+            <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-slate-500">STK & Emise</span>
+                  <span className="text-xs font-semibold text-zinc-500">STK & Emise</span>
                   {vehicle.mot_status === 'expired' ? (
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/10 text-rose-600">Propadlá</span>
                   ) : vehicle.mot_status === 'warning' ? (
@@ -289,11 +289,11 @@ export const VehicleDetailPage: React.FC = () => {
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-600">Platná</span>
                   )}
                 </div>
-                <div className="text-xl font-bold text-slate-900 dark:text-white">
+                <div className="text-xl font-bold text-zinc-900 dark:text-white">
                   {formatDate(vehicle.mot_expiry_date)}
                 </div>
               </div>
-              <div className="text-xs text-slate-400 mt-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <div className="text-xs text-zinc-400 mt-3 pt-2 border-t border-zinc-100 dark:border-zinc-800">
                 {vehicle.mot_days_remaining !== null && vehicle.mot_days_remaining !== undefined ? (
                   vehicle.mot_days_remaining < 0
                     ? `Propadlo před ${Math.abs(vehicle.mot_days_remaining)} dny`
@@ -303,10 +303,10 @@ export const VehicleDetailPage: React.FC = () => {
             </div>
 
             {/* Dálniční známka */}
-            <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+            <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-slate-500">Dálniční známka ČR</span>
+                  <span className="text-xs font-semibold text-zinc-500">Dálniční známka ČR</span>
                   {vehicle.vignette_status === 'expired' ? (
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/10 text-rose-600">Vypršela</span>
                   ) : vehicle.vignette_status === 'warning' ? (
@@ -314,14 +314,14 @@ export const VehicleDetailPage: React.FC = () => {
                   ) : vehicle.vignette_status === 'ok' ? (
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-600">Aktivní</span>
                   ) : (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] text-slate-400">Nemá</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] text-zinc-400">Nemá</span>
                   )}
                 </div>
-                <div className="text-xl font-bold text-slate-900 dark:text-white">
+                <div className="text-xl font-bold text-zinc-900 dark:text-white">
                   {vehicle.vignette_expiry_date ? formatDate(vehicle.vignette_expiry_date) : 'Bez známky'}
                 </div>
               </div>
-              <div className="text-xs text-slate-400 mt-3 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <div className="text-xs text-zinc-400 mt-3 pt-2 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
                 <span>
                   {vehicle.vignette_days_remaining !== null ? `Zbývá ${vehicle.vignette_days_remaining} dní` : '–'}
                 </span>
@@ -338,28 +338,28 @@ export const VehicleDetailPage: React.FC = () => {
             </div>
 
             {/* Pojištění */}
-            <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+            <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-slate-500">Pojištění (POV / HAV)</span>
-                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <span className="text-xs font-semibold text-zinc-500">Pojištění (POV / HAV)</span>
+                  <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
                     {vehicle.insurance_company || 'Pojišťovna'}
                   </span>
                 </div>
-                <div className="text-xl font-bold text-slate-900 dark:text-white">
+                <div className="text-xl font-bold text-zinc-900 dark:text-white">
                   {vehicle.insurance_expiry_date ? formatDate(vehicle.insurance_expiry_date) : '–'}
                 </div>
               </div>
-              <div className="text-xs text-slate-400 mt-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <div className="text-xs text-zinc-400 mt-3 pt-2 border-t border-zinc-100 dark:border-zinc-800">
                 Smlouva: {vehicle.insurance_policy_number || 'neuvedeno'}
               </div>
             </div>
 
             {/* Výměna oleje */}
-            <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+            <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-slate-500">Servisní interval oleje</span>
+                  <span className="text-xs font-semibold text-zinc-500">Servisní interval oleje</span>
                   {vehicle.oil_status === 'expired' ? (
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/10 text-rose-600">Přetaženo!</span>
                   ) : vehicle.oil_status === 'warning' ? (
@@ -368,13 +368,13 @@ export const VehicleDetailPage: React.FC = () => {
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-600">V normě</span>
                   )}
                 </div>
-                <div className="text-xl font-bold text-slate-900 dark:text-white">
+                <div className="text-xl font-bold text-zinc-900 dark:text-white">
                   {vehicle.oil_change_km_remaining !== null && vehicle.oil_change_km_remaining !== undefined
                     ? `za ${vehicle.oil_change_km_remaining.toLocaleString('cs-CZ')} km`
                     : 'Nenastaveno'}
                 </div>
               </div>
-              <div className="text-xs text-slate-400 mt-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <div className="text-xs text-zinc-400 mt-3 pt-2 border-t border-zinc-100 dark:border-zinc-800">
                 Poslední výměna: {vehicle.last_oil_change_mileage ? `${vehicle.last_oil_change_mileage.toLocaleString('cs-CZ')} km` : '–'}
               </div>
             </div>
@@ -383,33 +383,33 @@ export const VehicleDetailPage: React.FC = () => {
           {/* Tires & Specifications row */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             {/* Tires Card */}
-            <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+            <div className="p-5 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <div className="p-2.5 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
                     <Disc className="w-5 h-5" />
                   </div>
-                  <h3 className="font-bold text-slate-900 dark:text-white text-base">
+                  <h3 className="font-bold text-zinc-900 dark:text-white text-base">
                     Pneumatiky a sezónní sada
                   </h3>
                 </div>
-                <span className="px-3 py-1 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                <span className="px-3 py-1 rounded-xl text-xs font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
                   {vehicle.tire_type === 'winter' ? 'Zimní obutí' : vehicle.tire_type === 'summer' ? 'Letní obutí' : 'Celoroční'}
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 text-xs">
+              <div className="grid grid-cols-2 gap-3 p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-100 dark:border-zinc-800 text-xs">
                 <div>
-                  <div className="text-slate-400 mb-0.5">Rozměr pneu</div>
-                  <div className="font-bold text-slate-800 dark:text-slate-200 font-mono">
+                  <div className="text-zinc-400 mb-0.5">Rozměr pneu</div>
+                  <div className="font-bold text-zinc-800 dark:text-zinc-200 font-mono">
                     {vehicle.tire_dimension || '–'}
                   </div>
                 </div>
                 <div>
-                  <div className="text-slate-400 mb-0.5">Hloubka dezénu</div>
-                  <div className="font-bold text-slate-800 dark:text-slate-200">
+                  <div className="text-zinc-400 mb-0.5">Hloubka dezénu</div>
+                  <div className="font-bold text-zinc-800 dark:text-zinc-200">
                     {vehicle.tire_tread_depth_mm ? `${vehicle.tire_tread_depth_mm} mm` : '–'}
-                    <span className="text-[10px] text-slate-400 font-normal ml-1">
+                    <span className="text-[10px] text-zinc-400 font-normal ml-1">
                       (min. {vehicle.tire_type === 'winter' ? '4 mm' : '1.6 mm'})
                     </span>
                   </div>
@@ -420,62 +420,62 @@ export const VehicleDetailPage: React.FC = () => {
                 <div className="font-bold text-indigo-900 dark:text-indigo-300 mb-0.5">
                   Kde je uskladněna druhá sada?
                 </div>
-                <div className="text-slate-700 dark:text-slate-300">
+                <div className="text-zinc-700 dark:text-zinc-300">
                   {vehicle.tire_storage_location || 'Není zadáno (např. v pneuservisu nebo garáži)'}
                 </div>
               </div>
             </div>
 
             {/* Technical Specifications Card */}
-            <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+            <div className="p-5 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4">
               <div className="flex items-center gap-2.5">
-                <div className="p-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                <div className="p-2.5 rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
                   <Car className="w-5 h-5" />
                 </div>
-                <h3 className="font-bold text-slate-900 dark:text-white text-base">
+                <h3 className="font-bold text-zinc-900 dark:text-white text-base">
                   Technické údaje vozidla
                 </h3>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
-                <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
-                  <div className="text-slate-400 mb-0.5">Palivo</div>
-                  <div className="font-bold text-slate-800 dark:text-slate-200 capitalize">
+                <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-100 dark:border-zinc-800">
+                  <div className="text-zinc-400 mb-0.5">Palivo</div>
+                  <div className="font-bold text-zinc-800 dark:text-zinc-200 capitalize">
                     {vehicle.fuel_type === 'diesel' ? 'Nafta' : vehicle.fuel_type === 'petrol' ? 'Benzín' : vehicle.fuel_type}
                   </div>
                 </div>
 
-                <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
-                  <div className="text-slate-400 mb-0.5">Objem nádrže</div>
-                  <div className="font-bold text-slate-800 dark:text-slate-200">
+                <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-100 dark:border-zinc-800">
+                  <div className="text-zinc-400 mb-0.5">Objem nádrže</div>
+                  <div className="font-bold text-zinc-800 dark:text-zinc-200">
                     {vehicle.tank_capacity_l ? `${vehicle.tank_capacity_l} l` : '–'}
                   </div>
                 </div>
 
-                <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
-                  <div className="text-slate-400 mb-0.5">Výkon motoru</div>
-                  <div className="font-bold text-slate-800 dark:text-slate-200">
+                <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-100 dark:border-zinc-800">
+                  <div className="text-zinc-400 mb-0.5">Výkon motoru</div>
+                  <div className="font-bold text-zinc-800 dark:text-zinc-200">
                     {vehicle.engine_power_kw ? `${vehicle.engine_power_kw} kW` : '–'}
                   </div>
                 </div>
 
-                <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
-                  <div className="text-slate-400 mb-0.5">Objem válců</div>
-                  <div className="font-bold text-slate-800 dark:text-slate-200">
+                <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-100 dark:border-zinc-800">
+                  <div className="text-zinc-400 mb-0.5">Objem válců</div>
+                  <div className="font-bold text-zinc-800 dark:text-zinc-200">
                     {vehicle.engine_displacement_cc ? `${vehicle.engine_displacement_cc} ccm` : '–'}
                   </div>
                 </div>
 
-                <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
-                  <div className="text-slate-400 mb-0.5">Převodovka</div>
-                  <div className="font-bold text-slate-800 dark:text-slate-200 capitalize">
+                <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-100 dark:border-zinc-800">
+                  <div className="text-zinc-400 mb-0.5">Převodovka</div>
+                  <div className="font-bold text-zinc-800 dark:text-zinc-200 capitalize">
                     {vehicle.transmission === 'manual' ? 'Manuální' : 'Automatická'}
                   </div>
                 </div>
 
-                <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
-                  <div className="text-slate-400 mb-0.5">Lékárnička</div>
-                  <div className="font-bold text-slate-800 dark:text-slate-200">
+                <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-100 dark:border-zinc-800">
+                  <div className="text-zinc-400 mb-0.5">Lékárnička</div>
+                  <div className="font-bold text-zinc-800 dark:text-zinc-200">
                     {formatDate(vehicle.first_aid_kit_expiry_date)}
                   </div>
                 </div>
@@ -483,16 +483,16 @@ export const VehicleDetailPage: React.FC = () => {
 
               {/* VIN Code box with copy */}
               {vehicle.vin && (
-                <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 flex items-center justify-between">
                   <div>
-                    <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">VIN kód</div>
-                    <div className="font-mono text-xs font-bold text-slate-900 dark:text-white tracking-widest">
+                    <div className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider">VIN kód</div>
+                    <div className="font-mono text-xs font-bold text-zinc-900 dark:text-white tracking-widest">
                       {vehicle.vin}
                     </div>
                   </div>
                   <button
                     onClick={handleCopyVin}
-                    className="p-1.5 rounded-lg bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 transition shadow-sm"
+                    className="p-1.5 rounded-lg bg-white dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 transition shadow-sm"
                     title="Kopírovat VIN"
                   >
                     {copiedVin ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
@@ -501,7 +501,7 @@ export const VehicleDetailPage: React.FC = () => {
               )}
 
               {vehicle.notes && (
-                <p className="text-xs text-slate-500 dark:text-slate-400 italic">
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 italic">
                   "{vehicle.notes}"
                 </p>
               )}
@@ -515,10 +515,10 @@ export const VehicleDetailPage: React.FC = () => {
       {/* ======================================================== */}
       {activeTab === 'services' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+          <div className="flex items-center justify-between p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm">
             <div>
-              <div className="text-xs text-slate-400 font-medium">Celkové výdaje na servis</div>
-              <div className="text-2xl font-bold text-slate-900 dark:text-white">
+              <div className="text-xs text-zinc-400 font-medium">Celkové výdaje na servis</div>
+              <div className="text-2xl font-bold text-zinc-900 dark:text-white">
                 {vehicle.total_spent_service.toLocaleString('cs-CZ')} Kč
               </div>
             </div>
@@ -532,15 +532,15 @@ export const VehicleDetailPage: React.FC = () => {
           </div>
 
           {vehicle.service_records?.length === 0 ? (
-            <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800">
-              <p className="text-xs text-slate-400">Zatím žádné servisní záznamy.</p>
+            <div className="p-8 text-center bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800">
+              <p className="text-xs text-zinc-400">Zatím žádné servisní záznamy.</p>
             </div>
           ) : (
             <div className="space-y-3">
               {vehicle.service_records.map(record => (
                 <div
                   key={record.id}
-                  className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                  className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                 >
                   <div className="flex items-start gap-3">
                     <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex-shrink-0 mt-0.5">
@@ -548,14 +548,14 @@ export const VehicleDetailPage: React.FC = () => {
                     </div>
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h4 className="font-bold text-sm text-slate-900 dark:text-white">
+                        <h4 className="font-bold text-sm text-zinc-900 dark:text-white">
                           {record.title}
                         </h4>
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold">
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-semibold">
                           {record.service_type}
                         </span>
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-slate-400 mt-1">
+                      <div className="flex items-center gap-2 text-xs text-zinc-400 mt-1">
                         <span>{formatDate(record.date)}</span>
                         <span>•</span>
                         <span>{record.mileage.toLocaleString('cs-CZ')} km</span>
@@ -567,20 +567,20 @@ export const VehicleDetailPage: React.FC = () => {
                         )}
                       </div>
                       {record.performed_operations && (
-                        <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">
+                        <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-2">
                           {record.performed_operations}
                         </p>
                       )}
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800">
-                    <span className="text-sm font-bold text-slate-900 dark:text-white">
+                  <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-zinc-100 dark:border-zinc-800">
+                    <span className="text-sm font-bold text-zinc-900 dark:text-white">
                       {record.cost.toLocaleString('cs-CZ')} Kč
                     </span>
                     <button
                       onClick={() => handleDeleteService(record.id)}
-                      className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg transition"
+                      className="p-1.5 text-zinc-400 hover:text-rose-600 rounded-lg transition"
                       title="Smazat záznam"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -599,23 +599,23 @@ export const VehicleDetailPage: React.FC = () => {
       {activeTab === 'refuelings' && (
         <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-              <div className="text-xs text-slate-400 font-medium">Průměrná spotřeba</div>
+            <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm">
+              <div className="text-xs text-zinc-400 font-medium">Průměrná spotřeba</div>
               <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
                 {vehicle.average_consumption ? `${vehicle.average_consumption} l / 100 km` : '–'}
               </div>
             </div>
 
-            <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-              <div className="text-xs text-slate-400 font-medium">Celkem utraceno za palivo</div>
-              <div className="text-2xl font-bold text-slate-900 dark:text-white">
+            <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm">
+              <div className="text-xs text-zinc-400 font-medium">Celkem utraceno za palivo</div>
+              <div className="text-2xl font-bold text-zinc-900 dark:text-white">
                 {vehicle.total_spent_fuel.toLocaleString('cs-CZ')} Kč
               </div>
             </div>
 
-            <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
+            <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center justify-between">
               <div>
-                <div className="text-xs text-slate-400 font-medium">Náklady na 1 km</div>
+                <div className="text-xs text-zinc-400 font-medium">Náklady na 1 km</div>
                 <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
                   {vehicle.cost_per_km ? `${vehicle.cost_per_km} Kč / km` : '–'}
                 </div>
@@ -631,13 +631,13 @@ export const VehicleDetailPage: React.FC = () => {
           </div>
 
           {vehicle.refuelings?.length === 0 ? (
-            <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800">
-              <p className="text-xs text-slate-400">Zatím žádná zaznamenaná tankování.</p>
+            <div className="p-8 text-center bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800">
+              <p className="text-xs text-zinc-400">Zatím žádná zaznamenaná tankování.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div className="overflow-x-auto rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-400 uppercase font-semibold border-b border-slate-100 dark:border-slate-800">
+                <thead className="bg-zinc-50 dark:bg-zinc-800/50 text-zinc-400 uppercase font-semibold border-b border-zinc-100 dark:border-zinc-800">
                   <tr>
                     <th className="px-4 py-3">Datum</th>
                     <th className="px-4 py-3">Tachometr</th>
@@ -649,22 +649,22 @@ export const VehicleDetailPage: React.FC = () => {
                     <th className="px-4 py-3 text-right">Akce</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
                   {vehicle.refuelings.map(r => (
-                    <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
-                      <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">
+                    <tr key={r.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30">
+                      <td className="px-4 py-3 font-medium text-zinc-900 dark:text-white">
                         {formatDate(r.date)}
                       </td>
-                      <td className="px-4 py-3 font-semibold text-slate-700 dark:text-slate-300">
+                      <td className="px-4 py-3 font-semibold text-zinc-700 dark:text-zinc-300">
                         {r.mileage.toLocaleString('cs-CZ')} km
                       </td>
-                      <td className="px-4 py-3 font-bold text-slate-800 dark:text-slate-200">
+                      <td className="px-4 py-3 font-bold text-zinc-800 dark:text-zinc-200">
                         {r.fuel_amount_l} l
                       </td>
-                      <td className="px-4 py-3 text-slate-500">
+                      <td className="px-4 py-3 text-zinc-500">
                         {r.price_per_l ? `${r.price_per_l.toFixed(2)} Kč` : '–'}
                       </td>
-                      <td className="px-4 py-3 font-bold text-slate-900 dark:text-white">
+                      <td className="px-4 py-3 font-bold text-zinc-900 dark:text-white">
                         {r.total_price.toLocaleString('cs-CZ')} Kč
                       </td>
                       <td className="px-4 py-3">
@@ -673,16 +673,16 @@ export const VehicleDetailPage: React.FC = () => {
                             {r.calculated_consumption} l / 100 km
                           </span>
                         ) : (
-                          <span className="text-slate-400 italic">První nádrž</span>
+                          <span className="text-zinc-400 italic">První nádrž</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
+                      <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">
                         {r.fuel_brand || '–'}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <button
                           onClick={() => handleDeleteRefueling(r.id)}
-                          className="p-1 text-slate-400 hover:text-rose-600 rounded transition"
+                          className="p-1 text-zinc-400 hover:text-rose-600 rounded transition"
                           title="Smazat"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -721,12 +721,12 @@ export const VehicleDetailPage: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
-              <h4 className="font-bold text-slate-900 dark:text-white text-sm">
+            <div className="p-5 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-3">
+              <h4 className="font-bold text-zinc-900 dark:text-white text-sm">
                 Nouzové linky
               </h4>
               <div className="space-y-2">
-                <a href="tel:1224" className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 flex justify-between items-center text-xs font-bold">
+                <a href="tel:1224" className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200 dark:border-zinc-700 flex justify-between items-center text-xs font-bold">
                   <span>Linka pomoci řidičům ČR</span>
                   <span className="font-mono text-sm text-indigo-600 dark:text-indigo-400">1224</span>
                 </a>
@@ -738,15 +738,15 @@ export const VehicleDetailPage: React.FC = () => {
                   <span>Policie ČR (Nehoda nad 100 000 Kč)</span>
                   <span className="font-mono text-sm">158</span>
                 </a>
-                <a href="tel:112" className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex justify-between items-center text-xs font-bold">
+                <a href="tel:112" className="p-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 flex justify-between items-center text-xs font-bold">
                   <span>Tísňová linka SOS</span>
                   <span className="font-mono text-sm">112</span>
                 </a>
               </div>
             </div>
 
-            <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
-              <h4 className="font-bold text-slate-900 dark:text-white text-sm">
+            <div className="p-5 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-3">
+              <h4 className="font-bold text-zinc-900 dark:text-white text-sm">
                 Povinná výbava vozidla
               </h4>
               <div className="space-y-2 text-xs">

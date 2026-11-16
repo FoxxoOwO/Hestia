@@ -74,26 +74,26 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-2xl w-full p-6 shadow-2xl relative overflow-hidden max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-900/60 backdrop-blur-sm animate-fade-in">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-2xl w-full p-6 shadow-2xl relative overflow-hidden max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex items-center justify-between pb-4 border-b border-zinc-100 dark:border-zinc-800">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-2xl">
               <FileSpreadsheet className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="font-bold text-lg text-slate-800 dark:text-white">
+              <h3 className="font-bold text-lg text-zinc-800 dark:text-white">
                 {t('finance.import_title')}
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
                 {t('finance.import_desc')}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -111,10 +111,10 @@ export const ImportModal: React.FC<ImportModalProps> = ({
               <div className="p-4 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300 rounded-2xl mb-3 group-hover:scale-110 transition-transform">
                 <UploadCloud className="w-9 h-9" />
               </div>
-              <p className="font-semibold text-slate-700 dark:text-slate-200 text-sm mb-1">
+              <p className="font-semibold text-zinc-700 dark:text-zinc-200 text-sm mb-1">
                 {t('finance.drop_file')}
               </p>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-zinc-400">
                 Podporovány jsou bankovní exporty ČS, AirBank, KB, Fio, ČSOB, Revolut a další.
               </p>
               <input
@@ -132,9 +132,9 @@ export const ImportModal: React.FC<ImportModalProps> = ({
             <div className="space-y-4">
               {/* Summary Stats Cards */}
               <div className="grid grid-cols-3 gap-3">
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-                  <span className="text-xs text-slate-400 block">Nalezeno položek</span>
-                  <span className="text-xl font-bold text-slate-800 dark:text-white">
+                <div className="p-3.5 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+                  <span className="text-xs text-zinc-400 block">Nalezeno položek</span>
+                  <span className="text-xl font-bold text-zinc-800 dark:text-white">
                     {preview.total_count}
                   </span>
                 </div>
@@ -153,15 +153,15 @@ export const ImportModal: React.FC<ImportModalProps> = ({
               </div>
 
               {/* Assignment Controls */}
-              <div className="grid grid-cols-2 gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+              <div className="grid grid-cols-2 gap-3 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
                     {t('finance.import_assign_payer')}
                   </label>
                   <select
                     value={payerId}
                     onChange={(e) => setPayerId(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
+                    className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
                   >
                     {users.map((u) => (
                       <option key={u.id} value={u.id}>
@@ -172,12 +172,12 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                 </div>
 
                 <div className="flex items-center pt-5">
-                  <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-zinc-700 dark:text-zinc-300">
                     <input
                       type="checkbox"
                       checked={isShared}
                       onChange={(e) => setIsShared(e.target.checked)}
-                      className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300"
+                      className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-zinc-300"
                     />
                     <span>{t('finance.import_as_shared')}</span>
                   </label>
@@ -186,12 +186,12 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
               {/* Preview table */}
               <div>
-                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-2">
+                <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 block mb-2">
                   Náhled prvních {Math.min(preview.rows.length, 15)} položek z celkových {preview.total_count}:
                 </span>
-                <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden max-h-56 overflow-y-auto">
+                <div className="border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden max-h-56 overflow-y-auto">
                   <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-100 dark:bg-slate-800/90 text-slate-600 dark:text-slate-300 font-semibold sticky top-0">
+                    <thead className="bg-zinc-100 dark:bg-zinc-800/90 text-zinc-600 dark:text-zinc-300 font-semibold sticky top-0">
                       <tr>
                         <th className="py-2 px-3">Datum</th>
                         <th className="py-2 px-3">Název</th>
@@ -199,18 +199,18 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                         <th className="py-2 px-3 text-right">Částka</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
                       {preview.rows.slice(0, 15).map((r, idx) => (
-                        <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                          <td className="py-2 px-3 text-slate-500 whitespace-nowrap">{r.date}</td>
-                          <td className="py-2 px-3 font-medium text-slate-800 dark:text-slate-200 truncate max-w-xs">{r.title}</td>
+                        <tr key={idx} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40">
+                          <td className="py-2 px-3 text-zinc-500 whitespace-nowrap">{r.date}</td>
+                          <td className="py-2 px-3 font-medium text-zinc-800 dark:text-zinc-200 truncate max-w-xs">{r.title}</td>
                           <td className="py-2 px-3">
-                            <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px]">
+                            <span className="px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 text-[10px]">
                               {r.category}
                             </span>
                           </td>
                           <td className={`py-2 px-3 text-right font-semibold whitespace-nowrap ${
-                            r.transaction_type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-800 dark:text-slate-200'
+                            r.transaction_type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-zinc-800 dark:text-zinc-200'
                           }`}>
                             {r.transaction_type === 'income' ? '+' : '-'}{r.amount.toLocaleString('cs-CZ')} Kč
                           </td>
@@ -227,7 +227,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
           {isLoading && (
             <div className="py-8 flex flex-col items-center justify-center space-y-2">
               <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
-              <p className="text-xs text-slate-500">Parsování a auto-kategorizace plateb...</p>
+              <p className="text-xs text-zinc-500">Parsování a auto-kategorizace plateb...</p>
             </div>
           )}
 
@@ -241,7 +241,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex gap-3">
+        <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800 flex gap-3">
           {preview ? (
             <>
               <button
@@ -249,7 +249,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                   setPreview(null);
                   setSelectedFile(null);
                 }}
-                className="py-2.5 px-4 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-2xl transition-colors text-sm"
+                className="py-2.5 px-4 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-semibold rounded-2xl transition-colors text-sm"
               >
                 Vybrat jiný soubor
               </button>
@@ -265,7 +265,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
           ) : (
             <button
               onClick={onClose}
-              className="w-full py-2.5 px-4 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-2xl transition-colors text-sm"
+              className="w-full py-2.5 px-4 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-semibold rounded-2xl transition-colors text-sm"
             >
               {t('common.close')}
             </button>

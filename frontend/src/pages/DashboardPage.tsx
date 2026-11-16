@@ -8,10 +8,11 @@ import {
   UtensilsCrossed, Calendar, Award, Wrench, CalendarDays, ShieldCheck, ShieldAlert
 } from 'lucide-react';
 import { api } from '../services/api';
+import { getLocalDateISO, parseApiDate } from '../utils/date';
 import {
   Chore, ShoppingItem, MedicineStats, Medicine, MedicationSchedule,
   FinanceMonthlySummary, Subscription, Pet, Vehicle, ActivityLog,
-  Recipe, LeaderboardMember, Asset, AssetStats, MealPlanItem
+  Recipe, Asset, AssetStats, MealPlanItem
 } from '../types';
 import { useTranslation } from '../i18n';
 import { useTheme } from '../context/ThemeContext';
@@ -109,49 +110,55 @@ export const DashboardPage: React.FC = () => {
   const [newShoppingName, setNewShoppingName] = useState('');
   const [isAddingShopping, setIsAddingShopping] = useState(false);
 
-  // Load all dashboard data in parallel
-  const loadDashboardData = async (silent = false) => {
+  const [recipeSeed] = useState<number>(() => Math.random());
+
+  // Load enabled dashboard widgets data in parallel
+  const loadDashboardData = async (silent = false, widgetList = widgets, includeQuickStats = showQuickStats) => {
     try {
       if (!silent) setIsLoading(true);
       else setIsRefreshing(true);
 
-      const todayStr = new Date().toISOString().substring(0, 10);
+      const enabled = new Set(widgetList.filter(w => w.enabled).map(w => w.id));
+      const todayStr = getLocalDateISO();
 
-      const results = await Promise.allSettled([
-        api.getChores(),
-        api.getPanicModeTasks(),
-        api.getShoppingItems(),
-        api.getPlants(),
-        api.getMedicineStats(),
-        api.getMedicines(),
-        api.getMedicationSchedules(undefined, true),
-        api.getFinanceSummary(),
-        api.getSubscriptions(),
-        api.getPets(),
-        api.getVehicles(),
-        api.getActivities({ limit: 6 }),
-        api.getRecipes(),
-        api.getAssetStats(),
-        api.getAssets({ warranty_status: 'expiring_soon' }),
-        api.getMealPlans(todayStr, todayStr),
-      ]);
+      const needChores = includeQuickStats || enabled.has('chores');
+      const needShopping = includeQuickStats || enabled.has('shopping');
+      const needPlants = includeQuickStats || enabled.has('plants');
+      const needFinances = includeQuickStats || enabled.has('finances');
+      const needMedicines = enabled.has('medicines');
+      const needPets = enabled.has('pets');
+      const needVehicles = enabled.has('vehicles');
+      const needActivity = enabled.has('activity');
+      const needRecipes = enabled.has('recipe_tip');
+      const needAssets = enabled.has('assets');
+      const needMealPlanner = enabled.has('meal_planner');
 
-      if (results[0].status === 'fulfilled') setChores(results[0].value);
-      if (results[1].status === 'fulfilled') setPanicTasks(results[1].value);
-      if (results[2].status === 'fulfilled') setShoppingItems(results[2].value);
-      if (results[3].status === 'fulfilled') setPlants(results[3].value);
-      if (results[4].status === 'fulfilled') setMedicineStats(results[4].value);
-      if (results[5].status === 'fulfilled') setMedicines(results[5].value);
-      if (results[6].status === 'fulfilled') setMedSchedules(results[6].value);
-      if (results[7].status === 'fulfilled') setFinanceSummary(results[7].value);
-      if (results[8].status === 'fulfilled') setSubscriptions(results[8].value);
-      if (results[9].status === 'fulfilled') setPets(results[9].value);
-      if (results[10].status === 'fulfilled') setVehicles(results[10].value);
-      if (results[11].status === 'fulfilled') setActivities(results[11].value?.items || []);
-      if (results[12].status === 'fulfilled') setRecipes(results[12].value);
-      if (results[13].status === 'fulfilled') setAssetStats(results[13].value);
-      if (results[14].status === 'fulfilled') setExpiringAssets(results[14].value);
-      if (results[15].status === 'fulfilled') setTodayMealPlans(results[15].value);
+      const tasks: Array<Promise<void>> = [
+        api.getPanicModeTasks().then(setPanicTasks).catch(() => {}),
+      ];
+      if (needChores) tasks.push(api.getChores().then(setChores).catch(() => {}));
+      if (needShopping) tasks.push(api.getShoppingItems().then(setShoppingItems).catch(() => {}));
+      if (needPlants) tasks.push(api.getPlants().then(setPlants).catch(() => {}));
+      if (needFinances) {
+        tasks.push(api.getFinanceSummary().then(setFinanceSummary).catch(() => {}));
+        tasks.push(api.getSubscriptions().then(setSubscriptions).catch(() => {}));
+      }
+      if (needMedicines) {
+        tasks.push(api.getMedicineStats().then(setMedicineStats).catch(() => {}));
+        tasks.push(api.getMedicines().then(setMedicines).catch(() => {}));
+        tasks.push(api.getMedicationSchedules(undefined, true).then(setMedSchedules).catch(() => {}));
+      }
+      if (needPets) tasks.push(api.getPets().then(setPets).catch(() => {}));
+      if (needVehicles) tasks.push(api.getVehicles().then(setVehicles).catch(() => {}));
+      if (needActivity) tasks.push(api.getActivities({ limit: 6 }).then(r => setActivities(r?.items || [])).catch(() => {}));
+      if (needRecipes) tasks.push(api.getRecipes().then(setRecipes).catch(() => {}));
+      if (needAssets) {
+        tasks.push(api.getAssetStats().then(setAssetStats).catch(() => {}));
+        tasks.push(api.getAssets({ warranty_status: 'expiring_soon' }).then(setExpiringAssets).catch(() => {}));
+      }
+      if (needMealPlanner) tasks.push(api.getMealPlans(todayStr, todayStr).then(setTodayMealPlans).catch(() => {}));
+
+      await Promise.all(tasks);
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
     } finally {
@@ -173,6 +180,9 @@ export const DashboardPage: React.FC = () => {
   const handleToggleWidget = (id: DashboardWidgetId) => {
     const next = widgets.map(w => (w.id === id ? { ...w, enabled: !w.enabled } : w));
     saveWidgets(next);
+    if (next.find(w => w.id === id)?.enabled) {
+      loadDashboardData(true, next, showQuickStats);
+    }
   };
 
   const handleMoveUp = (id: DashboardWidgetId) => {
@@ -200,12 +210,14 @@ export const DashboardPage: React.FC = () => {
     localStorage.removeItem(STORAGE_KEY_WIDGETS);
     localStorage.removeItem(STORAGE_KEY_STATS);
     localStorage.removeItem(STORAGE_KEY_COMPACT);
+    loadDashboardData(true, DEFAULT_WIDGETS, true);
   };
 
   const handleToggleQuickStats = () => {
     const next = !showQuickStats;
     setShowQuickStats(next);
     localStorage.setItem(STORAGE_KEY_STATS, JSON.stringify(next));
+    if (next) loadDashboardData(true, widgets, true);
   };
 
   const handleToggleCompact = () => {
@@ -291,11 +303,10 @@ export const DashboardPage: React.FC = () => {
 
   const suggestedRecipe = useMemo(() => {
     if (recipes.length === 0) return null;
-    // pick one random recipe or favorite
     const favs = recipes.filter(r => r.is_favorite);
-    if (favs.length > 0) return favs[Math.floor(Math.random() * favs.length)];
+    if (favs.length > 0) return favs[Math.floor(recipeSeed * favs.length)];
     return recipes[0];
-  }, [recipes]);
+  }, [recipes, recipeSeed]);
 
   // Loading Screen
   if (isLoading) {
@@ -361,7 +372,7 @@ export const DashboardPage: React.FC = () => {
 
           <button
             onClick={() => setIsCustomizeOpen(true)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-white dark:bg-zinc-850 border border-zinc-200 dark:border-zinc-750 text-zinc-750 dark:text-zinc-200 hover:border-orange-400 text-xs font-semibold shadow-xs transition"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 hover:border-orange-400 text-xs font-semibold shadow-xs transition"
           >
             <SlidersHorizontal className="w-4 h-4 text-orange-500" />
             <span>{t('dashboard.customize')}</span>
@@ -552,7 +563,7 @@ export const DashboardPage: React.FC = () => {
                       {activeChores.slice(0, 4).map(chore => (
                         <div
                           key={chore.id}
-                          className="flex items-center justify-between p-2.5 rounded-2xl bg-zinc-50 dark:bg-zinc-850/60 border border-zinc-100 dark:border-zinc-800/60 hover:border-blue-300 transition group"
+                          className="flex items-center justify-between p-2.5 rounded-2xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-100 dark:border-zinc-800/60 hover:border-blue-300 transition group"
                         >
                           <div className="flex items-center gap-3 min-w-0">
                             <button
@@ -636,7 +647,7 @@ export const DashboardPage: React.FC = () => {
                       value={newShoppingName}
                       onChange={e => setNewShoppingName(e.target.value)}
                       placeholder={t('dashboard.shopping.placeholder')}
-                      className="flex-1 px-3 py-2 text-xs rounded-xl bg-zinc-50 dark:bg-zinc-850 border border-zinc-200 dark:border-zinc-750 text-zinc-800 dark:text-zinc-200 focus:outline-hidden focus:border-orange-500"
+                      className="flex-1 px-3 py-2 text-xs rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 focus:outline-hidden focus:border-orange-500"
                     />
                     <button
                       type="submit"
@@ -661,7 +672,7 @@ export const DashboardPage: React.FC = () => {
                         <div
                           key={item.id}
                           onClick={() => handleToggleShoppingItem(item.id)}
-                          className="flex items-center justify-between p-2 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-850 border border-transparent hover:border-zinc-200 dark:hover:border-zinc-800 cursor-pointer transition"
+                          className="flex items-center justify-between p-2 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-800 border border-transparent hover:border-zinc-200 dark:hover:border-zinc-800 cursor-pointer transition"
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
                             <input
@@ -727,7 +738,7 @@ export const DashboardPage: React.FC = () => {
                       {thirstyPlants.slice(0, 4).map(plant => (
                         <div
                           key={plant.id}
-                          className="flex items-center justify-between p-2.5 rounded-2xl bg-zinc-50 dark:bg-zinc-850/60 border border-zinc-100 dark:border-zinc-800/60 hover:border-emerald-300 transition"
+                          className="flex items-center justify-between p-2.5 rounded-2xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-100 dark:border-zinc-800/60 hover:border-emerald-300 transition"
                         >
                           <div className="flex items-center gap-3 min-w-0">
                             <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-xs shrink-0">
@@ -790,7 +801,7 @@ export const DashboardPage: React.FC = () => {
                   </div>
 
                   {/* Monthly overview card */}
-                  <div className="grid grid-cols-3 gap-2 p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-850/60 border border-zinc-100 dark:border-zinc-800/80 mb-3">
+                  <div className="grid grid-cols-3 gap-2 p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-100 dark:border-zinc-800/80 mb-3">
                     <div>
                       <span className="text-[10px] text-zinc-400 uppercase font-semibold">
                         {t('dashboard.finances.income')}
@@ -837,7 +848,7 @@ export const DashboardPage: React.FC = () => {
                         {upcomingSubscriptions.map(sub => (
                           <div
                             key={sub.id}
-                            className="flex items-center justify-between p-2 rounded-xl bg-zinc-50 dark:bg-zinc-850/40 text-xs"
+                            className="flex items-center justify-between p-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/40 text-xs"
                           >
                             <span className="font-medium text-zinc-700 dark:text-zinc-300 truncate">
                               {sub.name}
@@ -927,7 +938,7 @@ export const DashboardPage: React.FC = () => {
                         {medSchedules.slice(0, 3).map(schedule => (
                           <div
                             key={schedule.id}
-                            className="flex items-center justify-between p-2 rounded-xl bg-zinc-50 dark:bg-zinc-850/40 text-xs"
+                            className="flex items-center justify-between p-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/40 text-xs"
                           >
                             <span className="font-semibold text-zinc-800 dark:text-zinc-200">
                               {schedule.medicine_name || `Lék #${schedule.medicine_id}`}
@@ -982,7 +993,7 @@ export const DashboardPage: React.FC = () => {
                         <Link
                           key={pet.id}
                           to={`/pets/${pet.id}`}
-                          className="flex items-center justify-between p-2.5 rounded-2xl bg-zinc-50 dark:bg-zinc-850/60 border border-zinc-100 dark:border-zinc-800/60 hover:border-amber-300 transition"
+                          className="flex items-center justify-between p-2.5 rounded-2xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-100 dark:border-zinc-800/60 hover:border-amber-300 transition"
                         >
                           <div className="flex items-center gap-3 min-w-0">
                             <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-950 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold text-xs shrink-0">
@@ -1047,7 +1058,7 @@ export const DashboardPage: React.FC = () => {
                         <Link
                           key={v.id}
                           to={`/vehicles/${v.id}`}
-                          className="flex items-center justify-between p-2.5 rounded-2xl bg-zinc-50 dark:bg-zinc-850/60 border border-zinc-100 dark:border-zinc-800/60 hover:border-cyan-300 transition"
+                          className="flex items-center justify-between p-2.5 rounded-2xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-100 dark:border-zinc-800/60 hover:border-cyan-300 transition"
                         >
                           <div className="flex items-center gap-3 min-w-0">
                             <div className="w-8 h-8 rounded-xl bg-cyan-100 dark:bg-cyan-950 text-cyan-600 dark:text-cyan-400 flex items-center justify-center font-bold text-xs shrink-0">
@@ -1118,7 +1129,7 @@ export const DashboardPage: React.FC = () => {
                       {activities.slice(0, 4).map(act => (
                         <div
                           key={act.id}
-                          className="flex items-start gap-2.5 p-2 rounded-xl text-xs hover:bg-zinc-50 dark:hover:bg-zinc-850/40 transition"
+                          className="flex items-start gap-2.5 p-2 rounded-xl text-xs hover:bg-zinc-50 dark:hover:bg-zinc-800/40 transition"
                         >
                           <div className="w-2 h-2 rounded-full bg-orange-500 mt-1.5 shrink-0" />
                           <div className="min-w-0 flex-1">
@@ -1126,7 +1137,7 @@ export const DashboardPage: React.FC = () => {
                               {act.description}
                             </p>
                             <span className="text-[10px] text-zinc-400">
-                              {new Date(act.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · {act.user_name || 'Systém'}
+                              {parseApiDate(act.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · {act.user_name || 'Systém'}
                             </span>
                           </div>
                         </div>
@@ -1240,7 +1251,7 @@ export const DashboardPage: React.FC = () => {
 
                   <div className="flex-1 flex flex-col justify-between">
                     <div className="grid grid-cols-2 gap-2 mb-3">
-                      <div className="p-2.5 rounded-2xl bg-zinc-50 dark:bg-zinc-850/40 text-center">
+                      <div className="p-2.5 rounded-2xl bg-zinc-50 dark:bg-zinc-800/40 text-center">
                         <span className="text-[10px] text-zinc-400 block font-medium">V záruce</span>
                         <span className="text-base font-bold text-emerald-600 dark:text-emerald-400">
                           {assetStats?.active_warranties ?? 0}
@@ -1249,7 +1260,7 @@ export const DashboardPage: React.FC = () => {
                       <div className={`p-2.5 rounded-2xl text-center ${
                         (assetStats?.expiring_soon_warranties ?? 0) > 0
                           ? 'bg-amber-500/10 text-amber-600'
-                          : 'bg-zinc-50 dark:bg-zinc-850/40'
+                          : 'bg-zinc-50 dark:bg-zinc-800/40'
                       }`}>
                         <span className="text-[10px] text-zinc-400 block font-medium">Končí do 30 dní</span>
                         <span className={`text-base font-bold ${
@@ -1323,7 +1334,7 @@ export const DashboardPage: React.FC = () => {
                       {todayMealPlans.map(m => (
                         <div
                           key={m.id}
-                          className="flex items-center justify-between p-2.5 rounded-2xl bg-zinc-50 dark:bg-zinc-850/50 border border-zinc-100 dark:border-zinc-800 text-xs"
+                          className="flex items-center justify-between p-2.5 rounded-2xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 text-xs"
                         >
                           <div className="flex items-center gap-2 min-w-0">
                             <span className="text-sm">

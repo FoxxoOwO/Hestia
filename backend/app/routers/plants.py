@@ -1,7 +1,7 @@
 import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import or_
 
 from app.database import get_db
@@ -121,7 +121,10 @@ def get_plants(
             )
         )
 
-    plants = q.order_by(Plant.name.asc()).all()
+    plants = q.options(
+        selectinload(Plant.tasks),
+        selectinload(Plant.log_entries),
+    ).order_by(Plant.name.asc()).all()
     results = [format_plant_response(p) for p in plants]
 
     if thirsty_only:

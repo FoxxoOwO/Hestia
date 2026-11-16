@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { X, Wrench, Check, AlertCircle, Calendar, Gauge, Building2 } from 'lucide-react';
 import { Vehicle, VehicleServiceRecordCreate, ServiceType } from '../types';
 import { useTranslation } from '../i18n';
+import { getLocalDateISO } from '../utils/date';
 
 interface ServiceRecordModalProps {
   isOpen: boolean;
@@ -18,7 +19,7 @@ export const ServiceRecordModal: React.FC<ServiceRecordModalProps> = ({
   vehicle
 }) => {
   const { t } = useTranslation();
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getLocalDateISO();
 
   const [serviceType, setServiceType] = useState<ServiceType>('oil_change');
   const [title, setTitle] = useState('Výměna motorového oleje a filtrů');
@@ -78,26 +79,26 @@ export const ServiceRecordModal: React.FC<ServiceRecordModalProps> = ({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl relative my-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-900/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl relative my-8">
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
               <Wrench className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+              <h2 className="text-lg font-bold text-zinc-900 dark:text-white">
                 Záznam do servisní knížky
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
                 {vehicle.name} ({vehicle.license_plate})
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+            className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
           >
             <X className="w-5 h-5" />
           </button>
@@ -113,13 +114,13 @@ export const ServiceRecordModal: React.FC<ServiceRecordModalProps> = ({
         <form onSubmit={handleSubmit} className="mt-4 space-y-3.5">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
                 Typ servisu
               </label>
               <select
                 value={serviceType}
                 onChange={e => handleTypeChange(e.target.value as ServiceType)}
-                className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl"
+                className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-xl"
               >
                 <option value="oil_change">Výměna oleje a filtrů</option>
                 <option value="regular_service">Pravidelná prohlídka</option>
@@ -131,7 +132,7 @@ export const ServiceRecordModal: React.FC<ServiceRecordModalProps> = ({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
                 Datum servisu
               </label>
               <input
@@ -139,13 +140,13 @@ export const ServiceRecordModal: React.FC<ServiceRecordModalProps> = ({
                 required
                 value={date}
                 onChange={e => setDate(e.target.value)}
-                className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl"
+                className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-xl"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+            <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
               Název úkonu / Popis *
             </label>
             <input
@@ -154,13 +155,13 @@ export const ServiceRecordModal: React.FC<ServiceRecordModalProps> = ({
               value={title}
               onChange={e => setTitle(e.target.value)}
               placeholder="např. Výměna oleje Castrol Edge 5W-30 + filtry"
-              className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl"
+              className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-xl"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
                 Tachometr (km) *
               </label>
               <input
@@ -169,11 +170,11 @@ export const ServiceRecordModal: React.FC<ServiceRecordModalProps> = ({
                 value={mileage}
                 onChange={e => setMileage(e.target.value === '' ? '' : Number(e.target.value))}
                 placeholder={vehicle.current_mileage ? String(vehicle.current_mileage) : '164200'}
-                className="w-full px-3 py-2 text-xs font-semibold bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl"
+                className="w-full px-3 py-2 text-xs font-semibold bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-xl"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
                 Cena celkem (Kč)
               </label>
               <input
@@ -181,13 +182,13 @@ export const ServiceRecordModal: React.FC<ServiceRecordModalProps> = ({
                 value={cost}
                 onChange={e => setCost(e.target.value === '' ? '' : Number(e.target.value))}
                 placeholder="4200"
-                className="w-full px-3 py-2 text-xs font-bold bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl"
+                className="w-full px-3 py-2 text-xs font-bold bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-xl"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+            <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
               Autoservis / Mechanik
             </label>
             <input
@@ -195,12 +196,12 @@ export const ServiceRecordModal: React.FC<ServiceRecordModalProps> = ({
               value={serviceShop}
               onChange={e => setServiceShop(e.target.value)}
               placeholder="např. Autoservis Novák & Syn, Auto Ševčík..."
-              className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl"
+              className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-xl"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+            <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
               Podrobný rozpis prací a použitých dílů
             </label>
             <textarea
@@ -208,7 +209,7 @@ export const ServiceRecordModal: React.FC<ServiceRecordModalProps> = ({
               value={performedOperations}
               onChange={e => setPerformedOperations(e.target.value)}
               placeholder="např. 4.7 l motorového oleje, olejový filtr Mann, nový vzduchový filtr, doplnění chladící kapaliny G13..."
-              className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl"
+              className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-xl"
             />
           </div>
 
@@ -227,11 +228,11 @@ export const ServiceRecordModal: React.FC<ServiceRecordModalProps> = ({
           </div>
 
           {/* Footer Actions */}
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition"
+              className="px-4 py-2 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition"
             >
               Zrušit
             </button>

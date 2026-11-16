@@ -13,6 +13,7 @@ interface MealPlanAddModalProps {
   onClose: () => void;
   defaultDate: string; // YYYY-MM-DD
   defaultMealType?: MealType;
+  defaultRecipeId?: number | null;
   onAdd: (payload: MealPlanItemCreatePayload) => Promise<void>;
 }
 
@@ -21,6 +22,7 @@ export const MealPlanAddModal: React.FC<MealPlanAddModalProps> = ({
   onClose,
   defaultDate,
   defaultMealType = 'dinner',
+  defaultRecipeId = null,
   onAdd,
 }) => {
   const { t } = useTranslation();
@@ -47,14 +49,15 @@ export const MealPlanAddModal: React.FC<MealPlanAddModalProps> = ({
     if (isOpen) {
       setDate(defaultDate);
       setMealType(defaultMealType);
-      setSelectedRecipeId(null);
+      setMode('recipe');
+      setSelectedRecipeId(defaultRecipeId ?? null);
       setCustomTitle('');
       setServings(4);
       setNotes('');
       setError(null);
       loadRecipes();
     }
-  }, [isOpen, defaultDate, defaultMealType]);
+  }, [isOpen, defaultDate, defaultMealType, defaultRecipeId]);
 
   const loadRecipes = async () => {
     try {

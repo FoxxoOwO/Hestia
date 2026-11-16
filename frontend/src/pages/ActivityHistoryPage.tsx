@@ -3,6 +3,7 @@ import { useTranslation } from '../i18n';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { ActivityLog, ActivityStats, User } from '../types';
+import { getLocalDateISO, parseApiDate } from '../utils/date';
 import {
   History, Shield, Sparkles, CheckCircle2, Car, HeartPulse,
   FileText, DollarSign, Sprout, PawPrint, BookOpen, ShoppingBag,
@@ -30,10 +31,11 @@ export const ActivityHistoryPage: React.FC = () => {
   const [offset, setOffset] = useState<number>(0);
   const [total, setTotal] = useState<number>(0);
 
-  const loadData = async (resetOffset = false) => {
+  const loadData = async (resetOffset = false, searchOverride?: string) => {
     try {
       const currentOffset = resetOffset ? 0 : offset;
       if (resetOffset) setOffset(0);
+      const effectiveSearch = (searchOverride !== undefined ? searchOverride : searchQuery).trim();
 
       const [actRes, statsRes, usersRes] = await Promise.all([
         api.getActivities({
@@ -41,7 +43,7 @@ export const ActivityHistoryPage: React.FC = () => {
           offset: currentOffset,
           module: selectedModule !== 'all' ? selectedModule : undefined,
           user_id: selectedUserId !== 'all' ? selectedUserId : undefined,
-          search: searchQuery.trim() || undefined,
+          search: effectiveSearch || undefined,
         }),
         api.getActivityStats(),
         api.getUsers()
@@ -168,16 +170,17 @@ export const ActivityHistoryPage: React.FC = () => {
     }
   };
 
-  // Group activities by date
+  // Group activities by local date
   const groupedActivities = useMemo(() => {
     const groups: { [dateStr: string]: ActivityLog[] } = {};
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayStr = getLocalDateISO();
     const yesterdayDate = new Date();
     yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-    const yesterdayStr = yesterdayDate.toISOString().slice(0, 10);
+    const yesterdayStr = getLocalDateISO(yesterdayDate);
 
     activities.forEach((act) => {
-      const actDate = act.created_at.slice(0, 10);
+      const parsed = parseApiDate(act.created_at);
+      const actDate = Number.isNaN(parsed.getTime()) ? act.created_at.slice(0, 10) : getLocalDateISO(parsed);
       let groupTitle = actDate;
       if (actDate === todayStr) {
         groupTitle = language === 'cs' ? 'Dnes' : 'Today';
@@ -185,7 +188,7 @@ export const ActivityHistoryPage: React.FC = () => {
         groupTitle = language === 'cs' ? 'Včera' : 'Yesterday';
       } else {
         try {
-          const d = new Date(act.created_at);
+          const d = Number.isNaN(parsed.getTime()) ? new Date(act.created_at) : parsed;
           groupTitle = d.toLocaleDateString(language === 'cs' ? 'cs-CZ' : 'en-US', {
             weekday: 'long',
             day: 'numeric',
@@ -349,7 +352,7 @@ export const ActivityHistoryPage: React.FC = () => {
                 type="button"
                 onClick={() => {
                   setSearchQuery('');
-                  loadData(true);
+                  loadData(true, '');
                 }}
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-zinc-400 hover:text-zinc-600 px-2 py-0.5 rounded-lg"
               >
@@ -396,12 +399,12 @@ export const ActivityHistoryPage: React.FC = () => {
                 {items.map((act) => {
                   const badge = getModuleBadge(act.module);
                   const Icon = badge.icon;
-                  const timeStr = act.created_at ? new Date(act.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                  const timeStr = act.created_at ? parseApiDate(act.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
 
                   return (
                     <div
                       key={act.id}
-                      className="p-4 sm:p-5 flex items-start gap-3.5 hover:bg-zinc-50/50 dark:hover:bg-zinc-850/40 transition group"
+                      className="p-4 sm:p-5 flex items-start gap-3.5 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40 transition group"
                     >
                       {/* User Avatar */}
                       <div

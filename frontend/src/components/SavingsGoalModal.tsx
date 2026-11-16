@@ -91,26 +91,26 @@ export const SavingsGoalModal: React.FC<SavingsGoalModalProps> = ({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl relative overflow-hidden max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-900/60 backdrop-blur-sm animate-fade-in">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl relative overflow-hidden max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex items-center justify-between pb-4 border-b border-zinc-100 dark:border-zinc-800">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 rounded-2xl">
               <PiggyBank className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="font-bold text-lg text-slate-800 dark:text-white">
+              <h3 className="font-bold text-lg text-zinc-800 dark:text-white">
                 {goal ? 'Upravit spořicí cíl' : t('finance.add_goal')}
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
                 Stanovte si cíl a sledujte svůj pokrok
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -125,7 +125,7 @@ export const SavingsGoalModal: React.FC<SavingsGoalModalProps> = ({
           )}
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+            <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
               Název cíle *
             </label>
             <input
@@ -134,13 +134,13 @@ export const SavingsGoalModal: React.FC<SavingsGoalModalProps> = ({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="např. Letní dovolená v Řecku, Nová pohovka, Nouzová rezerva..."
-              className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white"
+              className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+              <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
                 Cílová částka (Kč) *
               </label>
               <input
@@ -150,12 +150,12 @@ export const SavingsGoalModal: React.FC<SavingsGoalModalProps> = ({
                 value={targetAmount}
                 onChange={(e) => setTargetAmount(e.target.value === '' ? '' : parseFloat(e.target.value))}
                 placeholder="50000"
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white"
+                className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+              <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
                 Aktuálně naspořeno (Kč)
               </label>
               <input
@@ -164,27 +164,27 @@ export const SavingsGoalModal: React.FC<SavingsGoalModalProps> = ({
                 value={currentAmount}
                 onChange={(e) => setCurrentAmount(e.target.value === '' ? '' : parseFloat(e.target.value))}
                 placeholder="0"
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white"
+                className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+            <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
               Cílové datum (volitelné)
             </label>
             <input
               type="date"
               value={targetDate}
               onChange={(e) => setTargetDate(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white"
+              className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white"
             />
           </div>
 
           {/* Icon & Color selector */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+              <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
                 Ikona
               </label>
               <div className="flex flex-wrap gap-2">
@@ -196,7 +196,7 @@ export const SavingsGoalModal: React.FC<SavingsGoalModalProps> = ({
                     className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg border transition-all ${
                       icon === item.id
                         ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 scale-105'
-                        : 'border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800'
+                        : 'border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800'
                     }`}
                   >
                     {item.icon}
@@ -206,7 +206,7 @@ export const SavingsGoalModal: React.FC<SavingsGoalModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+              <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
                 Barva
               </label>
               <div className="flex flex-wrap gap-2">
@@ -217,7 +217,7 @@ export const SavingsGoalModal: React.FC<SavingsGoalModalProps> = ({
                     onClick={() => setColor(c)}
                     style={{ backgroundColor: c }}
                     className={`w-9 h-9 rounded-xl border-2 transition-transform ${
-                      color === c ? 'border-white dark:border-slate-900 scale-110 shadow-md ring-2 ring-emerald-500' : 'border-transparent'
+                      color === c ? 'border-white dark:border-zinc-900 scale-110 shadow-md ring-2 ring-emerald-500' : 'border-transparent'
                     }`}
                   />
                 ))}
@@ -226,7 +226,7 @@ export const SavingsGoalModal: React.FC<SavingsGoalModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+            <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
               Poznámka
             </label>
             <textarea
@@ -234,16 +234,16 @@ export const SavingsGoalModal: React.FC<SavingsGoalModalProps> = ({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Odkazy, detaily nebo plán spoření..."
-              className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white"
+              className="w-full px-3.5 py-2 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white"
             />
           </div>
 
           {/* Footer */}
-          <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex gap-3">
+          <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 flex gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="py-2.5 px-4 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-2xl transition-colors text-sm"
+              className="py-2.5 px-4 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-semibold rounded-2xl transition-colors text-sm"
             >
               {t('common.close')}
             </button>

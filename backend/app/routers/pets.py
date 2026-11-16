@@ -1,7 +1,7 @@
 import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import or_
 
 from app.database import get_db
@@ -130,7 +130,13 @@ def get_pets(
             )
         )
 
-    pets = q.order_by(Pet.name.asc()).all()
+    pets = q.options(
+        selectinload(Pet.medical_records),
+        selectinload(Pet.medications),
+        selectinload(Pet.weight_logs),
+        selectinload(Pet.tasks),
+        selectinload(Pet.log_entries),
+    ).order_by(Pet.name.asc()).all()
     return [format_pet_response(p) for p in pets]
 
 

@@ -9,7 +9,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - SECRET_KEY=${SECRET_KEY:-hestia-super-secret-key-change-in-production-123456789}
+      - SECRET_KEY=${SECRET_KEY:?SECRET_KEY není nastaven. Spustit: echo "SECRET_KEY=$(python -c 'import secrets; print(secrets.token_urlsafe(48))')" > .env}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - DATABASE_URL=sqlite:////app/data/hestia.db
       - UPLOAD_DIR=/app/uploads

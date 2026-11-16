@@ -100,10 +100,10 @@ export const DashboardCustomizeModal: React.FC<DashboardCustomizeModalProps> = (
 
         {/* Global Settings Bar */}
         <div className="p-3.5 sm:p-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-100/40 dark:bg-zinc-950/40 grid grid-cols-1 sm:grid-cols-2 gap-2.5 shrink-0">
-          <label className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-zinc-850 border border-zinc-200/80 dark:border-zinc-700/60 cursor-pointer shadow-xs hover:border-orange-300 transition">
+          <label className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-zinc-800/70 border border-zinc-200/80 dark:border-zinc-700/60 cursor-pointer shadow-xs hover:border-orange-300 transition">
             <div className="flex items-center gap-2.5">
               <LayoutGrid className="w-4 h-4 text-orange-500" />
-              <span className="text-xs font-semibold text-zinc-750 dark:text-zinc-250">
+              <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">
                 {t('dashboard.widgets.quick_stats')}
               </span>
             </div>
@@ -115,9 +115,9 @@ export const DashboardCustomizeModal: React.FC<DashboardCustomizeModalProps> = (
             />
           </label>
 
-          <label className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-zinc-850 border border-zinc-200/80 dark:border-zinc-700/60 cursor-pointer shadow-xs hover:border-orange-300 transition">
+          <label className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-zinc-800/70 border border-zinc-200/80 dark:border-zinc-700/60 cursor-pointer shadow-xs hover:border-orange-300 transition">
             <div className="flex items-center gap-2.5">
-              <span className="text-xs font-semibold text-zinc-750 dark:text-zinc-250">
+              <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">
                 Kompaktní mřížka
               </span>
             </div>
@@ -147,7 +147,7 @@ export const DashboardCustomizeModal: React.FC<DashboardCustomizeModalProps> = (
                 key={widget.id}
                 className={`flex items-center justify-between p-3 rounded-2xl border transition-all ${
                   widget.enabled
-                    ? 'bg-white dark:bg-zinc-850 border-zinc-200 dark:border-zinc-750 shadow-xs'
+                    ? 'bg-white dark:bg-zinc-800/70 border-zinc-200 dark:border-zinc-700 shadow-xs'
                     : 'bg-zinc-50 dark:bg-zinc-900/40 border-dashed border-zinc-200 dark:border-zinc-800 opacity-60'
                 }`}
               >

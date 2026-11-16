@@ -62,7 +62,7 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
     }
     if (chore.days_until_due !== null && chore.days_until_due !== undefined) {
       return (
-        <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+        <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
           {t('chores.due_in_days', { days: chore.days_until_due })}
         </span>
       );
@@ -76,13 +76,13 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
   };
 
   return (
-    <div className={`relative bg-white dark:bg-gray-800 rounded-xl border p-4 shadow-sm transition-all hover:shadow-md ${
-      isAssignedToMe ? 'border-orange-300 dark:border-orange-700/60 ring-1 ring-orange-400/20' : 'border-gray-200 dark:border-gray-700'
+    <div className={`relative bg-white dark:bg-zinc-900 rounded-xl border p-4 shadow-sm transition-all hover:shadow-md ${
+      isAssignedToMe ? 'border-orange-300 dark:border-orange-700/60 ring-1 ring-orange-400/20' : 'border-zinc-200 dark:border-zinc-800'
     }`}>
       {/* Top Header Row */}
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+          <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300">
             {getRoomName(chore.room)}
           </span>
           {getDueBadge()}
@@ -98,15 +98,15 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
         <div className="relative">
           <button
             onClick={() => setShowOptionsMenu(!showOptionsMenu)}
-            className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700"
           >
             <MoreVertical className="w-4 h-4" />
           </button>
           {showOptionsMenu && (
-            <div className="absolute right-0 mt-1 w-36 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-20">
+            <div className="absolute right-0 mt-1 w-36 bg-white dark:bg-zinc-900 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-800 py-1 z-20">
               <button
                 onClick={() => { setShowOptionsMenu(false); onEdit(chore); }}
-                className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700"
               >
                 <Edit2 className="w-3.5 h-3.5" />
                 {t('chores.edit_chore')}
@@ -124,17 +124,17 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
       </div>
 
       {/* Chore Title and Description */}
-      <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-base mb-1 leading-snug">
+      <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 text-base mb-1 leading-snug">
         {chore.title}
       </h3>
       {chore.description && (
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 line-clamp-2">
+        <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3 line-clamp-2">
           {chore.description}
         </p>
       )}
 
       {/* Meta Specs: Points, Time, Frequency */}
-      <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mb-3.5">
+      <div className="flex items-center gap-3 text-xs text-zinc-500 dark:text-zinc-400 mb-3.5">
         <span className="flex items-center gap-1 font-semibold text-amber-600 dark:text-amber-400">
           <Sparkles className="w-3.5 h-3.5" />
           +{chore.points} {t('chores.pts')}
@@ -169,7 +169,7 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
       )}
 
       {/* Assignee & Action Row */}
-      <div className="flex items-center justify-between gap-2 pt-2 border-t border-gray-100 dark:border-gray-700/60 mt-auto">
+      <div className="flex items-center justify-between gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800/60 mt-auto">
         {/* Current Assignee Avatar & Name */}
         <div className="flex items-center gap-2">
           {chore.current_assignee ? (
@@ -181,14 +181,14 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
                 {chore.current_assignee.display_name.charAt(0).toUpperCase()}
               </div>
               <div className="flex flex-col">
-                <span className="text-[10px] text-gray-400 leading-none">{t('chores.on_turn')}</span>
-                <span className="text-xs font-medium text-gray-800 dark:text-gray-200 leading-tight">
+                <span className="text-[10px] text-zinc-400 leading-none">{t('chores.on_turn')}</span>
+                <span className="text-xs font-medium text-zinc-800 dark:text-zinc-200 leading-tight">
                   {chore.current_assignee.display_name}
                 </span>
               </div>
             </div>
           ) : (
-            <span className="text-xs text-gray-400 flex items-center gap-1">
+            <span className="text-xs text-zinc-400 flex items-center gap-1">
               <Users className="w-3.5 h-3.5" />
               Kdokoli
             </span>
@@ -199,13 +199,13 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
             <button
               onClick={() => setShowReassignMenu(!showReassignMenu)}
               title={t('chores.reassign_btn')}
-              className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700"
             >
               <ArrowRightLeft className="w-3 h-3" />
             </button>
             {showReassignMenu && (
-              <div className="absolute left-0 bottom-full mb-1 w-44 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-1 z-30">
-                <div className="px-3 py-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+              <div className="absolute left-0 bottom-full mb-1 w-44 bg-white dark:bg-zinc-900 rounded-lg shadow-xl border border-zinc-200 dark:border-zinc-800 py-1 z-30">
+                <div className="px-3 py-1 text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">
                   {t('chores.reassign_btn')}
                 </div>
                 {users.map(u => (
@@ -215,8 +215,8 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
                       setShowReassignMenu(false);
                       onReassign(chore.id, u.id);
                     }}
-                    className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left hover:bg-gray-50 dark:hover:bg-gray-700/60 ${
-                      chore.current_assignee_id === u.id ? 'font-bold text-orange-600 dark:text-orange-400' : 'text-gray-700 dark:text-gray-300'
+                    className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left hover:bg-zinc-50 dark:hover:bg-zinc-700/60 ${
+                      chore.current_assignee_id === u.id ? 'font-bold text-orange-600 dark:text-orange-400' : 'text-zinc-700 dark:text-zinc-300'
                     }`}
                   >
                     <div
@@ -240,7 +240,7 @@ export const ChoreCard: React.FC<ChoreCardProps> = ({
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium shadow-sm transition-all active:scale-95 ${
             isAssignedToMe
               ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-500/20'
-              : 'bg-gray-100 dark:bg-gray-700 hover:bg-emerald-600 hover:text-white text-gray-700 dark:text-gray-200'
+              : 'bg-zinc-100 dark:bg-zinc-700 hover:bg-emerald-600 hover:text-white text-zinc-700 dark:text-zinc-200'
           }`}
         >
           <CheckCircle2 className="w-3.5 h-3.5" />

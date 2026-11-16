@@ -53,19 +53,37 @@ export const Sidebar: React.FC = () => {
                 }`
               }
             >
-              {designStyle === 'terminal' ? (
-                <span className="font-mono text-[10px] text-emerald-500/80 mr-[-4px]">&gt;</span>
-              ) : designStyle === 'editorial' ? (
-                <span className="font-serif text-[11px] text-amber-900/60 dark:text-amber-200/60 mr-[-4px] italic">
-                  §{idx + 1}
-                </span>
-              ) : designStyle === 'monochrome' ? (
-                <span className="font-mono text-[10px] text-zinc-400 dark:text-zinc-500 mr-[-2px] tracking-tighter">
-                  {String(idx + 1).padStart(2, '0')}
-                </span>
-              ) : null}
-              <Icon className="w-4 h-4 shrink-0" />
-              <span>{item.label}</span>
+              {({ isActive }) => (
+                <>
+                  {designStyle === 'terminal' ? (
+                    <span
+                      className={`font-mono text-[10px] mr-[-4px] ${
+                        isActive ? 'opacity-80' : 'text-emerald-600 dark:text-emerald-400 opacity-80'
+                      }`}
+                    >
+                      &gt;
+                    </span>
+                  ) : designStyle === 'editorial' ? (
+                    <span
+                      className={`font-serif text-[11px] mr-[-4px] italic ${
+                        isActive ? 'opacity-80' : 'text-amber-900/60 dark:text-amber-200/60'
+                      }`}
+                    >
+                      §{idx + 1}
+                    </span>
+                  ) : designStyle === 'monochrome' ? (
+                    <span
+                      className={`font-mono text-[10px] mr-[-2px] tracking-tighter ${
+                        isActive ? 'opacity-80' : 'text-zinc-400 dark:text-zinc-500'
+                      }`}
+                    >
+                      {String(idx + 1).padStart(2, '0')}
+                    </span>
+                  ) : null}
+                  <Icon className="w-4 h-4 shrink-0" />
+                  <span>{item.label}</span>
+                </>
+              )}
             </NavLink>
           );
         })}
@@ -102,13 +120,13 @@ export const Sidebar: React.FC = () => {
       </div>
 
       <div className="mt-auto pt-6">
-        <div className="p-3 rounded-2xl bg-gradient-to-br from-orange-50 to-amber-50 dark:from-zinc-800/60 dark:to-zinc-800/20 border border-orange-200/60 dark:border-zinc-700/60 text-xs">
+        <div className="p-3 rounded-2xl bg-orange-50/80 dark:bg-zinc-800/50 border border-orange-200/70 dark:border-zinc-700/60 text-xs">
           <div className="flex items-center gap-2 text-orange-700 dark:text-orange-400 font-semibold mb-1">
             <Sparkles className="w-3.5 h-3.5" />
             <span>Hestia AI Ready</span>
           </div>
           <p className="text-[11px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
-            Podpora importu receptů přes Google Gemini 3.7.
+            Podpora importu receptů a účtenek přes Gemini AI.
           </p>
         </div>
       </div>

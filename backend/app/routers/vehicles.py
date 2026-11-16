@@ -1,7 +1,7 @@
 import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db
 from app.models.user import User
@@ -119,7 +119,7 @@ def _format_vehicle_response(vehicle: Vehicle) -> VehicleResponse:
     if refuelings and len(refuelings) >= 2:
         mileages = [r.mileage for r in refuelings]
         km_tracked = max(mileages) - min(mileages)
-        if km_diff := km_tracked > 0:
+        if km_tracked > 0:
             cost_per_km = round((total_spent_fuel + total_spent_service) / km_tracked, 2)
     elif vehicle.current_mileage and vehicle.current_mileage > 0 and (total_spent_fuel > 0 or total_spent_service > 0):
         cost_per_km = round((total_spent_fuel + total_spent_service) / vehicle.current_mileage, 2)
@@ -152,7 +152,10 @@ def get_fleet_stats(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    vehicles = db.query(Vehicle).all()
+    vehicles = db.query(Vehicle).options(
+        selectinload(Vehicle.refuelings),
+        selectinload(Vehicle.service_records),
+    ).all()
     total_vehicles = len(vehicles)
 
     warning_count = 0
@@ -208,7 +211,10 @@ def get_vehicles(
             (Vehicle.vin.ilike(term))
         )
 
-    vehicles = q.order_by(Vehicle.is_favorite.desc(), Vehicle.name.asc()).all()
+    vehicles = q.options(
+        selectinload(Vehicle.refuelings),
+        selectinload(Vehicle.service_records),
+    ).order_by(Vehicle.is_favorite.desc(), Vehicle.name.asc()).all()
     return [_format_vehicle_response(v) for v in vehicles]
 
 

@@ -11,6 +11,7 @@ import { api } from '../services/api';
 import { Plant, PlantTask, PlantLogEntry } from '../types';
 import { PlantDoctorModal } from '../components/PlantDoctorModal';
 import { useTranslation } from '../i18n';
+import { getLocalDateISO } from '../utils/date';
 
 export const PlantDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -39,7 +40,7 @@ export const PlantDetailPage: React.FC = () => {
   const [taskDueDate, setTaskDueDate] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() + 14);
-    return d.toISOString().split('T')[0];
+    return getLocalDateISO(d);
   });
   const [taskNotes, setTaskNotes] = useState('');
   const [isSubmittingTask, setIsSubmittingTask] = useState(false);

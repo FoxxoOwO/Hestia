@@ -4,6 +4,7 @@ import { Scale, X, Plus, Calendar, TrendingUp, TrendingDown, Minus } from 'lucid
 import { api } from '../services/api';
 import { Pet, PetWeightLog } from '../types';
 import { useTranslation } from '../i18n';
+import { getLocalDateISO } from '../utils/date';
 
 interface PetWeightModalProps {
   isOpen: boolean;
@@ -20,7 +21,7 @@ export const PetWeightModal: React.FC<PetWeightModalProps> = ({
 }) => {
   const { t } = useTranslation();
   const [weightKg, setWeightKg] = useState<number | ''>('');
-  const [recordedDate, setRecordedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [recordedDate, setRecordedDate] = useState(() => getLocalDateISO());
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);

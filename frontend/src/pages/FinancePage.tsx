@@ -253,10 +253,10 @@ export const FinancePage: React.FC = () => {
               <Wallet className="w-6 h-6" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-800 dark:text-white">
+              <h1 className="text-2xl font-bold text-zinc-800 dark:text-white">
                 {t('finance.title')}
               </h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
                 {t('finance.subtitle')}
               </p>
             </div>
@@ -270,7 +270,7 @@ export const FinancePage: React.FC = () => {
             <select
               value={currentMonth}
               onChange={(e) => setCurrentMonth(e.target.value)}
-              className="appearance-none bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-2.5 pr-9 text-sm font-semibold text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm"
+              className="appearance-none bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl px-4 py-2.5 pr-9 text-sm font-semibold text-zinc-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm"
             >
               {monthOptions.map((m) => (
                 <option key={m.value} value={m.value}>
@@ -315,16 +315,16 @@ export const FinancePage: React.FC = () => {
       {/* Top 4 KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Income */}
-        <div className="p-5 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm relative overflow-hidden group">
+        <div className="p-5 bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm relative overflow-hidden group">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+            <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
               {t('finance.total_income')}
             </span>
             <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400">
               <ArrowDownLeft className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-slate-800 dark:text-white">
+          <div className="text-2xl font-black text-zinc-800 dark:text-white">
             {summary?.total_income.toLocaleString('cs-CZ') || 0} Kč
           </div>
           <p className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-1 font-medium">
@@ -333,27 +333,27 @@ export const FinancePage: React.FC = () => {
         </div>
 
         {/* Expense */}
-        <div className="p-5 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm relative overflow-hidden group">
+        <div className="p-5 bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm relative overflow-hidden group">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+            <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
               {t('finance.total_expense')}
             </span>
             <div className="p-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400">
               <ArrowUpRight className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-slate-800 dark:text-white">
+          <div className="text-2xl font-black text-zinc-800 dark:text-white">
             {summary?.total_expense.toLocaleString('cs-CZ') || 0} Kč
           </div>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">
             Z rozpočtu {summary?.total_budget.toLocaleString('cs-CZ') || 0} Kč
           </p>
         </div>
 
         {/* Net Balance */}
-        <div className="p-5 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm relative overflow-hidden group">
+        <div className="p-5 bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm relative overflow-hidden group">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+            <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
               {t('finance.net_balance')}
             </span>
             <div className={`p-2 rounded-xl ${
@@ -370,13 +370,13 @@ export const FinancePage: React.FC = () => {
             {(summary?.net_balance || 0) > 0 ? '+' : ''}
             {summary?.net_balance.toLocaleString('cs-CZ') || 0} Kč
           </div>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">
             {(summary?.net_balance || 0) >= 0 ? 'Ušetřeno v tomto měsíci' : 'Přečerpáno v tomto měsíci'}
           </p>
         </div>
 
         {/* All-Months Historical Average Spending */}
-        <div className="p-5 bg-gradient-to-br from-slate-900 to-indigo-950 text-white rounded-3xl border border-slate-800 shadow-sm relative overflow-hidden group">
+        <div className="p-5 bg-gradient-to-br from-zinc-900 to-indigo-950 text-white rounded-3xl border border-zinc-800 shadow-sm relative overflow-hidden group">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-semibold text-indigo-200">
               {t('finance.all_months_average')}
@@ -404,13 +404,13 @@ export const FinancePage: React.FC = () => {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-1 overflow-x-auto">
+      <div className="flex items-center gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-1 overflow-x-auto">
         <button
           onClick={() => setActiveTab('overview')}
           className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
             activeTab === 'overview'
               ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+              : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
           }`}
         >
           <Wallet className="w-4 h-4" />
@@ -422,7 +422,7 @@ export const FinancePage: React.FC = () => {
           className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
             activeTab === 'settlement'
               ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+              : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
           }`}
         >
           <QrCode className="w-4 h-4" />
@@ -439,7 +439,7 @@ export const FinancePage: React.FC = () => {
           className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
             activeTab === 'subscriptions'
               ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+              : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
           }`}
         >
           <Repeat className="w-4 h-4" />
@@ -454,7 +454,7 @@ export const FinancePage: React.FC = () => {
           className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
             activeTab === 'goals'
               ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+              : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
           }`}
         >
           <PiggyBank className="w-4 h-4" />
@@ -469,7 +469,7 @@ export const FinancePage: React.FC = () => {
           className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
             activeTab === 'analytics'
               ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+              : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'
           }`}
         >
           <BarChart3 className="w-4 h-4" />
@@ -481,13 +481,13 @@ export const FinancePage: React.FC = () => {
       {activeTab === 'overview' && (
         <div className="space-y-6">
           {/* Envelope Method (Obálková metoda) Category Budgets */}
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+          <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm">
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
+                <h3 className="font-bold text-lg text-zinc-800 dark:text-white flex items-center gap-2">
                   <span>✉️</span> {t('finance.budget_status')}
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
                   Sledování čerpání jednotlivých kategorií a limitů rozpočtu
                 </p>
               </div>
@@ -513,12 +513,12 @@ export const FinancePage: React.FC = () => {
                 return (
                   <div
                     key={cat.category}
-                    className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800/80 hover:shadow-sm transition-all"
+                    className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800/80 hover:shadow-sm transition-all"
                   >
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <span className="text-lg">{meta.icon}</span>
-                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                        <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">
                           {t(`finance.categories.${cat.category}`)}
                         </span>
                       </div>
@@ -527,7 +527,7 @@ export const FinancePage: React.FC = () => {
                           setEditingCategoryBudget({ category: cat.category, limit });
                           setIsBudgetModalOpen(true);
                         }}
-                        className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded hover:bg-slate-200/50 dark:hover:bg-slate-700/50"
+                        className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 rounded hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50"
                         title={t('finance.edit_budget')}
                       >
                         <Sliders className="w-3.5 h-3.5" />
@@ -535,16 +535,16 @@ export const FinancePage: React.FC = () => {
                     </div>
 
                     <div className="flex items-baseline justify-between text-xs mb-1.5">
-                      <span className="font-extrabold text-sm text-slate-900 dark:text-white">
+                      <span className="font-extrabold text-sm text-zinc-900 dark:text-white">
                         {cat.current_month_amount.toLocaleString('cs-CZ')} Kč
                       </span>
-                      <span className="text-slate-400 text-[11px]">
+                      <span className="text-zinc-400 text-[11px]">
                         z {limit.toLocaleString('cs-CZ')} Kč ({pct}%)
                       </span>
                     </div>
 
                     {/* Progress bar */}
-                    <div className="w-full bg-slate-200 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
+                    <div className="w-full bg-zinc-200 dark:bg-zinc-700 h-2 rounded-full overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all duration-500 ${barColor}`}
                         style={{ width: `${Math.min(100, pct)}%` }}
@@ -557,7 +557,7 @@ export const FinancePage: React.FC = () => {
                           ? `Překročeno o ${(cat.current_month_amount - limit).toLocaleString('cs-CZ')} Kč`
                           : `Zbývá ${(limit - cat.current_month_amount).toLocaleString('cs-CZ')} Kč`}
                       </span>
-                      <span className="text-slate-400 dark:text-slate-500 text-[10px]">
+                      <span className="text-zinc-400 dark:text-zinc-500 text-[10px]">
                         průměr {cat.historical_monthly_average.toLocaleString('cs-CZ')} Kč
                       </span>
                     </div>
@@ -568,13 +568,13 @@ export const FinancePage: React.FC = () => {
           </div>
 
           {/* Transactions list */}
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+          <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-5">
               <div>
-                <h3 className="font-bold text-lg text-slate-800 dark:text-white">
+                <h3 className="font-bold text-lg text-zinc-800 dark:text-white">
                   {t('finance.recent_transactions')}
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
                   Přehled evidovaných výdajů a příjmů za zvolený měsíc
                 </p>
               </div>
@@ -582,20 +582,20 @@ export const FinancePage: React.FC = () => {
               {/* Filters */}
               <div className="flex items-center gap-2">
                 <div className="relative">
-                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
                     value={txSearch}
                     onChange={(e) => setTxSearch(e.target.value)}
                     placeholder="Hledat platbu..."
-                    className="pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-amber-500 dark:text-white"
+                    className="pl-8 pr-3 py-1.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-amber-500 dark:text-white"
                   />
                 </div>
 
                 <select
                   value={selectedCatFilter}
                   onChange={(e) => setSelectedCatFilter(e.target.value)}
-                  className="px-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-amber-500 dark:text-white"
+                  className="px-3 py-1.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-amber-500 dark:text-white"
                 >
                   <option value="all">Všechny kategorie</option>
                   {CATEGORIES.map((c) => (
@@ -608,7 +608,7 @@ export const FinancePage: React.FC = () => {
             </div>
 
             {filteredTransactions.length === 0 ? (
-              <div className="py-12 text-center text-slate-400 dark:text-slate-500">
+              <div className="py-12 text-center text-zinc-400 dark:text-zinc-500">
                 <Wallet className="w-10 h-10 mx-auto mb-2 opacity-30" />
                 <p className="text-sm font-medium">{t('finance.no_transactions')}</p>
                 <button
@@ -623,7 +623,7 @@ export const FinancePage: React.FC = () => {
                 </button>
               </div>
             ) : (
-              <div className="divide-y divide-slate-100 dark:divide-slate-800">
+              <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
                 {filteredTransactions.map((t) => {
                   const meta = getCategoryMeta(t.category);
                   const isIncome = t.transaction_type === 'income';
@@ -631,15 +631,15 @@ export const FinancePage: React.FC = () => {
                   return (
                     <div
                       key={t.id}
-                      className="py-3.5 flex items-center justify-between hover:bg-slate-50/60 dark:hover:bg-slate-800/30 px-2 rounded-2xl transition-colors group"
+                      className="py-3.5 flex items-center justify-between hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30 px-2 rounded-2xl transition-colors group"
                     >
                       <div className="flex items-center gap-3.5">
-                        <div className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-lg shrink-0">
+                        <div className="w-10 h-10 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-lg shrink-0">
                           {meta.icon}
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="font-semibold text-sm text-slate-800 dark:text-slate-100">
+                            <span className="font-semibold text-sm text-zinc-800 dark:text-zinc-100">
                               {t.title}
                             </span>
                             {t.is_shared && (
@@ -653,7 +653,7 @@ export const FinancePage: React.FC = () => {
                               </span>
                             )}
                           </div>
-                          <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
+                          <div className="flex items-center gap-2 text-xs text-zinc-400 mt-0.5">
                             <span>{t.date}</span>
                             <span>•</span>
                             <span>{t.payer?.display_name || t.payer?.username || 'Člen'}</span>
@@ -669,7 +669,7 @@ export const FinancePage: React.FC = () => {
 
                       <div className="flex items-center gap-3">
                         <span className={`font-bold text-sm whitespace-nowrap ${
-                          isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-800 dark:text-slate-100'
+                          isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-zinc-800 dark:text-zinc-100'
                         }`}>
                           {isIncome ? '+' : '-'}{t.amount.toLocaleString('cs-CZ')} Kč
                         </span>
@@ -680,14 +680,14 @@ export const FinancePage: React.FC = () => {
                               setEditingTx(t);
                               setIsTxModalOpen(true);
                             }}
-                            className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                            className="p-1.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800"
                             title="Upravit"
                           >
                             <Edit className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => handleDeleteTransaction(t.id)}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                            className="p-1.5 text-zinc-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30"
                             title="Smazat"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -737,7 +737,7 @@ export const FinancePage: React.FC = () => {
               return (
                 <div
                   key={b.user_id}
-                  className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm"
+                  className="bg-white dark:bg-zinc-900 p-5 rounded-3xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm"
                 >
                   <div className="flex items-center gap-3 mb-3">
                     <div
@@ -747,25 +747,25 @@ export const FinancePage: React.FC = () => {
                       {b.user_name.slice(0, 2).toUpperCase()}
                     </div>
                     <div>
-                      <h4 className="font-bold text-sm text-slate-800 dark:text-white">
+                      <h4 className="font-bold text-sm text-zinc-800 dark:text-white">
                         {b.user_name}
                       </h4>
-                      <span className="text-[11px] text-slate-400">
+                      <span className="text-[11px] text-zinc-400">
                         {isZero ? 'Vyrovnáno' : (isPositive ? t('finance.is_owed') : t('finance.owes'))}
                       </span>
                     </div>
                   </div>
 
-                  <div className="space-y-1.5 text-xs text-slate-500 dark:text-slate-400 mb-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <div className="space-y-1.5 text-xs text-zinc-500 dark:text-zinc-400 mb-3 pt-2 border-t border-zinc-100 dark:border-zinc-800">
                     <div className="flex justify-between">
                       <span>{t('finance.paid')}:</span>
-                      <span className="font-semibold text-slate-700 dark:text-slate-200">
+                      <span className="font-semibold text-zinc-700 dark:text-zinc-200">
                         {b.paid_total.toLocaleString('cs-CZ')} Kč
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span>{t('finance.share')}:</span>
-                      <span className="font-semibold text-slate-700 dark:text-slate-200">
+                      <span className="font-semibold text-zinc-700 dark:text-zinc-200">
                         {b.share_total.toLocaleString('cs-CZ')} Kč
                       </span>
                     </div>
@@ -773,7 +773,7 @@ export const FinancePage: React.FC = () => {
 
                   <div className={`p-3 rounded-2xl flex items-center justify-between text-xs font-bold ${
                     isZero
-                      ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                      ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
                       : isPositive
                       ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400'
                       : 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400'
@@ -789,8 +789,8 @@ export const FinancePage: React.FC = () => {
           </div>
 
           {/* Suggested Transfers & 1-Click SPAYD QR codes */}
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
-            <h3 className="font-bold text-lg text-slate-800 dark:text-white mb-4">
+          <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm">
+            <h3 className="font-bold text-lg text-zinc-800 dark:text-white mb-4">
               {t('finance.suggested_transfers')}
             </h3>
 
@@ -798,7 +798,7 @@ export const FinancePage: React.FC = () => {
               <div className="py-8 text-center text-emerald-600 dark:text-emerald-400 space-y-2">
                 <CheckCircle2 className="w-12 h-12 mx-auto opacity-80" />
                 <p className="font-bold text-base">{t('finance.settled_all')}</p>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-zinc-400">
                   Nikdo nikomu v této chvíli nedluží žádné peníze za sdílené nákupy.
                 </p>
               </div>
@@ -807,18 +807,18 @@ export const FinancePage: React.FC = () => {
                 {settlement?.settlements.map((s, idx) => (
                   <div
                     key={idx}
-                    className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+                    className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
                   >
                     <div className="flex items-center gap-3">
                       <div className="p-2.5 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 rounded-2xl">
                         <QrCode className="w-5 h-5" />
                       </div>
                       <div>
-                        <div className="text-sm font-bold text-slate-800 dark:text-white">
+                        <div className="text-sm font-bold text-zinc-800 dark:text-white">
                           <span className="text-rose-600 dark:text-rose-400">{s.from_user_name}</span> zaplatí{' '}
                           <span className="text-emerald-600 dark:text-emerald-400">{s.to_user_name}</span>
                         </div>
-                        <div className="text-xs text-slate-400 flex items-center gap-2 mt-0.5">
+                        <div className="text-xs text-zinc-400 flex items-center gap-2 mt-0.5">
                           {s.to_user_account ? (
                             <span>Účet: {s.to_user_account}</span>
                           ) : s.to_user_iban ? (
@@ -852,17 +852,17 @@ export const FinancePage: React.FC = () => {
           </div>
 
           {/* User's Bank Account Profile for QR payments */}
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
-            <h3 className="font-bold text-base text-slate-800 dark:text-white mb-1">
+          <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm">
+            <h3 className="font-bold text-base text-zinc-800 dark:text-white mb-1">
               {t('finance.my_bank_profile')}
             </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-4">
               Zadejte své bankovní spojení, aby ostatní členové mohli vygenerovat QR kód přímo na váš účet.
             </p>
 
             <form onSubmit={handleSaveProfile} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
                   {t('finance.bank_account')}
                 </label>
                 <input
@@ -870,12 +870,12 @@ export const FinancePage: React.FC = () => {
                   value={bankAccountInput}
                   onChange={(e) => setBankAccountInput(e.target.value)}
                   placeholder="např. 123456789/0800"
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white"
+                  className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
                   {t('finance.iban')}
                 </label>
                 <input
@@ -883,7 +883,7 @@ export const FinancePage: React.FC = () => {
                   value={ibanInput}
                   onChange={(e) => setIbanInput(e.target.value)}
                   placeholder="CZ..."
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white"
+                  className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white"
                 />
               </div>
 
@@ -891,7 +891,7 @@ export const FinancePage: React.FC = () => {
                 <button
                   type="submit"
                   disabled={isSavingProfile}
-                  className="w-full py-2.5 px-4 bg-slate-800 dark:bg-slate-700 hover:bg-slate-900 dark:hover:bg-slate-600 text-white rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
+                  className="w-full py-2.5 px-4 bg-zinc-800 dark:bg-zinc-700 hover:bg-zinc-900 dark:hover:bg-zinc-600 text-white rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
                 >
                   <Check className="w-4 h-4" />
                   {profileSuccessMsg ? t('finance.profile_saved') : t('finance.save_profile')}
@@ -906,23 +906,23 @@ export const FinancePage: React.FC = () => {
       {activeTab === 'subscriptions' && (
         <div className="space-y-6">
           {/* Subscriptions Overview Card */}
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h3 className="font-bold text-lg text-slate-800 dark:text-white">
+              <h3 className="font-bold text-lg text-zinc-800 dark:text-white">
                 {t('finance.subscriptions_title')}
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
                 Sledování měsíčních a ročních fixních poplatků a blížících se plateb
               </p>
             </div>
 
             <div className="flex items-center gap-4">
               <div className="text-right">
-                <span className="text-xs text-slate-400 block">{t('finance.monthly_total')}</span>
+                <span className="text-xs text-zinc-400 block">{t('finance.monthly_total')}</span>
                 <span className="text-xl font-bold text-indigo-600 dark:text-indigo-400">
                   {subscriptionsMonthlyTotal.toLocaleString('cs-CZ')} Kč
                 </span>
-                <span className="text-[10px] text-slate-400 block">
+                <span className="text-[10px] text-zinc-400 block">
                   {t('finance.yearly_projection')}: {(subscriptionsMonthlyTotal * 12).toLocaleString('cs-CZ')} Kč
                 </span>
               </div>
@@ -949,7 +949,7 @@ export const FinancePage: React.FC = () => {
               return (
                 <div
                   key={sub.id}
-                  className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col justify-between hover:shadow-md transition-all group"
+                  className="bg-white dark:bg-zinc-900 p-5 rounded-3xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm flex flex-col justify-between hover:shadow-md transition-all group"
                 >
                   <div>
                     <div className="flex items-start justify-between mb-3">
@@ -958,10 +958,10 @@ export const FinancePage: React.FC = () => {
                           {meta.icon}
                         </div>
                         <div>
-                          <h4 className="font-bold text-sm text-slate-800 dark:text-white">
+                          <h4 className="font-bold text-sm text-zinc-800 dark:text-white">
                             {sub.name}
                           </h4>
-                          <span className="text-xs text-slate-400 capitalize">
+                          <span className="text-xs text-zinc-400 capitalize">
                             {sub.billing_cycle === 'monthly' ? 'Měsíčně' : sub.billing_cycle === 'yearly' ? 'Ročně' : 'Čtvrtletně'}
                           </span>
                         </div>
@@ -973,13 +973,13 @@ export const FinancePage: React.FC = () => {
                             setEditingSub(sub);
                             setIsSubModalOpen(true);
                           }}
-                          className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded"
+                          className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 rounded"
                         >
                           <Edit className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => handleDeleteSubscription(sub.id)}
-                          className="p-1 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded"
+                          className="p-1 text-zinc-400 hover:text-rose-600 dark:hover:text-rose-400 rounded"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -987,23 +987,23 @@ export const FinancePage: React.FC = () => {
                     </div>
 
                     <div className="flex items-baseline justify-between mb-3">
-                      <span className="text-2xl font-black text-slate-900 dark:text-white">
+                      <span className="text-2xl font-black text-zinc-900 dark:text-white">
                         {sub.amount.toLocaleString('cs-CZ')} Kč
                       </span>
                       {sub.billing_cycle !== 'monthly' && (
-                        <span className="text-xs text-slate-400">
+                        <span className="text-xs text-zinc-400">
                           ~{sub.monthly_equivalent.toLocaleString('cs-CZ')} Kč/měsíc
                         </span>
                       )}
                     </div>
                   </div>
 
-                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
-                    <span className="text-slate-400">Příští platba:</span>
+                  <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between text-xs">
+                    <span className="text-zinc-400">Příští platba:</span>
                     <span className={`font-semibold px-2 py-0.5 rounded-md ${
                       isDueSoon
                         ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 animate-pulse'
-                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                        : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300'
                     }`}>
                       {sub.next_billing_date} ({sub.days_until_billing !== null && sub.days_until_billing !== undefined && sub.days_until_billing >= 0 ? `za ${sub.days_until_billing} dní` : 'dnes'})
                     </span>
@@ -1020,10 +1020,10 @@ export const FinancePage: React.FC = () => {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-bold text-lg text-slate-800 dark:text-white">
+              <h3 className="font-bold text-lg text-zinc-800 dark:text-white">
                 {t('finance.goals_title')}
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
                 Společné rodinné cíle, rezervy a dovolené
               </p>
             </div>
@@ -1047,7 +1047,7 @@ export const FinancePage: React.FC = () => {
               return (
                 <div
                   key={goal.id}
-                  className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col justify-between hover:shadow-md transition-all group"
+                  className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm flex flex-col justify-between hover:shadow-md transition-all group"
                 >
                   <div>
                     <div className="flex items-start justify-between mb-4">
@@ -1059,11 +1059,11 @@ export const FinancePage: React.FC = () => {
                           {goal.icon === 'Palmtree' ? '🌴' : goal.icon === 'Car' ? '🚗' : goal.icon === 'Home' ? '🏠' : goal.icon === 'Laptop' ? '💻' : goal.icon === 'Gift' ? '🎁' : goal.icon === 'Heart' ? '❤️' : '🐷'}
                         </div>
                         <div>
-                          <h4 className="font-bold text-base text-slate-800 dark:text-white">
+                          <h4 className="font-bold text-base text-zinc-800 dark:text-white">
                             {goal.title}
                           </h4>
                           {goal.target_date && (
-                            <span className="text-[11px] text-slate-400 block">
+                            <span className="text-[11px] text-zinc-400 block">
                               Cíl do: {goal.target_date}
                             </span>
                           )}
@@ -1076,13 +1076,13 @@ export const FinancePage: React.FC = () => {
                             setEditingGoal(goal);
                             setIsGoalModalOpen(true);
                           }}
-                          className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded"
+                          className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 rounded"
                         >
                           <Edit className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => handleDeleteGoal(goal.id)}
-                          className="p-1 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded"
+                          className="p-1 text-zinc-400 hover:text-rose-600 dark:hover:text-rose-400 rounded"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -1092,14 +1092,14 @@ export const FinancePage: React.FC = () => {
                     {/* Progress Bar */}
                     <div className="mb-4">
                       <div className="flex justify-between items-baseline text-xs mb-1.5">
-                        <span className="font-extrabold text-slate-800 dark:text-white text-base">
+                        <span className="font-extrabold text-zinc-800 dark:text-white text-base">
                           {goal.current_amount.toLocaleString('cs-CZ')} Kč
                         </span>
-                        <span className="text-slate-400 text-xs">
+                        <span className="text-zinc-400 text-xs">
                           z {goal.target_amount.toLocaleString('cs-CZ')} Kč ({pct}%)
                         </span>
                       </div>
-                      <div className="w-full bg-slate-100 dark:bg-slate-800 h-3 rounded-full overflow-hidden">
+                      <div className="w-full bg-zinc-100 dark:bg-zinc-800 h-3 rounded-full overflow-hidden">
                         <div
                           className="h-full rounded-full transition-all duration-700"
                           style={{
@@ -1111,20 +1111,20 @@ export const FinancePage: React.FC = () => {
                     </div>
 
                     {goal.notes && (
-                      <p className="text-xs text-slate-400 mb-4 line-clamp-2">
+                      <p className="text-xs text-zinc-400 mb-4 line-clamp-2">
                         {goal.notes}
                       </p>
                     )}
                   </div>
 
                   {/* 1-Click Deposit Button */}
-                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                  <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
                     {goal.is_completed ? (
                       <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                         <CheckCircle2 className="w-4 h-4" /> {t('finance.goal_completed')}
                       </span>
                     ) : (
-                      <span className="text-xs text-slate-400">
+                      <span className="text-xs text-zinc-400">
                         Zbývá naspořit {(goal.target_amount - goal.current_amount).toLocaleString('cs-CZ')} Kč
                       </span>
                     )}
@@ -1150,19 +1150,19 @@ export const FinancePage: React.FC = () => {
       {/* Tab 5: LONG-TERM ANALYTICS & HISTORICAL AVERAGES */}
       {activeTab === 'analytics' && (
         <div className="space-y-6">
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+          <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm">
             <div className="mb-5">
-              <h3 className="font-bold text-lg text-slate-800 dark:text-white">
+              <h3 className="font-bold text-lg text-zinc-800 dark:text-white">
                 {t('finance.analytics_title')}
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
                 {t('finance.analytics_subtitle')} (výpočet ze všech {summary?.distinct_months_count || 1} evidovaných měsíců)
               </p>
             </div>
 
-            <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
+            <div className="border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-100 dark:bg-slate-800/90 text-slate-600 dark:text-slate-300 font-bold">
+                <thead className="bg-zinc-100 dark:bg-zinc-800/90 text-zinc-600 dark:text-zinc-300 font-bold">
                   <tr>
                     <th className="py-3 px-4">{t('finance.category')}</th>
                     <th className="py-3 px-4 text-right">{t('finance.current_month')}</th>
@@ -1172,25 +1172,25 @@ export const FinancePage: React.FC = () => {
                     <th className="py-3 px-4 text-center">Akce</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
                   {summary?.categories.map((c) => {
                     const meta = getCategoryMeta(c.category);
                     const diffPct = c.difference_from_average_percent;
 
                     return (
-                      <tr key={c.category} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                      <tr key={c.category} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40">
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
                             <span className="text-base">{meta.icon}</span>
-                            <span className="font-semibold text-slate-800 dark:text-slate-200">
+                            <span className="font-semibold text-zinc-800 dark:text-zinc-200">
                               {t(`finance.categories.${c.category}`)}
                             </span>
                           </div>
                         </td>
-                        <td className="py-3 px-4 text-right font-bold text-slate-900 dark:text-white">
+                        <td className="py-3 px-4 text-right font-bold text-zinc-900 dark:text-white">
                           {c.current_month_amount.toLocaleString('cs-CZ')} Kč
                         </td>
-                        <td className="py-3 px-4 text-right text-slate-500 dark:text-slate-400 font-medium">
+                        <td className="py-3 px-4 text-right text-zinc-500 dark:text-zinc-400 font-medium">
                           {c.historical_monthly_average.toLocaleString('cs-CZ')} Kč
                         </td>
                         <td className="py-3 px-4 text-right">
@@ -1200,15 +1200,15 @@ export const FinancePage: React.FC = () => {
                                 ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400'
                                 : diffPct < -10
                                 ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400'
-                                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                                : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
                             }`}>
                               {diffPct > 0 ? `+${diffPct}%` : `${diffPct}%`}
                             </span>
                           ) : (
-                            <span className="text-slate-400">-</span>
+                            <span className="text-zinc-400">-</span>
                           )}
                         </td>
-                        <td className="py-3 px-4 text-right font-medium text-slate-600 dark:text-slate-300">
+                        <td className="py-3 px-4 text-right font-medium text-zinc-600 dark:text-zinc-300">
                           {(c.budget_limit || 4000).toLocaleString('cs-CZ')} Kč
                         </td>
                         <td className="py-3 px-4 text-center">
@@ -1217,7 +1217,7 @@ export const FinancePage: React.FC = () => {
                               setEditingCategoryBudget({ category: c.category, limit: c.budget_limit || 4000 });
                               setIsBudgetModalOpen(true);
                             }}
-                            className="p-1 text-slate-400 hover:text-amber-600 rounded hover:bg-slate-100 dark:hover:bg-slate-800"
+                            className="p-1 text-zinc-400 hover:text-amber-600 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800"
                             title={t('finance.edit_budget')}
                           >
                             <Sliders className="w-3.5 h-3.5" />

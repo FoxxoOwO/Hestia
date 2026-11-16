@@ -1,6 +1,6 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import or_
 
 from app.database import get_db
@@ -41,7 +41,9 @@ def get_meal_plans(
     if end_date:
         query = query.filter(MealPlanItem.date <= end_date)
 
-    items = query.order_by(MealPlanItem.date.asc(), MealPlanItem.meal_type.asc()).all()
+    items = query.options(selectinload(MealPlanItem.recipe)).order_by(
+        MealPlanItem.date.asc(), MealPlanItem.meal_type.asc()
+    ).all()
     return [_format_meal_plan_item(it) for it in items]
 
 @router.post("", response_model=MealPlanItemResponse, status_code=status.HTTP_201_CREATED)
@@ -69,21 +71,21 @@ def create_meal_plan_item(
         created_by_id=current_user.id
     )
     db.add(item)
+    db.flush()
+
+    log_activity(
+        db=db,
+        user=current_user,
+        module="meal_plans",
+        action_type="create",
+        title="Plánované jídlo",
+        description=f"{current_user.display_name} naplánoval(a) jídlo na {item.date}: {title} ({item.meal_type})",
+        entity_type="MealPlanItem",
+        entity_id=item.id,
+    )
+
     db.commit()
     db.refresh(item)
-
-    try:
-        log_activity(
-            db=db,
-            user_id=current_user.id,
-            action_type="create",
-            entity_type="meal_plan",
-            entity_id=item.id,
-            description=f"Naplánováno jídlo na {item.date}: {title} ({item.meal_type})"
-        )
-    except Exception:
-        pass
-
     return _format_meal_plan_item(item)
 
 @router.put("/{item_id}", response_model=MealPlanItemResponse)
@@ -93,11 +95,15 @@ def update_meal_plan_item(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    item = db.query(MealPlanItem).filter(MealPlanItem.id == item_id).first()
+    item = db.query(MealPlanItem).options(selectinload(MealPlanItem.recipe)).filter(MealPlanItem.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Položka plánu nebyla nalezena")
 
     update_data = item_in.model_dump(exclude_unset=True)
+    if "recipe_id" in update_data and update_data["recipe_id"] is not None:
+        recipe = db.query(Recipe).filter(Recipe.id == update_data["recipe_id"]).first()
+        if not recipe:
+            raise HTTPException(status_code=404, detail="Recept nebyl nalezen")
     for key, val in update_data.items():
         setattr(item, key, val)
 
@@ -124,7 +130,7 @@ def toggle_cooked_meal_plan(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    item = db.query(MealPlanItem).filter(MealPlanItem.id == item_id).first()
+    item = db.query(MealPlanItem).options(selectinload(MealPlanItem.recipe)).filter(MealPlanItem.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Položka plánu nebyla nalezena")
 
@@ -139,7 +145,7 @@ def generate_shopping_from_meal_plan(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    items = db.query(MealPlanItem).filter(
+    items = db.query(MealPlanItem).options(selectinload(MealPlanItem.recipe)).filter(
         MealPlanItem.date >= req.start_date,
         MealPlanItem.date <= req.end_date,
         MealPlanItem.recipe_id.isnot(None)
@@ -162,7 +168,9 @@ def generate_shopping_from_meal_plan(
         if not it.recipe or not it.recipe.ingredients:
             continue
         
-        ratio = (it.servings / (it.recipe.default_servings or 4))
+        # servings can be NULL in older rows; fall back to the recipe default
+        target_servings = it.servings or it.recipe.default_servings or 4
+        ratio = target_servings / (it.recipe.default_servings or 4)
         for ing in it.recipe.ingredients:
             if not isinstance(ing, dict):
                 continue
@@ -199,19 +207,19 @@ def generate_shopping_from_meal_plan(
             shopping_names.add(name_lower)
             added_names.append(f"{name} ({it.recipe.title})")
 
-    db.commit()
-
     if added_names:
-        try:
-            log_activity(
-                db=db,
-                user_id=current_user.id,
-                action_type="create",
-                entity_type="shopping",
-                description=f"Generován nákup z jídelníčku: přidáno {len(added_names)} surovin ({req.start_date} až {req.end_date})"
-            )
-        except Exception:
-            pass
+        log_activity(
+            db=db,
+            user=current_user,
+            module="shopping",
+            action_type="create",
+            title="Nákupní seznam z jídelníčku",
+            description=f"{current_user.display_name} vygeneroval(a) nákup z jídelníčku: přidáno {len(added_names)} surovin ({req.start_date} až {req.end_date})",
+            entity_type="ShoppingItem",
+        )
+        db.commit()
+    else:
+        db.commit()
 
     return GenerateShoppingResponse(
         added_items_count=len(added_names),

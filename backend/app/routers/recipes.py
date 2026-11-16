@@ -6,6 +6,8 @@ from sqlalchemy import or_
 from app.database import get_db
 from app.models.recipe import Recipe
 from app.models.pantry import PantryItem
+from app.models.shopping import ShoppingItem
+from app.models.meal_plan import MealPlanItem
 from app.models.user import User
 from app.schemas.recipe import (
     RecipeCreate, RecipeUpdate, RecipeResponse, ScaledRecipeResponse, ScaledIngredientItem
@@ -17,8 +19,14 @@ router = APIRouter(prefix="/recipes", tags=["Recipes"])
 
 def match_ingredient_in_pantry(ing_name: str, pantry_items: List[PantryItem]):
     ing_clean = ing_name.lower().strip()
+    if not ing_clean:
+        return False, None
     for p in pantry_items:
-        p_name = p.name.lower().strip()
+        if p.quantity is not None and p.quantity <= 0:
+            continue
+        p_name = (p.name or "").lower().strip()
+        if not p_name:
+            continue
         # Direct or substring match
         if p_name in ing_clean or ing_clean in p_name:
             return True, p.quantity
@@ -164,6 +172,12 @@ def delete_recipe(
     recipe = db.query(Recipe).filter(Recipe.id == recipe_id).first()
     if not recipe:
         raise HTTPException(status_code=404, detail="Recept nebyl nalezen")
+    db.query(MealPlanItem).filter(MealPlanItem.recipe_id == recipe_id).update(
+        {"recipe_id": None}, synchronize_session=False
+    )
+    db.query(ShoppingItem).filter(ShoppingItem.recipe_id == recipe_id).update(
+        {"recipe_id": None}, synchronize_session=False
+    )
     db.delete(recipe)
     db.commit()
     return {"status": "success", "message": "Recept byl úspěšně smazán"}

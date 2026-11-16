@@ -76,24 +76,24 @@ export const ChoreRewardModal: React.FC<ChoreRewardModalProps> = ({
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-lg w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl max-w-lg w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800">
         
         {/* Header */}
-        <div className="p-5 border-b border-gray-100 dark:border-gray-700 flex items-start justify-between bg-gradient-to-r from-amber-500/10 to-orange-500/10">
+        <div className="p-5 border-b border-zinc-100 dark:border-zinc-800 flex items-start justify-between bg-gradient-to-r from-amber-500/10 to-orange-500/10">
           <div>
             <div className="flex items-center gap-2">
               <Coins className="w-5 h-5 text-amber-500" />
-              <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+              <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
                 {t('chores.rewards.title')}
               </h2>
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
               {t('chores.rewards.subtitle')}
             </p>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="p-1 rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700"
           >
             <X className="w-5 h-5" />
           </button>
@@ -125,18 +125,18 @@ export const ChoreRewardModal: React.FC<ChoreRewardModalProps> = ({
             return (
               <div
                 key={reward.id}
-                className="flex items-center justify-between p-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-sm transition-all"
+                className="flex items-center justify-between p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:shadow-sm transition-all"
               >
                 <div className="flex items-center gap-3 min-w-0 pr-2">
-                  <div className="w-10 h-10 rounded-xl bg-gray-50 dark:bg-gray-700/60 flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-zinc-50 dark:bg-zinc-700/60 flex items-center justify-center flex-shrink-0">
                     {getRewardIcon(reward.icon)}
                   </div>
                   <div className="min-w-0">
-                    <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">
+                    <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate">
                       {reward.title}
                     </h4>
                     {reward.description && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5">
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-1 mt-0.5">
                         {reward.description}
                       </p>
                     )}
@@ -152,7 +152,7 @@ export const ChoreRewardModal: React.FC<ChoreRewardModalProps> = ({
                   className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                     canAfford
                       ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-sm shadow-amber-500/20 active:scale-95'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
+                      : 'bg-zinc-100 dark:bg-zinc-700 text-zinc-400 cursor-not-allowed'
                   }`}
                 >
                   {canAfford ? t('chores.rewards.redeem_btn') : t('chores.rewards.not_enough_points')}
@@ -163,8 +163,8 @@ export const ChoreRewardModal: React.FC<ChoreRewardModalProps> = ({
 
           {/* Add custom reward accordion */}
           {showAddForm ? (
-            <form onSubmit={handleCreate} className="p-4 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 space-y-3 bg-gray-50/50 dark:bg-gray-900/20">
-              <h4 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+            <form onSubmit={handleCreate} className="p-4 rounded-xl border border-dashed border-zinc-300 dark:border-zinc-700 space-y-3 bg-zinc-50/50 dark:bg-zinc-900/20">
+              <h4 className="text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
                 {t('chores.rewards.add_reward')}
               </h4>
               <input
@@ -173,33 +173,33 @@ export const ChoreRewardModal: React.FC<ChoreRewardModalProps> = ({
                 value={title}
                 onChange={e => setTitle(e.target.value)}
                 required
-                className="w-full text-xs rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200"
+                className="w-full text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-zinc-800 dark:text-zinc-200"
               />
               <input
                 type="text"
                 placeholder="Popis odměny (volitelné)"
                 value={description}
                 onChange={e => setDescription(e.target.value)}
-                className="w-full text-xs rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200"
+                className="w-full text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-zinc-800 dark:text-zinc-200"
               />
               <div className="flex gap-2">
                 <div className="flex-1">
-                  <label className="block text-[10px] text-gray-400 mb-1">Cena v bodech:</label>
+                  <label className="block text-[10px] text-zinc-400 mb-1">Cena v bodech:</label>
                   <input
                     type="number"
                     min="5"
                     step="5"
                     value={costPoints}
                     onChange={e => setCostPoints(Number(e.target.value))}
-                    className="w-full text-xs rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-1.5 text-gray-800 dark:text-gray-200"
+                    className="w-full text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-1.5 text-zinc-800 dark:text-zinc-200"
                   />
                 </div>
                 <div className="flex-1">
-                  <label className="block text-[10px] text-gray-400 mb-1">Ikona:</label>
+                  <label className="block text-[10px] text-zinc-400 mb-1">Ikona:</label>
                   <select
                     value={icon}
                     onChange={e => setIcon(e.target.value)}
-                    className="w-full text-xs rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-1.5 text-gray-800 dark:text-gray-200"
+                    className="w-full text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-1.5 text-zinc-800 dark:text-zinc-200"
                   >
                     <option value="Gift">Dárek (Gift)</option>
                     <option value="Film">Film / Kino</option>
@@ -213,7 +213,7 @@ export const ChoreRewardModal: React.FC<ChoreRewardModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowAddForm(false)}
-                  className="px-3 py-1.5 text-xs text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg"
+                  className="px-3 py-1.5 text-xs text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg"
                 >
                   Zrušit
                 </button>
@@ -229,7 +229,7 @@ export const ChoreRewardModal: React.FC<ChoreRewardModalProps> = ({
           ) : (
             <button
               onClick={() => setShowAddForm(true)}
-              className="w-full py-2.5 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 hover:border-amber-500 dark:hover:border-amber-500 text-xs font-semibold text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 flex items-center justify-center gap-1.5 transition-colors"
+              className="w-full py-2.5 rounded-xl border border-dashed border-zinc-300 dark:border-zinc-700 hover:border-amber-500 dark:hover:border-amber-500 text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-amber-600 dark:hover:text-amber-400 flex items-center justify-center gap-1.5 transition-colors"
             >
               <Plus className="w-4 h-4" />
               {t('chores.rewards.add_reward')}
@@ -238,10 +238,10 @@ export const ChoreRewardModal: React.FC<ChoreRewardModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-gray-50 dark:bg-gray-900/40 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+        <div className="p-4 bg-zinc-50 dark:bg-zinc-900/40 border-t border-zinc-200 dark:border-zinc-800 flex justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg text-xs font-semibold bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200"
+            className="px-4 py-2 rounded-lg text-xs font-semibold bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 text-zinc-800 dark:text-zinc-200"
           >
             {t('common.close')}
           </button>

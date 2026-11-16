@@ -44,21 +44,21 @@ export const MileageModal: React.FC<MileageModalProps> = ({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-sm w-full p-6 shadow-2xl relative">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-900/60 backdrop-blur-sm animate-fade-in">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-sm w-full p-6 shadow-2xl relative">
+        <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
               <Gauge className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-slate-900 dark:text-white text-base">
+              <h3 className="font-bold text-zinc-900 dark:text-white text-base">
                 Aktualizovat tachometr
               </h3>
-              <p className="text-xs text-slate-400">{vehicle.name}</p>
+              <p className="text-xs text-zinc-400">{vehicle.name}</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg">
+          <button onClick={onClose} className="p-1.5 text-zinc-400 hover:text-zinc-600 rounded-lg">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -72,7 +72,7 @@ export const MileageModal: React.FC<MileageModalProps> = ({
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+            <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
               Nový stav tachometru (km)
             </label>
             <input
@@ -82,9 +82,9 @@ export const MileageModal: React.FC<MileageModalProps> = ({
               value={mileage}
               onChange={e => setMileage(e.target.value === '' ? '' : Number(e.target.value))}
               placeholder={String(vehicle.current_mileage || 0)}
-              className="w-full px-3 py-2 text-base font-bold bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl"
+              className="w-full px-3 py-2 text-base font-bold bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-xl"
             />
-            <p className="text-[11px] text-slate-400 mt-1">
+            <p className="text-[11px] text-zinc-400 mt-1">
               Aktuálně uloženo: {vehicle.current_mileage.toLocaleString('cs-CZ')} km
             </p>
           </div>
@@ -93,7 +93,7 @@ export const MileageModal: React.FC<MileageModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-3.5 py-1.5 text-xs text-slate-600 dark:text-slate-400 rounded-xl hover:bg-slate-100"
+              className="px-3.5 py-1.5 text-xs text-zinc-600 dark:text-zinc-400 rounded-xl hover:bg-zinc-100"
             >
               Zrušit
             </button>

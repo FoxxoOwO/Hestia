@@ -4,6 +4,7 @@ import { X, Upload, FileText, Wrench, Shield, AlertCircle } from 'lucide-react';
 import { Asset, AssetCreatePayload, AssetCategory, AssetRoom, AssetStatus } from '../types';
 import { useTranslation } from '../i18n';
 import { api } from '../services/api';
+import { getLocalDateISO } from '../utils/date';
 
 interface AssetEditModalProps {
   isOpen: boolean;
@@ -88,7 +89,7 @@ export const AssetEditModal: React.FC<AssetEditModalProps> = ({
       setBrand('');
       setModelNumber('');
       setSerialNumber('');
-      setPurchaseDate(new Date().toISOString().substring(0, 10));
+      setPurchaseDate(getLocalDateISO());
       setWarrantyMonths(24);
       setPurchasePrice('');
       setStoreOrVendor('');

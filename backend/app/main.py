@@ -6,14 +6,15 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 import app.models  # Ensure all SQLAlchemy models are registered
-from app.database import engine, Base, SessionLocal
+from app.database import SessionLocal
 from app.services.seed_data import seed_initial_data
+from app.migrations import run_migrations
 from app.routers import auth, recipes, pantry, shopping, ai, plants, pets, chores, finance, documents, vehicles, medicines, activities, system, assets, meal_plans
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Ensure database schema is created
-    Base.metadata.create_all(bind=engine)
+    # Schéma databáze spravují Alembic migrace (backend/alembic/versions)
+    run_migrations()
     
     # Ensure uploads dir exists
     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
@@ -30,15 +31,18 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.PROJECT_NAME,
     description="Komplexní modulární self-hosted systém pro chytrou domácnost Hestia",
-    version="1.1.0",
+    version="1.6.0",
     lifespan=lifespan
 )
 
 # CORS middleware for local network and web access
+# Auth je přes Bearer token v hlavičce (žádné cookies) → allow_credentials=False,
+# aby wildcard "*" zůstal validní; konkrétní originy lze omezit přes CORS_ORIGINS.
+_cors_origins = [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()] or ["*"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=_cors_origins,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -71,7 +75,7 @@ def health_check():
     return {
         "status": "healthy",
         "app": "Hestia Smart Home OS",
-        "version": "1.1.0",
+        "version": "1.6.0",
         "modules": ["recipes", "pantry", "shopping", "auth", "gemini-ai", "plants", "pets", "chores", "finance", "documents", "vehicles", "medicines", "activities", "assets", "meal-plans"]
     }
 
@@ -90,8 +94,10 @@ if getattr(settings, "FRONTEND_DIST_DIR", None) and os.path.exists(settings.FRON
         if full_path.startswith("api/") or full_path.startswith("uploads/"):
             raise HTTPException(status_code=404, detail="Not Found")
         
-        file_path = os.path.join(settings.FRONTEND_DIST_DIR, full_path)
-        if os.path.isfile(file_path):
+        dist_root = os.path.realpath(settings.FRONTEND_DIST_DIR)
+        file_path = os.path.realpath(os.path.join(dist_root, full_path))
+        # Keeps "..%2f" traversal inside the built frontend directory
+        if os.path.commonpath([dist_root, file_path]) == dist_root and os.path.isfile(file_path):
             return FileResponse(file_path)
         index_file = os.path.join(settings.FRONTEND_DIST_DIR, "index.html")
         if os.path.exists(index_file):

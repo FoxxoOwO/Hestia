@@ -66,8 +66,8 @@ Vrať striktní JSON odpovídající schématu."""
 
         prompt = f"Posuď bezpečnost potraviny '{food_name}' pro druh: '{species}'."
 
-        response = client.models.generate_content(
-            model=settings.GEMINI_MODEL,
+        response = await client.aio.models.generate_content(
+            model="gemini-3.7-flash",
             contents=[prompt],
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction,
@@ -118,8 +118,8 @@ Vrať striktní JSON odpovídající schématu."""
         info_str = f"Pacient: {pet_name or 'Mazlíček'}, druh: {pet_species or 'pes'}, věk: {pet_age or 'neuveden'}."
         parts.append(f"{info_str}\nPopis příznaků a chování: {symptoms_description}")
 
-        response = client.models.generate_content(
-            model=settings.GEMINI_MODEL,
+        response = await client.aio.models.generate_content(
+            model="gemini-3.7-flash",
             contents=parts,
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction,

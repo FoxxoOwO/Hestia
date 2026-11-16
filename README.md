@@ -210,7 +210,7 @@ Aplikace ihned běží na `http://localhost:8000`.
    ```bash
    cp .env.example .env
    ```
-2. V souboru `.env` vyplňte svůj `GEMINI_API_KEY` (získat lze zdarma na [Google AI Studio](https://aistudio.google.com/)).
+2. V souboru `.env` nastavte `SECRET_KEY` (povinné, vygenerujte `python -c "import secrets; print(secrets.token_urlsafe(48))"`) a volitelně `GEMINI_API_KEY` (získat lze zdarma na [Google AI Studio](https://aistudio.google.com/)).
 3. Spusťte kontejnery:
    ```bash
    docker compose up -d
@@ -238,6 +238,24 @@ pip install -r requirements.txt
 python -m uvicorn app.main:app --reload --port 8000
 ```
 
+Databázové schéma spravují **Alembic migrace** (`backend/alembic/versions`) a aplikují se automaticky při startu.
+Starší databáze vytvořené přes `create_all` se při prvním startu automaticky orazítkují, takže o data nepřijdete.
+
+Ruční příkazy (spouštějte z `backend/`):
+
+```bash
+python -m alembic upgrade head                                  # aplikovat migrace
+python -m alembic revision --autogenerate -m "popis zmeny"      # nová migrace po změně modelů
+python -m alembic check                                         # kontrola, že modely == migrace
+```
+
+Testy (pytest, používají dočasnou SQLite, takže nesahají na produkční data):
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest -q
+```
+
 #### Frontend (React + Vite):
 ```bash
 cd frontend
@@ -262,6 +280,6 @@ Při prvním spuštění se databáze automaticky naplní ukázkovými recepty, 
 
 ## 🛡️ Technologie
 
-- **Backend**: Python 3.13, FastAPI, SQLAlchemy, SQLite (WAL mode), Pydantic v2, PyJWT, bcrypt, google-genai SDK
+- **Backend**: Python 3.13, FastAPI, SQLAlchemy + Alembic, SQLite (WAL mode), Pydantic v2, PyJWT, bcrypt, google-genai SDK
 - **Frontend**: React 19, TypeScript, Vite, Tailwind CSS, Lucide Icons, Custom i18n
 - **Deploy**: Docker, Docker Compose, Nginx Alpine

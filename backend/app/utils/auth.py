@@ -12,8 +12,22 @@ from app.schemas.user import TokenPayload
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login")
 
+# Falešný bcrypt hash - používá se, když účet neexistuje, aby ověření hesla
+# trvalo stejně dlouho a nešlo z času odezvy zjistit, která jména existují.
+_DUMMY_HASH = b"$2b$12$.eVBLlTG9s2Qn0B7TsjTQuS906rn//pmzu4vBv5GJpeMBI4bgP4N2"
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+
+def verify_password_or_dummy(plain_password: str, hashed_password: Optional[str]) -> bool:
+    """Vrací True jen pro správné heslo, ale bcrypt spustí vždy (konstantní čas)."""
+    if hashed_password:
+        try:
+            return verify_password(plain_password, hashed_password)
+        except ValueError:
+            pass  # poškozený hash v DB = neplatné heslo
+    bcrypt.checkpw(plain_password.encode('utf-8'), _DUMMY_HASH)
+    return False
 
 def get_password_hash(password: str) -> str:
     salt = bcrypt.gensalt()

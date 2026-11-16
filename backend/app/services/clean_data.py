@@ -21,6 +21,8 @@ from app.models.document import Document, VaultSetting
 from app.models.vehicle import Vehicle, VehicleRefueling, VehicleServiceRecord
 from app.models.medicine import Medicine, MedicationSchedule, MedicationLog
 from app.models.activity import ActivityLog
+from app.models.asset import Asset
+from app.models.meal_plan import MealPlanItem
 from app.utils.auth import get_password_hash
 from app.config import settings
 
@@ -45,11 +47,12 @@ def clean_all_sample_data(db: Session, preserve_user_id: int | None = None, uplo
     deleted_counts["vehicle_refuelings"] = db.query(VehicleRefueling).delete()
     deleted_counts["vehicles"] = db.query(Vehicle).delete()
 
-    # 4. Documents & Vault
+    # 4. Documents, Assets & Vault
     deleted_counts["documents"] = db.query(Document).delete()
+    deleted_counts["assets"] = db.query(Asset).delete()
     # Reset vault setting to clean default
     db.query(VaultSetting).delete()
-    db.add(VaultSetting(pin_hash="1234", is_active=True))
+    db.add(VaultSetting(pin_hash=get_password_hash("1234"), is_active=True))
 
     # 5. Finance
     deleted_counts["finance_transactions"] = db.query(FinanceTransaction).delete()
@@ -77,7 +80,8 @@ def clean_all_sample_data(db: Session, preserve_user_id: int | None = None, uplo
     deleted_counts["plant_tasks"] = db.query(PlantTask).delete()
     deleted_counts["plants"] = db.query(Plant).delete()
 
-    # 9. Shopping & Pantry & Recipes
+    # 9. Meal Plans, Shopping, Pantry & Recipes
+    deleted_counts["meal_plan_items"] = db.query(MealPlanItem).delete()
     deleted_counts["shopping_items"] = db.query(ShoppingItem).delete()
     deleted_counts["pantry_items"] = db.query(PantryItem).delete()
     deleted_counts["recipes"] = db.query(Recipe).delete()
@@ -126,16 +130,17 @@ def clean_all_sample_data(db: Session, preserve_user_id: int | None = None, uplo
             sample_dir = os.path.join(udir, "documents", "sample")
             if os.path.exists(sample_dir):
                 shutil.rmtree(sample_dir, ignore_errors=True)
-            # Clean uploaded test files in documents subfolders
-            doc_dir = os.path.join(udir, "documents")
-            if os.path.exists(doc_dir):
-                for root, dirs, files in os.walk(doc_dir):
-                    for file in files:
-                        if file != ".gitkeep":
-                            try:
-                                os.remove(os.path.join(root, file))
-                            except Exception:
-                                pass
+            # Clean uploaded test files in documents and assets subfolders
+            for sub in ("documents", "assets"):
+                sub_dir = os.path.join(udir, sub)
+                if os.path.exists(sub_dir):
+                    for root, dirs, files in os.walk(sub_dir):
+                        for file in files:
+                            if file != ".gitkeep":
+                                try:
+                                    os.remove(os.path.join(root, file))
+                                except Exception:
+                                    pass
 
     return deleted_counts
 

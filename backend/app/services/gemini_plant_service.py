@@ -88,7 +88,7 @@ Pravidla a priority:
             prompt_text += f" URL obrázku: {image_url}."
         contents.append(prompt_text)
 
-        response = client.models.generate_content(
+        response = await client.aio.models.generate_content(
             model="gemini-3.7-flash",
             contents=contents,
             config=types.GenerateContentConfig(
@@ -147,7 +147,7 @@ Pravidla:
 
         contents.append(prompt_text)
 
-        response = client.models.generate_content(
+        response = await client.aio.models.generate_content(
             model="gemini-3.7-flash",
             contents=contents,
             config=types.GenerateContentConfig(

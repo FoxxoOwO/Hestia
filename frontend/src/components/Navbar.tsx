@@ -3,8 +3,8 @@ import { createPortal } from 'react-dom';
 import { Link, useLocation } from 'react-router-dom';
 import {
   Flame, Moon, Sun, Monitor, Globe, UserCheck, ChevronDown, LogOut, History, Palette,
-  Menu, X, LayoutDashboard, UtensilsCrossed, PackageOpen, ShoppingCart, Flower2, Dog, CheckSquare,
-  Wallet, FolderArchive, Car, HeartPulse, Settings
+  Menu, X, LayoutDashboard, UtensilsCrossed, CalendarDays, PackageOpen, ShoppingCart, Wrench,
+  Flower2, Dog, CheckSquare, Wallet, FolderArchive, Car, HeartPulse, Settings
 } from 'lucide-react';
 import { useTranslation } from '../i18n';
 import { useTheme, DesignStyle } from '../context/ThemeContext';
@@ -27,8 +27,10 @@ export const Navbar: React.FC = () => {
   const mobileNavItems = [
     { to: '/', label: t('nav.dashboard'), icon: LayoutDashboard },
     { to: '/recipes', label: t('nav.recipes'), icon: UtensilsCrossed },
+    { to: '/meal-planner', label: t('nav.meal_planner'), icon: CalendarDays },
     { to: '/pantry', label: t('nav.pantry'), icon: PackageOpen },
     { to: '/shopping', label: t('nav.shopping'), icon: ShoppingCart },
+    { to: '/assets', label: t('nav.assets'), icon: Wrench },
     { to: '/plants', label: t('nav.plants'), icon: Flower2 },
     { to: '/pets', label: t('nav.pets'), icon: Dog },
     { to: '/chores', label: t('nav.chores'), icon: CheckSquare },
@@ -92,7 +94,7 @@ export const Navbar: React.FC = () => {
                     </span>
                     <span className="inline-block w-2 h-4 bg-emerald-700 dark:bg-emerald-400 animate-pulse shrink-0" />
                     <span className="text-[10px] uppercase font-bold px-1 py-0.2 border border-emerald-600/40 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/40 hidden sm:inline-block">
-                      v1.1
+                      v1.6
                     </span>
                   </div>
                   <p className="text-[10px] text-emerald-700 dark:text-emerald-500 hidden sm:block">
@@ -111,7 +113,7 @@ export const Navbar: React.FC = () => {
                       HESTIA!
                     </span>
                     <span className="text-[10px] font-black px-1.5 py-0.5 bg-black dark:bg-zinc-900 text-yellow-300 border border-black dark:border-white uppercase shadow-[1px_1px_0px_#000] dark:shadow-[1px_1px_0px_#fff] hidden sm:inline-block">
-                      v1.1
+                      v1.6
                     </span>
                   </div>
                   <p className="text-[10px] font-bold text-zinc-800 dark:text-zinc-200 uppercase tracking-wider hidden sm:block">
@@ -168,7 +170,7 @@ export const Navbar: React.FC = () => {
                       {t('app_name')}
                     </span>
                     <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded-full bg-orange-100 dark:bg-orange-950/60 text-orange-700 dark:text-orange-300 hidden sm:inline-block">
-                      v1.1
+                      v1.6
                     </span>
                   </div>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400 hidden sm:block">
@@ -199,7 +201,7 @@ export const Navbar: React.FC = () => {
               </div>
             )}
             {designStyle === 'monochrome' && (
-              <div className="flex items-center gap-2 font-mono text-[11px] text-zinc-600 dark:text-zinc-400 border border-zinc-300 dark:border-zinc-700 bg-zinc-100/80 dark:bg-zinc-850 px-3 py-1 rounded-md shadow-xs">
+              <div className="flex items-center gap-2 font-mono text-[11px] text-zinc-600 dark:text-zinc-400 border border-zinc-300 dark:border-zinc-700 bg-zinc-100/80 dark:bg-zinc-800/80 px-3 py-1 rounded-md shadow-xs">
                 <span className="w-2 h-2 rounded-full bg-zinc-900 dark:bg-white" />
                 <span className="tracking-widest uppercase">MONOCHROME EDITION // FOCUS</span>
               </div>
@@ -363,7 +365,7 @@ export const Navbar: React.FC = () => {
                     {t('app_name')}
                   </span>
                   <span className="text-[10px] uppercase font-bold ml-1.5 px-1 py-0.5 rounded bg-orange-100 dark:bg-orange-950/60 text-orange-700 dark:text-orange-300">
-                    v1.1
+                    v1.6
                   </span>
                 </div>
               </div>

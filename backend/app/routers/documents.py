@@ -1,8 +1,9 @@
+import hmac
 import os
 import uuid
 import datetime
 from typing import List, Optional, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, File, Form, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
 
@@ -15,7 +16,11 @@ from app.schemas.document import (
     DocumentStatsResponse, DocumentAiScanResponse,
     VaultVerifyRequest, VaultSetPinRequest
 )
-from app.utils.auth import get_current_user
+from app.utils.auth import get_current_user, get_password_hash, verify_password
+from app.utils.rate_limit import (
+    check_login_rate_limit, register_failed_login, reset_login_attempts
+)
+from app.utils.uploads import read_upload, safe_upload_subpath, IMAGE_EXT
 from app.services.gemini_document_service import GeminiDocumentService
 from app.services.activity_service import log_activity
 
@@ -23,11 +28,11 @@ from app.services.activity_service import log_activity
 router = APIRouter(prefix="/documents", tags=["Digital Archive & Documents"])
 
 
-def _compute_document_status(doc: Document) -> tuple[Optional[int], str]:
-    if not doc.expiry_date:
+def _compute_expiry_status(expiry_date: Optional[str]) -> tuple[Optional[int], str]:
+    if not expiry_date:
         return None, "permanent"
     try:
-        exp = datetime.datetime.strptime(doc.expiry_date[:10], "%Y-%m-%d").date()
+        exp = datetime.datetime.strptime(expiry_date[:10], "%Y-%m-%d").date()
         today = datetime.date.today()
         days = (exp - today).days
         if days < 0:
@@ -38,6 +43,10 @@ def _compute_document_status(doc: Document) -> tuple[Optional[int], str]:
             return days, "active"
     except Exception:
         return None, "permanent"
+
+
+def _compute_document_status(doc: Document) -> tuple[Optional[int], str]:
+    return _compute_expiry_status(doc.expiry_date)
 
 
 def _format_document_response(doc: Document) -> DocumentResponse:
@@ -116,18 +125,20 @@ def get_document_stats(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    docs = db.query(Document).all()
-    total = len(docs)
+    rows = db.query(
+        Document.category, Document.is_vault_protected, Document.expiry_date
+    ).all()
+    total = len(rows)
     expiring_soon = 0
     expired = 0
     vault_count = 0
     cat_counts: Dict[str, int] = {}
 
-    for d in docs:
-        if d.is_vault_protected:
+    for category, is_vault, expiry_date in rows:
+        if is_vault:
             vault_count += 1
-        cat_counts[d.category] = cat_counts.get(d.category, 0) + 1
-        _, st = _compute_document_status(d)
+        cat_counts[category] = cat_counts.get(category, 0) + 1
+        _, st = _compute_expiry_status(expiry_date)
         if st == "expiring_soon":
             expiring_soon += 1
         elif st == "expired":
@@ -166,19 +177,19 @@ async def upload_document_file(
     abs_dir = os.path.join(settings.UPLOAD_DIR, rel_dir)
     os.makedirs(abs_dir, exist_ok=True)
 
-    # Unique file name
-    orig_name = file.filename or "document.pdf"
-    file_ext = os.path.splitext(orig_name)[1].lower()
+    # Unique file name; read_upload keeps only the last path segment of the client name
+    orig_name, _, content = await read_upload(file, IMAGE_EXT)
     unique_name = f"{uuid.uuid4().hex[:12]}_{orig_name}"
     rel_path = os.path.join(rel_dir, unique_name).replace("\\", "/")
     abs_path = os.path.join(abs_dir, unique_name)
 
-    content = await file.read()
     with open(abs_path, "wb") as f:
         f.write(content)
 
     file_size = len(content)
     mime_type = file.content_type or "application/pdf"
+    if mime_type not in ("application/pdf", "image/png", "image/jpeg", "image/webp"):
+        mime_type = "application/pdf" if orig_name.lower().endswith(".pdf") else "image/jpeg"
 
     # AI Analysis with Gemini Flash if requested
     ai_metadata = None
@@ -212,6 +223,9 @@ def create_document(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    if payload.file_path and not safe_upload_subpath(settings.UPLOAD_DIR, payload.file_path):
+        raise HTTPException(status_code=400, detail="Neplatná cesta k souboru dokumentu.")
+
     doc = Document(
         title=payload.title,
         category=payload.category,
@@ -300,10 +314,10 @@ def delete_document(
     if not doc:
         raise HTTPException(status_code=404, detail="Dokument nebyl nalezen")
 
-    # Attempt to remove disk file
+    # Attempt to remove disk file safely inside UPLOAD_DIR
     if doc.file_path:
-        full_path = os.path.join(settings.UPLOAD_DIR, doc.file_path)
-        if os.path.exists(full_path):
+        full_path = safe_upload_subpath(settings.UPLOAD_DIR, doc.file_path)
+        if full_path and os.path.isfile(full_path):
             try:
                 os.remove(full_path)
             except Exception:
@@ -314,19 +328,39 @@ def delete_document(
     return {"status": "success", "message": "Dokument byl smazán"}
 
 
+def _verify_vault_pin_value(pin: str, stored_hash: str) -> bool:
+    if stored_hash.startswith("$2"):
+        try:
+            return verify_password(pin, stored_hash)
+        except ValueError:
+            return False
+    return hmac.compare_digest(pin, stored_hash)
+
+
 # Vault security endpoints
 @router.post("/vault/verify")
 def verify_vault_pin(
     payload: VaultVerifyRequest,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    client_ip = request.client.host if request.client else "unknown"
+    rate_key = f"vault|{client_ip}"
+    check_login_rate_limit(rate_key)
+
     setting = db.query(VaultSetting).first()
     expected_pin = setting.pin_hash if setting else "1234"
 
-    if payload.pin == expected_pin:
+    if _verify_vault_pin_value(payload.pin, expected_pin):
+        reset_login_attempts(rate_key)
+        # Upgrade legacy plaintext PIN to bcrypt hash on successful verification
+        if setting and not expected_pin.startswith("$2"):
+            setting.pin_hash = get_password_hash(payload.pin)
+            db.commit()
         return {"status": "success", "message": "PIN je správný. Trezor byl odemčen."}
     else:
+        register_failed_login(rate_key)
         raise HTTPException(status_code=401, detail="Nesprávný PIN kód trezoru.")
 
 
@@ -338,16 +372,16 @@ def change_vault_pin(
 ):
     setting = db.query(VaultSetting).first()
     if not setting:
-        setting = VaultSetting(pin_hash="1234")
+        setting = VaultSetting(pin_hash=get_password_hash("1234"))
         db.add(setting)
+        db.flush()
 
-    # If old pin is provided, verify it
-    if payload.old_pin and payload.old_pin != setting.pin_hash:
+    if not payload.old_pin or not _verify_vault_pin_value(payload.old_pin, setting.pin_hash):
         raise HTTPException(status_code=400, detail="Původní PIN není správný.")
 
-    if len(payload.new_pin) < 4:
+    if len(payload.new_pin.strip()) < 4:
         raise HTTPException(status_code=400, detail="PIN musí mít alespoň 4 znaky.")
 
-    setting.pin_hash = payload.new_pin
+    setting.pin_hash = get_password_hash(payload.new_pin.strip())
     db.commit()
     return {"status": "success", "message": "PIN kód trezoru byl úspěšně změněn."}

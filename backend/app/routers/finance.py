@@ -5,7 +5,7 @@ import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, status
 from sqlalchemy.orm import Session
-from sqlalchemy import func, distinct
+from sqlalchemy import func, select
 
 from app.database import get_db
 from app.models.user import User
@@ -24,6 +24,7 @@ from app.schemas.finance import (
     UserFinanceProfileUpdate, UserFinanceProfileResponse, UserSimple
 )
 from app.utils.auth import get_current_user
+from app.utils.uploads import read_upload, TABLE_EXT
 from app.services.spayd_service import generate_spayd_string, czech_account_to_iban
 from app.services.gemini_finance_service import GeminiFinanceService
 from app.services.activity_service import log_activity
@@ -42,6 +43,16 @@ DEFAULT_CATEGORIES = [
     {"category": "shopping", "monthly_limit": 4000.0, "icon": "ShoppingBag", "color": "#6366f1"},
     {"category": "other", "monthly_limit": 3000.0, "icon": "Tag", "color": "#64748b"},
 ]
+
+def _month_prefix(month: str) -> str:
+    """Validates 'YYYY-MM'; invalid input falls back to the current month
+    instead of reaching the LIKE filter as a wildcard."""
+    try:
+        datetime.datetime.strptime(month, "%Y-%m")
+    except (TypeError, ValueError):
+        return datetime.date.today().strftime("%Y-%m")
+    return month
+
 
 def _categorize_text(text: str) -> str:
     t = text.lower()
@@ -72,21 +83,23 @@ def get_monthly_summary(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    current_month = month or datetime.date.today().strftime("%Y-%m")
+    current_month = _month_prefix(month) if month else datetime.date.today().strftime("%Y-%m")
     
-    # 1. Transactions for current month
-    month_txs = db.query(FinanceTransaction).filter(
-        FinanceTransaction.date.like(f"{current_month}%")
-    ).order_by(FinanceTransaction.date.desc(), FinanceTransaction.id.desc()).all()
-
-    total_income = sum(t.amount for t in month_txs if t.transaction_type == "income")
-    total_expense = sum(t.amount for t in month_txs if t.transaction_type == "expense")
+    # 1. Month totals aggregated in SQL (no full row load)
+    month_filter = FinanceTransaction.date.like(f"{current_month}%")
+    type_totals = dict(
+        db.query(FinanceTransaction.transaction_type, func.sum(FinanceTransaction.amount))
+        .filter(month_filter).group_by(FinanceTransaction.transaction_type).all()
+    )
+    total_income = float(type_totals.get("income") or 0.0)
+    total_expense = float(type_totals.get("expense") or 0.0)
     net_balance = total_income - total_expense
 
     # 2. Distinct months across entire database (where expenses exist)
-    distinct_months = db.query(
-        distinct(func.substr(FinanceTransaction.date, 1, 7))
-    ).filter(FinanceTransaction.transaction_type == "expense").all()
+    distinct_months = db.execute(
+        select(func.substr(FinanceTransaction.date, 1, 7)).distinct()
+        .where(FinanceTransaction.transaction_type == "expense")
+    ).all()
 
     distinct_count = max(1, len(distinct_months))
 
@@ -101,10 +114,12 @@ def get_monthly_summary(
     db_budgets = {b.category: b for b in db.query(CategoryBudget).all()}
     
     # Pre-calculate category sums for current month and all time
-    current_cat_sums = {}
-    for t in month_txs:
-        if t.transaction_type == "expense":
-            current_cat_sums[t.category] = current_cat_sums.get(t.category, 0.0) + t.amount
+    current_cat_sums = {
+        cat: float(total or 0.0)
+        for cat, total in db.query(FinanceTransaction.category, func.sum(FinanceTransaction.amount))
+        .filter(month_filter, FinanceTransaction.transaction_type == "expense")
+        .group_by(FinanceTransaction.category).all()
+    }
 
     all_cat_sums = dict(
         db.query(
@@ -160,9 +175,10 @@ def get_monthly_summary(
     categories_summary.sort(key=lambda c: c["current_month_amount"], reverse=True)
 
     # Format recent transactions
-    recent_formatted = []
-    for t in month_txs[:15]:
-        recent_formatted.append(TransactionResponse.model_validate(t))
+    recent_txs = db.query(FinanceTransaction).filter(month_filter).order_by(
+        FinanceTransaction.date.desc(), FinanceTransaction.id.desc()
+    ).limit(15).all()
+    recent_formatted = [TransactionResponse.model_validate(t) for t in recent_txs]
 
     return {
         "month": current_month,
@@ -239,7 +255,7 @@ def get_transactions(
     query = db.query(FinanceTransaction)
 
     if month and month != "all":
-        query = query.filter(FinanceTransaction.date.like(f"{month}%"))
+        query = query.filter(FinanceTransaction.date.like(f"{_month_prefix(month)}%"))
     if category and category != "all":
         query = query.filter(FinanceTransaction.category == category)
     if payer_id is not None:
@@ -343,7 +359,7 @@ def get_debt_settlement(
         FinanceTransaction.is_settled == False
     )
     if month and month != "all":
-        query = query.filter(FinanceTransaction.date.like(f"{month}%"))
+        query = query.filter(FinanceTransaction.date.like(f"{_month_prefix(month)}%"))
 
     txs = query.all()
     users = db.query(User).filter(User.is_active == True).all()
@@ -477,34 +493,32 @@ def mark_all_settled(
     return {"status": "success", "message": "Všechny sdílené platby byly označeny jako vyrovnané."}
 
 
+def _format_subscription(s: Subscription, today: Optional[datetime.date] = None) -> SubscriptionResponse:
+    today = today or datetime.date.today()
+    resp = SubscriptionResponse.model_validate(s)
+    if s.billing_cycle == "yearly":
+        resp.monthly_equivalent = round(s.amount / 12.0, 2)
+    elif s.billing_cycle == "quarterly":
+        resp.monthly_equivalent = round(s.amount / 3.0, 2)
+    else:
+        resp.monthly_equivalent = s.amount
+
+    try:
+        b_date = datetime.datetime.strptime(s.next_billing_date[:10], "%Y-%m-%d").date()
+        resp.days_until_billing = (b_date - today).days
+    except Exception:
+        resp.days_until_billing = None
+    return resp
+
+
 @router.get("/subscriptions", response_model=List[SubscriptionResponse])
 def get_subscriptions(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     subs = db.query(Subscription).order_by(Subscription.next_billing_date.asc()).all()
-    res = []
     today = datetime.date.today()
-
-    for s in subs:
-        resp = SubscriptionResponse.model_validate(s)
-        # Monthly equivalent
-        if s.billing_cycle == "yearly":
-            resp.monthly_equivalent = round(s.amount / 12.0, 2)
-        elif s.billing_cycle == "quarterly":
-            resp.monthly_equivalent = round(s.amount / 3.0, 2)
-        else:
-            resp.monthly_equivalent = s.amount
-
-        # Days until billing
-        try:
-            b_date = datetime.datetime.strptime(s.next_billing_date, "%Y-%m-%d").date()
-            resp.days_until_billing = (b_date - today).days
-        except Exception:
-            resp.days_until_billing = None
-
-        res.append(resp)
-    return res
+    return [_format_subscription(s, today) for s in subs]
 
 
 @router.post("/subscriptions", response_model=SubscriptionResponse, status_code=status.HTTP_201_CREATED)
@@ -527,9 +541,7 @@ def create_subscription(
     db.add(sub)
     db.commit()
     db.refresh(sub)
-    resp = SubscriptionResponse.model_validate(sub)
-    resp.monthly_equivalent = sub.amount if sub.billing_cycle == "monthly" else round(sub.amount / 12, 2)
-    return resp
+    return _format_subscription(sub)
 
 
 @router.put("/subscriptions/{id}", response_model=SubscriptionResponse)
@@ -548,9 +560,7 @@ def update_subscription(
 
     db.commit()
     db.refresh(sub)
-    resp = SubscriptionResponse.model_validate(sub)
-    resp.monthly_equivalent = sub.amount if sub.billing_cycle == "monthly" else round(sub.amount / 12, 2)
-    return resp
+    return _format_subscription(sub)
 
 
 @router.delete("/subscriptions/{id}")
@@ -684,7 +694,7 @@ async def preview_import_file(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    content = await file.read()
+    _, _, content = await read_upload(file, TABLE_EXT)
     filename = (file.filename or "").lower()
 
     rows: List[CsvImportRow] = []
@@ -841,7 +851,7 @@ def confirm_import_transactions(
             transaction_type=r.transaction_type,
             category=r.category,
             date=r.date,
-            payer_id=payload.payer_id,
+            payer_id=payload.payer_id or current_user.id,
             is_shared=payload.is_shared,
             split_type="equal"
         )

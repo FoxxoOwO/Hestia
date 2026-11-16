@@ -23,6 +23,8 @@ from app.models.document import Document, VaultSetting
 from app.models.vehicle import Vehicle, VehicleRefueling, VehicleServiceRecord
 from app.models.medicine import Medicine, MedicationSchedule, MedicationLog
 from app.models.activity import ActivityLog
+from app.models.asset import Asset
+from app.models.meal_plan import MealPlanItem
 from app.services.clean_data import clean_all_sample_data
 from app.services.activity_service import log_activity
 from app.config import settings
@@ -120,6 +122,8 @@ def export_all_data(db: Session, user: Optional[User] = None) -> Dict[str, Any]:
     medicines = db.query(Medicine).all()
     med_schedules = db.query(MedicationSchedule).all()
     med_logs = db.query(MedicationLog).all()
+    assets = db.query(Asset).all()
+    meal_plans = db.query(MealPlanItem).all()
     activities = db.query(ActivityLog).order_by(ActivityLog.created_at.desc()).limit(100).all()
     users = db.query(User).all()
 
@@ -160,6 +164,8 @@ def export_all_data(db: Session, user: Optional[User] = None) -> Dict[str, Any]:
         "medicines": [_serialize_instance(m) for m in medicines],
         "medication_schedules": [_serialize_instance(s) for s in med_schedules],
         "medication_logs": [_serialize_instance(l) for l in med_logs],
+        "assets": [_serialize_instance(a) for a in assets],
+        "meal_plans": [_serialize_instance(m) for m in meal_plans],
         "activities": [_serialize_instance(a) for a in activities],
         "users": serialized_users,
     }
@@ -227,11 +233,24 @@ def import_data(db: Session, backup_json: Dict[str, Any], mode: str = "merge", c
     # Fallback user ID
     default_uid = current_user.id if current_user else (db.query(User).first().id if db.query(User).first() else 1)
 
+    def _map_uid(old_uid: Optional[int], required: bool = False) -> Optional[int]:
+        if old_uid is not None:
+            return user_id_map.get(old_uid, default_uid)
+        return default_uid if required else None
+
     # 2. Recipes
+    recipe_id_map: Dict[int, int] = {}
     rec_count = 0
     for r_raw in data.get("recipes", []):
-        rec_data = _deserialize_data(Recipe, r_raw)
-        db.add(Recipe(**rec_data))
+        old_id = r_raw.get("id")
+        rec_data = _deserialize_data(
+            Recipe, r_raw, overrides={"created_by_id": _map_uid(r_raw.get("created_by_id"))}
+        )
+        new_rec = Recipe(**rec_data)
+        db.add(new_rec)
+        db.flush()
+        if old_id:
+            recipe_id_map[old_id] = new_rec.id
         rec_count += 1
     imported_counts["recipes"] = rec_count
 
@@ -246,7 +265,16 @@ def import_data(db: Session, backup_json: Dict[str, Any], mode: str = "merge", c
     # 4. Shopping Items
     shop_count = 0
     for s_raw in data.get("shopping", []):
-        s_data = _deserialize_data(ShoppingItem, s_raw)
+        old_rid = s_raw.get("recipe_id")
+        new_rid = recipe_id_map.get(old_rid, old_rid) if old_rid else None
+        s_data = _deserialize_data(
+            ShoppingItem,
+            s_raw,
+            overrides={
+                "recipe_id": new_rid,
+                "added_by_id": _map_uid(s_raw.get("added_by_id")),
+            },
+        )
         db.add(ShoppingItem(**s_data))
         shop_count += 1
     imported_counts["shopping"] = shop_count
@@ -256,11 +284,12 @@ def import_data(db: Session, backup_json: Dict[str, Any], mode: str = "merge", c
     plant_count = 0
     for pl_raw in data.get("plants", []):
         old_id = pl_raw.get("id")
-        pl_data = _deserialize_data(Plant, pl_raw)
+        pl_data = _deserialize_data(
+            Plant, pl_raw, overrides={"created_by_id": _map_uid(pl_raw.get("created_by_id"))}
+        )
         new_pl = Plant(**pl_data)
         db.add(new_pl)
-        db.commit()
-        db.refresh(new_pl)
+        db.flush()
         if old_id:
             plant_id_map[old_id] = new_pl.id
         plant_count += 1
@@ -285,11 +314,12 @@ def import_data(db: Session, backup_json: Dict[str, Any], mode: str = "merge", c
     pet_count = 0
     for p_raw in data.get("pets", []):
         old_id = p_raw.get("id")
-        p_data = _deserialize_data(Pet, p_raw)
+        p_data = _deserialize_data(
+            Pet, p_raw, overrides={"created_by_id": _map_uid(p_raw.get("created_by_id"))}
+        )
         new_pet = Pet(**p_data)
         db.add(new_pet)
-        db.commit()
-        db.refresh(new_pet)
+        db.flush()
         if old_id:
             pet_id_map[old_id] = new_pet.id
         pet_count += 1
@@ -335,13 +365,26 @@ def import_data(db: Session, backup_json: Dict[str, Any], mode: str = "merge", c
     chore_count = 0
     for c_raw in data.get("chores", []):
         old_id = c_raw.get("id")
-        old_uid = c_raw.get("assigned_to_user_id")
-        new_uid = user_id_map.get(old_uid, default_uid) if old_uid else None
-        c_data = _deserialize_data(Chore, c_raw, overrides={"assigned_to_user_id": new_uid})
+        rot_str = c_raw.get("rotation_member_ids")
+        if rot_str:
+            try:
+                rot_ids = json.loads(rot_str)
+                if isinstance(rot_ids, list):
+                    rot_str = json.dumps([user_id_map.get(uid, uid) for uid in rot_ids])
+            except Exception:
+                pass
+        c_data = _deserialize_data(
+            Chore,
+            c_raw,
+            overrides={
+                "current_assignee_id": _map_uid(c_raw.get("current_assignee_id")),
+                "last_completed_by_id": _map_uid(c_raw.get("last_completed_by_id")),
+                "rotation_member_ids": rot_str or "[]",
+            },
+        )
         new_chore = Chore(**c_data)
         db.add(new_chore)
-        db.commit()
-        db.refresh(new_chore)
+        db.flush()
         if old_id:
             chore_id_map[old_id] = new_chore.id
         chore_count += 1
@@ -350,8 +393,7 @@ def import_data(db: Session, backup_json: Dict[str, Any], mode: str = "merge", c
     for comp_raw in data.get("chore_completions", []):
         old_cid = comp_raw.get("chore_id")
         new_cid = chore_id_map.get(old_cid, old_cid)
-        old_uid = comp_raw.get("user_id")
-        new_uid = user_id_map.get(old_uid, default_uid)
+        new_uid = _map_uid(comp_raw.get("user_id"), required=True)
         if new_cid:
             comp_data = _deserialize_data(ChoreCompletion, comp_raw, overrides={"chore_id": new_cid, "user_id": new_uid})
             db.add(ChoreCompletion(**comp_data))
@@ -362,16 +404,14 @@ def import_data(db: Session, backup_json: Dict[str, Any], mode: str = "merge", c
         rew_data = _deserialize_data(ChoreReward, rew_raw)
         new_rew = ChoreReward(**rew_data)
         db.add(new_rew)
-        db.commit()
-        db.refresh(new_rew)
+        db.flush()
         if old_id:
             reward_id_map[old_id] = new_rew.id
 
     for red_raw in data.get("chore_redemptions", []):
         old_rid = red_raw.get("reward_id")
         new_rid = reward_id_map.get(old_rid, old_rid)
-        old_uid = red_raw.get("user_id")
-        new_uid = user_id_map.get(old_uid, default_uid)
+        new_uid = _map_uid(red_raw.get("user_id"), required=True)
         if new_rid:
             red_data = _deserialize_data(ChoreRewardRedemption, red_raw, overrides={"reward_id": new_rid, "user_id": new_uid})
             db.add(ChoreRewardRedemption(**red_data))
@@ -379,9 +419,8 @@ def import_data(db: Session, backup_json: Dict[str, Any], mode: str = "merge", c
     # 8. Finance
     fin_count = 0
     for tx_raw in data.get("finance_transactions", []):
-        old_uid = tx_raw.get("user_id")
-        new_uid = user_id_map.get(old_uid, default_uid)
-        tx_data = _deserialize_data(FinanceTransaction, tx_raw, overrides={"user_id": new_uid})
+        new_payer = _map_uid(tx_raw.get("payer_id"), required=True)
+        tx_data = _deserialize_data(FinanceTransaction, tx_raw, overrides={"payer_id": new_payer})
         db.add(FinanceTransaction(**tx_data))
         fin_count += 1
     imported_counts["finance_transactions"] = fin_count
@@ -401,7 +440,9 @@ def import_data(db: Session, backup_json: Dict[str, Any], mode: str = "merge", c
             existing_budgets[cat] = new_b
 
     for sub_raw in data.get("finance_subscriptions", []):
-        sub_data = _deserialize_data(Subscription, sub_raw)
+        sub_data = _deserialize_data(
+            Subscription, sub_raw, overrides={"payer_id": _map_uid(sub_raw.get("payer_id"))}
+        )
         db.add(Subscription(**sub_data))
 
     for goal_raw in data.get("finance_goals", []):
@@ -410,8 +451,7 @@ def import_data(db: Session, backup_json: Dict[str, Any], mode: str = "merge", c
 
     existing_profiles = {p.user_id: p for p in db.query(UserFinanceProfile).all()}
     for prof_raw in data.get("finance_profiles", []):
-        old_uid = prof_raw.get("user_id")
-        new_uid = user_id_map.get(old_uid, default_uid)
+        new_uid = _map_uid(prof_raw.get("user_id"), required=True)
         prof_data = _deserialize_data(UserFinanceProfile, prof_raw, overrides={"user_id": new_uid})
         if new_uid in existing_profiles:
             for k, v in prof_data.items():
@@ -424,9 +464,9 @@ def import_data(db: Session, backup_json: Dict[str, Any], mode: str = "merge", c
     # 9. Documents & Vault
     doc_count = 0
     for d_raw in data.get("documents", []):
-        old_uid = d_raw.get("uploaded_by_user_id")
-        new_uid = user_id_map.get(old_uid, default_uid) if old_uid else None
-        d_data = _deserialize_data(Document, d_raw, overrides={"uploaded_by_user_id": new_uid})
+        d_data = _deserialize_data(
+            Document, d_raw, overrides={"created_by_id": _map_uid(d_raw.get("created_by_id"))}
+        )
         db.add(Document(**d_data))
         doc_count += 1
     imported_counts["documents"] = doc_count
@@ -447,11 +487,12 @@ def import_data(db: Session, backup_json: Dict[str, Any], mode: str = "merge", c
     veh_count = 0
     for v_raw in data.get("vehicles", []):
         old_id = v_raw.get("id")
-        v_data = _deserialize_data(Vehicle, v_raw)
+        v_data = _deserialize_data(
+            Vehicle, v_raw, overrides={"created_by_id": _map_uid(v_raw.get("created_by_id"))}
+        )
         new_v = Vehicle(**v_data)
         db.add(new_v)
-        db.commit()
-        db.refresh(new_v)
+        db.flush()
         if old_id:
             vehicle_id_map[old_id] = new_v.id
         veh_count += 1
@@ -460,19 +501,29 @@ def import_data(db: Session, backup_json: Dict[str, Any], mode: str = "merge", c
     for ref_raw in data.get("vehicle_refuelings", []):
         old_vid = ref_raw.get("vehicle_id")
         new_vid = vehicle_id_map.get(old_vid, old_vid)
-        old_uid = ref_raw.get("user_id")
-        new_uid = user_id_map.get(old_uid, default_uid) if old_uid else None
         if new_vid:
-            ref_data = _deserialize_data(VehicleRefueling, ref_raw, overrides={"vehicle_id": new_vid, "user_id": new_uid})
+            ref_data = _deserialize_data(
+                VehicleRefueling,
+                ref_raw,
+                overrides={
+                    "vehicle_id": new_vid,
+                    "created_by_id": _map_uid(ref_raw.get("created_by_id")),
+                },
+            )
             db.add(VehicleRefueling(**ref_data))
 
     for s_raw in data.get("vehicle_services", []):
         old_vid = s_raw.get("vehicle_id")
         new_vid = vehicle_id_map.get(old_vid, old_vid)
-        old_uid = s_raw.get("user_id")
-        new_uid = user_id_map.get(old_uid, default_uid) if old_uid else None
         if new_vid:
-            s_data = _deserialize_data(VehicleServiceRecord, s_raw, overrides={"vehicle_id": new_vid, "user_id": new_uid})
+            s_data = _deserialize_data(
+                VehicleServiceRecord,
+                s_raw,
+                overrides={
+                    "vehicle_id": new_vid,
+                    "created_by_id": _map_uid(s_raw.get("created_by_id")),
+                },
+            )
             db.add(VehicleServiceRecord(**s_data))
 
     # 11. Medicines
@@ -480,11 +531,12 @@ def import_data(db: Session, backup_json: Dict[str, Any], mode: str = "merge", c
     med_count = 0
     for m_raw in data.get("medicines", []):
         old_id = m_raw.get("id")
-        m_data = _deserialize_data(Medicine, m_raw)
+        m_data = _deserialize_data(
+            Medicine, m_raw, overrides={"assigned_user_id": _map_uid(m_raw.get("assigned_user_id"))}
+        )
         new_m = Medicine(**m_data)
         db.add(new_m)
-        db.commit()
-        db.refresh(new_m)
+        db.flush()
         if old_id:
             med_id_map[old_id] = new_m.id
         med_count += 1
@@ -495,14 +547,12 @@ def import_data(db: Session, backup_json: Dict[str, Any], mode: str = "merge", c
         old_id = sched_raw.get("id")
         old_mid = sched_raw.get("medicine_id")
         new_mid = med_id_map.get(old_mid, old_mid)
-        old_uid = sched_raw.get("user_id")
-        new_uid = user_id_map.get(old_uid, default_uid) if old_uid else None
+        new_uid = _map_uid(sched_raw.get("user_id"), required=True)
         if new_mid:
             sched_data = _deserialize_data(MedicationSchedule, sched_raw, overrides={"medicine_id": new_mid, "user_id": new_uid})
             new_sched = MedicationSchedule(**sched_data)
             db.add(new_sched)
-            db.commit()
-            db.refresh(new_sched)
+            db.flush()
             if old_id:
                 sched_id_map[old_id] = new_sched.id
 
@@ -511,18 +561,42 @@ def import_data(db: Session, backup_json: Dict[str, Any], mode: str = "merge", c
         new_mid = med_id_map.get(old_mid, old_mid)
         old_sid = mlog_raw.get("schedule_id")
         new_sid = sched_id_map.get(old_sid, old_sid) if old_sid else None
-        old_uid = mlog_raw.get("user_id")
-        new_uid = user_id_map.get(old_uid, default_uid) if old_uid else None
+        new_uid = _map_uid(mlog_raw.get("user_id"), required=True)
         if new_mid:
             mlog_data = _deserialize_data(MedicationLog, mlog_raw, overrides={"medicine_id": new_mid, "schedule_id": new_sid, "user_id": new_uid})
             db.add(MedicationLog(**mlog_data))
 
-    # 12. Activity Logs
+    # 12. Assets & Appliances
+    asset_count = 0
+    for a_raw in data.get("assets", []):
+        a_data = _deserialize_data(Asset, a_raw)
+        db.add(Asset(**a_data))
+        asset_count += 1
+    imported_counts["assets"] = asset_count
+
+    # 13. Weekly Meal Plans
+    meal_count = 0
+    for mp_raw in data.get("meal_plans", []):
+        old_rid = mp_raw.get("recipe_id")
+        new_rid = recipe_id_map.get(old_rid, old_rid) if old_rid else None
+        mp_data = _deserialize_data(
+            MealPlanItem,
+            mp_raw,
+            overrides={
+                "recipe_id": new_rid,
+                "created_by_id": _map_uid(mp_raw.get("created_by_id")),
+            },
+        )
+        db.add(MealPlanItem(**mp_data))
+        meal_count += 1
+    imported_counts["meal_plans"] = meal_count
+
+    # 14. Activity Logs
     act_count = 0
     for act_raw in data.get("activities", []):
-        old_uid = act_raw.get("user_id")
-        new_uid = user_id_map.get(old_uid, default_uid) if old_uid else None
-        act_data = _deserialize_data(ActivityLog, act_raw, overrides={"user_id": new_uid})
+        act_data = _deserialize_data(
+            ActivityLog, act_raw, overrides={"user_id": _map_uid(act_raw.get("user_id"))}
+        )
         db.add(ActivityLog(**act_data))
         act_count += 1
     imported_counts["activities"] = act_count

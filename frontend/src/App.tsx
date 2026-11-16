@@ -1,35 +1,46 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { I18nProvider } from './i18n';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
-
-import { LoginPage } from './pages/LoginPage';
-import { DashboardPage } from './pages/DashboardPage';
-import { RecipesPage } from './pages/RecipesPage';
-import { RecipeDetailPage } from './pages/RecipeDetailPage';
-import { RecipeEditPage } from './pages/RecipeEditPage';
-import { PantryPage } from './pages/PantryPage';
-import { ShoppingListPage } from './pages/ShoppingListPage';
-import { PlantsPage } from './pages/PlantsPage';
-import { PlantDetailPage } from './pages/PlantDetailPage';
-import { PlantEditPage } from './pages/PlantEditPage';
-import { PetsPage } from './pages/PetsPage';
-import { PetDetailPage } from './pages/PetDetailPage';
-import { PetEditPage } from './pages/PetEditPage';
-import { ChoresPage } from './pages/ChoresPage';
-import { FinancePage } from './pages/FinancePage';
-import { DocumentsPage } from './pages/DocumentsPage';
-import { VehiclesPage } from './pages/VehiclesPage';
-import { VehicleDetailPage } from './pages/VehicleDetailPage';
-import { MedicinesPage } from './pages/MedicinesPage';
-import { ActivityHistoryPage } from './pages/ActivityHistoryPage';
-import { AssetsPage } from './pages/AssetsPage';
-import { MealPlannerPage } from './pages/MealPlannerPage';
-import { SettingsPage } from './pages/SettingsPage';
 import { Flame } from 'lucide-react';
+
+const lazyPage = <T extends Record<string, React.ComponentType<any>>>(
+  loader: () => Promise<T>,
+  key: keyof T
+) => lazy(() => loader().then((m) => ({ default: m[key] })));
+
+const LoginPage = lazyPage(() => import('./pages/LoginPage'), 'LoginPage');
+const DashboardPage = lazyPage(() => import('./pages/DashboardPage'), 'DashboardPage');
+const RecipesPage = lazyPage(() => import('./pages/RecipesPage'), 'RecipesPage');
+const RecipeDetailPage = lazyPage(() => import('./pages/RecipeDetailPage'), 'RecipeDetailPage');
+const RecipeEditPage = lazyPage(() => import('./pages/RecipeEditPage'), 'RecipeEditPage');
+const PantryPage = lazyPage(() => import('./pages/PantryPage'), 'PantryPage');
+const ShoppingListPage = lazyPage(() => import('./pages/ShoppingListPage'), 'ShoppingListPage');
+const PlantsPage = lazyPage(() => import('./pages/PlantsPage'), 'PlantsPage');
+const PlantDetailPage = lazyPage(() => import('./pages/PlantDetailPage'), 'PlantDetailPage');
+const PlantEditPage = lazyPage(() => import('./pages/PlantEditPage'), 'PlantEditPage');
+const PetsPage = lazyPage(() => import('./pages/PetsPage'), 'PetsPage');
+const PetDetailPage = lazyPage(() => import('./pages/PetDetailPage'), 'PetDetailPage');
+const PetEditPage = lazyPage(() => import('./pages/PetEditPage'), 'PetEditPage');
+const ChoresPage = lazyPage(() => import('./pages/ChoresPage'), 'ChoresPage');
+const FinancePage = lazyPage(() => import('./pages/FinancePage'), 'FinancePage');
+const DocumentsPage = lazyPage(() => import('./pages/DocumentsPage'), 'DocumentsPage');
+const VehiclesPage = lazyPage(() => import('./pages/VehiclesPage'), 'VehiclesPage');
+const VehicleDetailPage = lazyPage(() => import('./pages/VehicleDetailPage'), 'VehicleDetailPage');
+const MedicinesPage = lazyPage(() => import('./pages/MedicinesPage'), 'MedicinesPage');
+const ActivityHistoryPage = lazyPage(() => import('./pages/ActivityHistoryPage'), 'ActivityHistoryPage');
+const AssetsPage = lazyPage(() => import('./pages/AssetsPage'), 'AssetsPage');
+const MealPlannerPage = lazyPage(() => import('./pages/MealPlannerPage'), 'MealPlannerPage');
+const SettingsPage = lazyPage(() => import('./pages/SettingsPage'), 'SettingsPage');
+
+const RouteFallback: React.FC = () => (
+  <div className="py-16 flex flex-col items-center justify-center text-zinc-400">
+    <div className="w-7 h-7 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+  </div>
+);
 
 const AppContent: React.FC = () => {
   const { user, token, isLoading } = useAuth();
@@ -49,7 +60,11 @@ const AppContent: React.FC = () => {
   }
 
   if (!user || !token) {
-    return <LoginPage />;
+    return (
+      <Suspense fallback={<RouteFallback />}>
+        <LoginPage />
+      </Suspense>
+    );
   }
 
   return (
@@ -60,7 +75,8 @@ const AppContent: React.FC = () => {
         <div className="flex-1 flex max-w-7xl w-full mx-auto overflow-x-hidden">
           <Sidebar />
           <main className="flex-1 p-3 sm:p-6 lg:p-8 min-w-0 w-full max-w-full overflow-x-hidden">
-            <Routes>
+            <Suspense fallback={<RouteFallback />}>
+              <Routes>
               <Route path="/" element={<DashboardPage />} />
               <Route path="/recipes" element={<RecipesPage />} />
               <Route path="/recipes/new" element={<RecipeEditPage />} />
@@ -90,6 +106,7 @@ const AppContent: React.FC = () => {
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
+            </Suspense>
           </main>
         </div>
       </div>

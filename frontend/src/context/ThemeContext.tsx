@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import '@m3e/web/theme';
 
 export type Theme = 'light' | 'dark' | 'system';
 export type DesignStyle = 'classic' | 'm3e' | 'neobrutalism' | 'terminal' | 'editorial' | 'nordic' | 'cyber' | 'glass' | 'sunset' | 'monochrome';
@@ -257,19 +256,27 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [designStyle]);
 
   useEffect(() => {
+    let cancelled = false;
     let el = document.querySelector('m3e-theme') as HTMLElement | null;
     if (designStyle === 'm3e') {
-      if (!el) {
-        el = document.createElement('m3e-theme');
-        document.body.appendChild(el);
-      }
-      el.setAttribute('color', '#6750A4');
-      el.setAttribute('variant', 'expressive');
-      el.setAttribute('motion', 'expressive');
-      el.setAttribute('scheme', isDark ? 'dark' : 'light');
+      void import('@m3e/web/theme').then(() => {
+        if (cancelled) return;
+        let themeEl = document.querySelector('m3e-theme') as HTMLElement | null;
+        if (!themeEl) {
+          themeEl = document.createElement('m3e-theme');
+          document.body.appendChild(themeEl);
+        }
+        themeEl.setAttribute('color', '#6750A4');
+        themeEl.setAttribute('variant', 'expressive');
+        themeEl.setAttribute('motion', 'expressive');
+        themeEl.setAttribute('scheme', isDark ? 'dark' : 'light');
+      });
     } else if (el) {
       el.remove();
     }
+    return () => {
+      cancelled = true;
+    };
   }, [designStyle, isDark]);
 
   const setTheme = (newTheme: Theme) => {

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { X, Wrench, RefreshCw, Users, Sparkles, Clock, Calendar } from 'lucide-react';
 import { Chore, ChoreCreateInput, User } from '../types';
 import { useTranslation } from '../i18n';
+import { getLocalDateISO } from '../utils/date';
 
 interface ChoreEditModalProps {
   isOpen: boolean;
@@ -68,7 +69,7 @@ export const ChoreEditModal: React.FC<ChoreEditModalProps> = ({
       const allUserIds = users.map(u => u.id);
       setRotationMemberIds(allUserIds);
       setCurrentAssigneeId(allUserIds[0] || null);
-      const today = new Date().toISOString().split('T')[0];
+      const today = getLocalDateISO();
       setDueDate(today);
       setCleaningSuppliesNeeded('');
       setIsApplianceMaintenance(false);
@@ -119,16 +120,16 @@ export const ChoreEditModal: React.FC<ChoreEditModalProps> = ({
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl max-w-xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800">
         
         {/* Header */}
-        <div className="p-5 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+        <div className="p-5 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
             {chore ? t('chores.edit_chore') : t('chores.add_chore_btn')}
           </h2>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="p-1 rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700"
           >
             <X className="w-5 h-5" />
           </button>
@@ -139,7 +140,7 @@ export const ChoreEditModal: React.FC<ChoreEditModalProps> = ({
           
           {/* Title */}
           <div>
-            <label className="block font-semibold text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
               Název úkolu *
             </label>
             <input
@@ -148,13 +149,13 @@ export const ChoreEditModal: React.FC<ChoreEditModalProps> = ({
               onChange={e => setTitle(e.target.value)}
               placeholder="např. Vyklidit myčku, Vytřít koupelnu..."
               required
-              className="w-full text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3.5 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
+              className="w-full text-sm rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3.5 py-2 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
           </div>
 
           {/* Description */}
           <div>
-            <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block font-medium text-zinc-700 dark:text-zinc-300 mb-1">
               Popis a instrukce
             </label>
             <textarea
@@ -162,20 +163,20 @@ export const ChoreEditModal: React.FC<ChoreEditModalProps> = ({
               onChange={e => setDescription(e.target.value)}
               rows={2}
               placeholder="Detailní postup, kam uklidit věci..."
-              className="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3.5 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
+              className="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3.5 py-2 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
           </div>
 
           {/* Room & Category */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                 Místnost / Zóna
               </label>
               <select
                 value={room}
                 onChange={e => setRoom(e.target.value)}
-                className="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-gray-900 dark:text-gray-100"
+                className="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-zinc-900 dark:text-zinc-100"
               >
                 <option value="kitchen">Kuchyně</option>
                 <option value="bathroom">Koupelna & WC</option>
@@ -189,13 +190,13 @@ export const ChoreEditModal: React.FC<ChoreEditModalProps> = ({
             </div>
 
             <div>
-              <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                 Kategorie úkolu
               </label>
               <select
                 value={category}
                 onChange={e => setCategory(e.target.value)}
-                className="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-gray-900 dark:text-gray-100"
+                className="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-zinc-900 dark:text-zinc-100"
               >
                 <option value="routine">Běžná rutina</option>
                 <option value="maintenance">Údržba spotřebiče</option>
@@ -208,7 +209,7 @@ export const ChoreEditModal: React.FC<ChoreEditModalProps> = ({
           {/* Frequency & Interval */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                 Frekvence
               </label>
               <select
@@ -222,7 +223,7 @@ export const ChoreEditModal: React.FC<ChoreEditModalProps> = ({
                   else if (val === 'monthly') setIntervalDays(30);
                   else if (val === 'seasonal') setIntervalDays(90);
                 }}
-                className="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-gray-900 dark:text-gray-100"
+                className="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-zinc-900 dark:text-zinc-100"
               >
                 <option value="daily">Denně (1 den)</option>
                 <option value="weekly">Týdně (7 dní)</option>
@@ -234,7 +235,7 @@ export const ChoreEditModal: React.FC<ChoreEditModalProps> = ({
             </div>
 
             <div>
-              <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                 Interval opakování (dní)
               </label>
               <input
@@ -242,7 +243,7 @@ export const ChoreEditModal: React.FC<ChoreEditModalProps> = ({
                 min="1"
                 value={intervalDays}
                 onChange={e => setIntervalDays(Number(e.target.value))}
-                className="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-gray-900 dark:text-gray-100"
+                className="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-zinc-900 dark:text-zinc-100"
               />
             </div>
           </div>
@@ -250,7 +251,7 @@ export const ChoreEditModal: React.FC<ChoreEditModalProps> = ({
           {/* Points & Time */}
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1">
+              <label className="block font-medium text-zinc-700 dark:text-zinc-300 mb-1 flex items-center gap-1">
                 <Sparkles className="w-3.5 h-3.5 text-amber-500" />
                 Odměna (b.)
               </label>
@@ -260,12 +261,12 @@ export const ChoreEditModal: React.FC<ChoreEditModalProps> = ({
                 max="100"
                 value={points}
                 onChange={e => setPoints(Number(e.target.value))}
-                className="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-gray-900 dark:text-gray-100"
+                className="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-zinc-900 dark:text-zinc-100"
               />
             </div>
 
             <div>
-              <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1">
+              <label className="block font-medium text-zinc-700 dark:text-zinc-300 mb-1 flex items-center gap-1">
                 <Clock className="w-3.5 h-3.5 text-blue-500" />
                 Čas (min)
               </label>
@@ -274,12 +275,12 @@ export const ChoreEditModal: React.FC<ChoreEditModalProps> = ({
                 min="1"
                 value={estimatedMinutes}
                 onChange={e => setEstimatedMinutes(Number(e.target.value))}
-                className="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-gray-900 dark:text-gray-100"
+                className="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-zinc-900 dark:text-zinc-100"
               />
             </div>
 
             <div>
-              <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1">
+              <label className="block font-medium text-zinc-700 dark:text-zinc-300 mb-1 flex items-center gap-1">
                 <Calendar className="w-3.5 h-3.5 text-emerald-500" />
                 Příští termín
               </label>
@@ -287,21 +288,21 @@ export const ChoreEditModal: React.FC<ChoreEditModalProps> = ({
                 type="date"
                 value={dueDate}
                 onChange={e => setDueDate(e.target.value)}
-                className="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-gray-900 dark:text-gray-100"
+                className="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-zinc-900 dark:text-zinc-100"
               />
             </div>
           </div>
 
           {/* Rotation Toggle & Members */}
-          <div className="p-3.5 rounded-xl bg-gray-50 dark:bg-gray-700/40 border border-gray-200 dark:border-gray-700 space-y-3">
+          <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-700/40 border border-zinc-200 dark:border-zinc-800 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <RefreshCw className="w-4 h-4 text-indigo-500" />
                 <div>
-                  <h4 className="font-semibold text-gray-900 dark:text-gray-100">
+                  <h4 className="font-semibold text-zinc-900 dark:text-zinc-100">
                     Férová rotace v rodině
                   </h4>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
                     Automaticky střídat členy rodiny při každém splnění
                   </p>
                 </div>
@@ -316,7 +317,7 @@ export const ChoreEditModal: React.FC<ChoreEditModalProps> = ({
 
             {isRotationEnabled && (
               <div>
-                <label className="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1.5">
+                <label className="block text-[11px] font-medium text-zinc-600 dark:text-zinc-400 mb-1.5">
                   Kdo je zařazen do střídání:
                 </label>
                 <div className="flex flex-wrap gap-2">
@@ -329,8 +330,8 @@ export const ChoreEditModal: React.FC<ChoreEditModalProps> = ({
                         onClick={() => toggleUserInRotation(u.id)}
                         className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all ${
                           isSelected
-                            ? 'bg-white dark:bg-gray-800 border-orange-500 text-gray-900 dark:text-gray-100 shadow-sm'
-                            : 'bg-transparent border-gray-300 dark:border-gray-600 text-gray-400 opacity-60'
+                            ? 'bg-white dark:bg-zinc-900 border-orange-500 text-zinc-900 dark:text-zinc-100 shadow-sm'
+                            : 'bg-transparent border-zinc-300 dark:border-zinc-700 text-zinc-400 opacity-60'
                         }`}
                       >
                         <div
@@ -348,13 +349,13 @@ export const ChoreEditModal: React.FC<ChoreEditModalProps> = ({
             )}
 
             <div>
-              <label className="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1">
+              <label className="block text-[11px] font-medium text-zinc-600 dark:text-zinc-400 mb-1">
                 Kdo začíná (je na řadě teď):
               </label>
               <select
                 value={currentAssigneeId || ''}
                 onChange={e => setCurrentAssigneeId(e.target.value ? Number(e.target.value) : null)}
-                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-gray-900 dark:text-gray-100"
+                className="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-1.5 text-zinc-900 dark:text-zinc-100"
               >
                 <option value="">Kdokoli (volný úkol)</option>
                 {users.map(u => (
@@ -371,7 +372,7 @@ export const ChoreEditModal: React.FC<ChoreEditModalProps> = ({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Wrench className="w-4 h-4 text-blue-500" />
-                <span className="font-semibold text-gray-900 dark:text-gray-100">
+                <span className="font-semibold text-zinc-900 dark:text-zinc-100">
                   Péče o domácí spotřebič (Servisní knížka)
                 </span>
               </div>
@@ -388,14 +389,14 @@ export const ChoreEditModal: React.FC<ChoreEditModalProps> = ({
                 placeholder="Název spotřebiče (např. Kávovar DeLonghi, Myčka Bosch)"
                 value={applianceName}
                 onChange={e => setApplianceName(e.target.value)}
-                className="w-full rounded-lg border border-blue-200 dark:border-blue-800 bg-white dark:bg-gray-700 px-3 py-1.5 text-gray-900 dark:text-gray-100"
+                className="w-full rounded-lg border border-blue-200 dark:border-blue-800 bg-white dark:bg-zinc-800 px-3 py-1.5 text-zinc-900 dark:text-zinc-100"
               />
             )}
           </div>
 
           {/* Cleaning supplies needed */}
           <div>
-            <label className="block font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block font-medium text-zinc-700 dark:text-zinc-300 mb-1">
               Potřebné čisticí prostředky (pro rychlý nákup)
             </label>
             <input
@@ -403,16 +404,16 @@ export const ChoreEditModal: React.FC<ChoreEditModalProps> = ({
               placeholder="např. Tablety do myčky Jar Platinum, Pytle do koše..."
               value={cleaningSuppliesNeeded}
               onChange={e => setCleaningSuppliesNeeded(e.target.value)}
-              className="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3.5 py-2 text-gray-900 dark:text-gray-100"
+              className="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3.5 py-2 text-zinc-900 dark:text-zinc-100"
             />
           </div>
 
           {/* Buttons */}
-          <div className="flex justify-end gap-2 pt-3 border-t border-gray-100 dark:border-gray-700">
+          <div className="flex justify-end gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 font-medium"
+              className="px-4 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-600 font-medium"
             >
               Zrušit
             </button>

@@ -4,6 +4,7 @@ import { X, Calendar, DollarSign, Repeat, Check, User as UserIcon } from 'lucide
 import { Subscription, SubscriptionCreate, User, BillingCycle } from '../types';
 import { useTranslation } from '../i18n';
 import { CATEGORIES } from './TransactionModal';
+import { getLocalDateISO } from '../utils/date';
 
 interface SubscriptionModalProps {
   isOpen: boolean;
@@ -27,7 +28,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
   const [name, setName] = useState('');
   const [amount, setAmount] = useState<number | ''>('');
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
-  const [nextBillingDate, setNextBillingDate] = useState(new Date().toISOString().split('T')[0]);
+  const [nextBillingDate, setNextBillingDate] = useState(() => getLocalDateISO());
   const [category, setCategory] = useState('entertainment');
   const [payerId, setPayerId] = useState<number>(currentUserId);
   const [serviceUrl, setServiceUrl] = useState('');
@@ -48,7 +49,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
       setName('');
       setAmount('');
       setBillingCycle('monthly');
-      setNextBillingDate(new Date().toISOString().split('T')[0]);
+      setNextBillingDate(getLocalDateISO());
       setCategory('entertainment');
       setPayerId(currentUserId);
       setServiceUrl('');
@@ -85,26 +86,26 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl relative overflow-hidden max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-900/60 backdrop-blur-sm animate-fade-in">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl relative overflow-hidden max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex items-center justify-between pb-4 border-b border-zinc-100 dark:border-zinc-800">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-2xl">
               <Repeat className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="font-bold text-lg text-slate-800 dark:text-white">
+              <h3 className="font-bold text-lg text-zinc-800 dark:text-white">
                 {subscription ? 'Upravit předplatné' : t('finance.add_subscription')}
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
                 Pravidelná platba se sledováním termínu stržení
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -113,7 +114,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
         {/* Form */}
         <form onSubmit={handleSubmit} className="py-4 space-y-4 overflow-y-auto flex-1">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+            <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
               Název služby *
             </label>
             <input
@@ -122,13 +123,13 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="např. Netflix, Spotify Family, O2 Internet, Pojištění..."
-              className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
+              className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+              <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
                 Částka (Kč) *
               </label>
               <input
@@ -138,18 +139,18 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                 value={amount}
                 onChange={(e) => setAmount(e.target.value === '' ? '' : parseFloat(e.target.value))}
                 placeholder="0.00"
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
+                className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+              <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
                 {t('finance.billing_cycle')}
               </label>
               <select
                 value={billingCycle}
                 onChange={(e) => setBillingCycle(e.target.value as BillingCycle)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
+                className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
               >
                 <option value="monthly">{t('finance.cycle_monthly')}</option>
                 <option value="quarterly">{t('finance.cycle_quarterly')}</option>
@@ -160,7 +161,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+              <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
                 {t('finance.next_billing')} *
               </label>
               <input
@@ -168,18 +169,18 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                 required
                 value={nextBillingDate}
                 onChange={(e) => setNextBillingDate(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
+                className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+              <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
                 {t('finance.category')}
               </label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
+                className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
               >
                 {CATEGORIES.filter(c => c.id !== 'income').map((cat) => (
                   <option key={cat.id} value={cat.id}>
@@ -192,13 +193,13 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+              <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
                 Plátce
               </label>
               <select
                 value={payerId}
                 onChange={(e) => setPayerId(Number(e.target.value))}
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
+                className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
               >
                 {users.map((u) => (
                   <option key={u.id} value={u.id}>
@@ -209,7 +210,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+              <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
                 Odkaz na správu (URL)
               </label>
               <input
@@ -217,13 +218,13 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                 value={serviceUrl}
                 onChange={(e) => setServiceUrl(e.target.value)}
                 placeholder="https://..."
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
+                className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+            <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
               Poznámka
             </label>
             <textarea
@@ -231,16 +232,16 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Číslo smlouvy, přihlašovací údaje nebo poznámky..."
-              className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
+              className="w-full px-3.5 py-2 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
             />
           </div>
 
           {/* Footer */}
-          <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex gap-3">
+          <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 flex gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="py-2.5 px-4 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-2xl transition-colors text-sm"
+              className="py-2.5 px-4 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-semibold rounded-2xl transition-colors text-sm"
             >
               {t('common.close')}
             </button>

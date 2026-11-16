@@ -2,9 +2,11 @@ import json
 import logging
 import base64
 import re
+import io
 from typing import Optional, Dict, Any
 from google import genai
 from google.genai import types
+import pypdf
 
 from app.config import settings
 
@@ -19,12 +21,47 @@ class GeminiDocumentService:
             raise ValueError("GEMINI_API_KEY není nastaven.")
         return genai.Client(api_key=self.api_key)
 
+    def _extract_pdf_text(self, file_bytes: bytes) -> str:
+        """Extract text from PDF. Returns empty string if PDF has no pages or is invalid."""
+        try:
+            reader = pypdf.PdfReader(io.BytesIO(file_bytes))
+            if len(reader.pages) == 0:
+                return ""
+            pages_text = []
+            for page in reader.pages:
+                t = page.extract_text()
+                if t:
+                    pages_text.append(t)
+            return "\n\n".join(pages_text).strip()
+        except Exception as e:
+            logger.warning(f"Failed to extract text from PDF: {e}")
+            return ""
+
     async def analyze_document(
         self,
         file_bytes: bytes,
         mime_type: str = "application/pdf"
     ) -> Dict[str, Any]:
         client = self._get_client()
+        
+        # Pre-extract text for PDFs to detect empty/invalid documents early
+        if mime_type == "application/pdf":
+            pdf_text = self._extract_pdf_text(file_bytes)
+            if not pdf_text:
+                logger.warning("PDF document has no extractable text (empty or scanned image-only PDF)")
+                return {
+                    "title": "Prázdný nebo neskenerovatelný PDF dokument",
+                    "category": "other",
+                    "issuer": None,
+                    "document_date": None,
+                    "expiry_date": None,
+                    "warranty_months": None,
+                    "contract_number": None,
+                    "amount": None,
+                    "tags": "pdf, prázdný, sken",
+                    "summary": "Dokument neobsahuje extrahovatelný text. Pravděpodobně se jedná o prázdný PDF nebo pouze obrázky bez OCR.",
+                    "ocr_fulltext": ""
+                }
 
         prompt = """
 Jsi specializovaný asistent pro digitalizaci a archivaci dokumentů v chytré domácnosti Hestia.
@@ -56,7 +93,7 @@ DŮLEŽITÉ POKYNY:
         contents = [part, prompt]
 
         try:
-            response = client.models.generate_content(
+            response = await client.aio.models.generate_content(
                 model="gemini-2.5-flash",
                 contents=contents,
                 config=types.GenerateContentConfig(

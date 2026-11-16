@@ -125,7 +125,7 @@ Pravidla:
 {content_to_analyze}
 """
 
-        response = client.models.generate_content(
+        response = await client.aio.models.generate_content(
             model="gemini-3.7-flash",
             contents=prompt,
             config=types.GenerateContentConfig(
@@ -617,7 +617,7 @@ Pravidla pro každý recept:
             contents.append(f"Zde je text receptu ze souboru {filename}:\n\n{raw_text[:35000]}")
 
         try:
-            response = client.models.generate_content(
+            response = await client.aio.models.generate_content(
                 model="gemini-3.7-flash",
                 contents=contents,
                 config=types.GenerateContentConfig(

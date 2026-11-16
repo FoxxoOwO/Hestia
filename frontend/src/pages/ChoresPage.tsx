@@ -188,11 +188,11 @@ export const ChoresPage: React.FC = () => {
       {/* Header with Title and Action buttons */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
             <Sparkles className="w-7 h-7 text-orange-500" />
             {t('chores.title')}
           </h1>
-          <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-xs md:text-sm text-zinc-500 dark:text-zinc-400 mt-1">
             {t('chores.subtitle')}
           </p>
         </div>
@@ -240,13 +240,13 @@ export const ChoresPage: React.FC = () => {
       </div>
 
       {/* Tabs navigation */}
-      <div className="flex border-b border-gray-200 dark:border-gray-700 overflow-x-auto gap-2 pb-px scrollbar-none">
+      <div className="flex border-b border-zinc-200 dark:border-zinc-800 overflow-x-auto gap-2 pb-px scrollbar-none">
         <button
           onClick={() => setActiveTab('today')}
           className={`flex items-center gap-2 py-2.5 px-4 font-semibold text-xs md:text-sm border-b-2 transition-colors whitespace-nowrap ${
             activeTab === 'today'
               ? 'border-orange-500 text-orange-600 dark:text-orange-400'
-              : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+              : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200'
           }`}
         >
           <Calendar className="w-4 h-4" />
@@ -258,7 +258,7 @@ export const ChoresPage: React.FC = () => {
           className={`flex items-center gap-2 py-2.5 px-4 font-semibold text-xs md:text-sm border-b-2 transition-colors whitespace-nowrap ${
             activeTab === 'rotation'
               ? 'border-orange-500 text-orange-600 dark:text-orange-400'
-              : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+              : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200'
           }`}
         >
           <RefreshCw className="w-4 h-4" />
@@ -270,7 +270,7 @@ export const ChoresPage: React.FC = () => {
           className={`flex items-center gap-2 py-2.5 px-4 font-semibold text-xs md:text-sm border-b-2 transition-colors whitespace-nowrap ${
             activeTab === 'maintenance'
               ? 'border-orange-500 text-orange-600 dark:text-orange-400'
-              : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+              : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200'
           }`}
         >
           <Wrench className="w-4 h-4" />
@@ -282,7 +282,7 @@ export const ChoresPage: React.FC = () => {
           className={`flex items-center gap-2 py-2.5 px-4 font-semibold text-xs md:text-sm border-b-2 transition-colors whitespace-nowrap ${
             activeTab === 'deep_clean'
               ? 'border-orange-500 text-orange-600 dark:text-orange-400'
-              : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+              : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200'
           }`}
         >
           <CheckCircle2 className="w-4 h-4" />
@@ -294,7 +294,7 @@ export const ChoresPage: React.FC = () => {
           className={`flex items-center gap-2 py-2.5 px-4 font-semibold text-xs md:text-sm border-b-2 transition-colors whitespace-nowrap ${
             activeTab === 'leaderboard'
               ? 'border-orange-500 text-orange-600 dark:text-orange-400'
-              : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+              : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200'
           }`}
         >
           <Trophy className="w-4 h-4 text-amber-500" />
@@ -314,7 +314,7 @@ export const ChoresPage: React.FC = () => {
                   className={`p-5 rounded-2xl border transition-all ${
                     isFirst
                       ? 'bg-gradient-to-b from-amber-500/10 via-amber-500/5 to-transparent border-amber-300 dark:border-amber-700/60 shadow-md ring-1 ring-amber-400/30'
-                      : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm'
+                      : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 shadow-sm'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-4">
@@ -326,26 +326,26 @@ export const ChoresPage: React.FC = () => {
                         {member.display_name.charAt(0)}
                       </div>
                       <div>
-                        <h3 className="font-bold text-gray-900 dark:text-gray-100 flex items-center gap-1.5">
+                        <h3 className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
                           {member.display_name}
                           {isFirst && <Trophy className="w-4 h-4 text-amber-500" />}
                         </h3>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                        <span className="text-xs text-zinc-500 dark:text-zinc-400">
                           {index + 1}. místo v rodině
                         </span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 pt-3 border-t border-gray-100 dark:border-gray-700/60 text-xs">
-                    <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-700/40">
-                      <span className="text-gray-400 text-[10px] block">{t('chores.leaderboard.weekly_rank')}</span>
+                  <div className="grid grid-cols-2 gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800/60 text-xs">
+                    <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-700/40">
+                      <span className="text-zinc-400 text-[10px] block">{t('chores.leaderboard.weekly_rank')}</span>
                       <span className="text-base font-extrabold text-orange-600 dark:text-orange-400">
                         +{member.weekly_points} b.
                       </span>
                     </div>
-                    <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-700/40">
-                      <span className="text-gray-400 text-[10px] block">{t('chores.leaderboard.available_points')}</span>
+                    <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-700/40">
+                      <span className="text-zinc-400 text-[10px] block">{t('chores.leaderboard.available_points')}</span>
                       <span className="text-base font-extrabold text-amber-600 dark:text-amber-400">
                         {member.available_points} b.
                       </span>
@@ -363,10 +363,10 @@ export const ChoresPage: React.FC = () => {
                 <Gift className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="font-bold text-gray-900 dark:text-gray-100">
+                <h3 className="font-bold text-zinc-900 dark:text-zinc-100">
                   {t('chores.rewards.title')}
                 </h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
                   Vyměňte své body za rodinný film, večeři na přání nebo zmrzlinový pohár!
                 </p>
               </div>
@@ -387,13 +387,13 @@ export const ChoresPage: React.FC = () => {
           <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
             {/* Search Input */}
             <div className="relative w-full sm:w-72">
-              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 placeholder={t('chores.search_placeholder')}
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full text-xs rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 pl-9 pr-3 py-2 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 pl-9 pr-3 py-2 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
               />
             </div>
 
@@ -413,7 +413,7 @@ export const ChoresPage: React.FC = () => {
                   className={`px-3 py-1.5 rounded-lg whitespace-nowrap font-medium transition-colors ${
                     selectedRoom === room.id
                       ? 'bg-orange-500 text-white shadow-sm'
-                      : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                      : 'bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700'
                   }`}
                 >
                   {room.label}
@@ -428,18 +428,18 @@ export const ChoresPage: React.FC = () => {
               {Object.entries(deepCleanRooms).map(([rm, stats]) => {
                 const percent = Math.round((stats.completed / stats.total) * 100);
                 return (
-                  <div key={rm} className="p-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                  <div key={rm} className="p-3 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
                     <div className="flex items-center justify-between text-xs font-semibold mb-1">
                       <span className="capitalize">{t(`chores.rooms.${rm}`) || rm}</span>
                       <span className="text-orange-600 dark:text-orange-400">{percent}%</span>
                     </div>
-                    <div className="w-full bg-gray-100 dark:bg-gray-700 h-2 rounded-full overflow-hidden">
+                    <div className="w-full bg-zinc-100 dark:bg-zinc-700 h-2 rounded-full overflow-hidden">
                       <div
                         className="bg-orange-500 h-full rounded-full transition-all duration-300"
                         style={{ width: `${percent}%` }}
                       />
                     </div>
-                    <span className="text-[10px] text-gray-400 mt-1 block">
+                    <span className="text-[10px] text-zinc-400 mt-1 block">
                       {stats.completed} z {stats.total} úkolů hotovo
                     </span>
                   </div>
@@ -450,13 +450,13 @@ export const ChoresPage: React.FC = () => {
 
           {/* Chore Cards Grid */}
           {isLoading ? (
-            <div className="py-12 text-center text-gray-400">
+            <div className="py-12 text-center text-zinc-400">
               {t('common.loading')}
             </div>
           ) : filteredChores.length === 0 ? (
-            <div className="py-16 text-center bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-8">
-              <Sparkles className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-              <h3 className="text-base font-bold text-gray-700 dark:text-gray-300">
+            <div className="py-16 text-center bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-8">
+              <Sparkles className="w-12 h-12 text-zinc-300 dark:text-zinc-600 mx-auto mb-3" />
+              <h3 className="text-base font-bold text-zinc-700 dark:text-zinc-300">
                 {t('chores.empty_chores')}
               </h3>
             </div>

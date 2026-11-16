@@ -62,7 +62,7 @@ DŮLEŽITÉ:
 
         contents.append(prompt)
 
-        response = client.models.generate_content(
+        response = await client.aio.models.generate_content(
             model="gemini-2.5-flash",
             contents=contents,
             config=types.GenerateContentConfig(

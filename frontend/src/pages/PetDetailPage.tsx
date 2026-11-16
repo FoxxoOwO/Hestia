@@ -14,6 +14,7 @@ import { PetSitterModal } from '../components/PetSitterModal';
 import { PetSosModal } from '../components/PetSosModal';
 import { PetWeightModal } from '../components/PetWeightModal';
 import { useTranslation } from '../i18n';
+import { getLocalDateISO } from '../utils/date';
 
 export const PetDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -37,7 +38,7 @@ export const PetDetailPage: React.FC = () => {
   // Form states
   const [medRecordType, setMedRecordType] = useState<string>('vaccination');
   const [medRecordTitle, setMedRecordTitle] = useState('');
-  const [medRecordDate, setMedRecordDate] = useState(new Date().toISOString().split('T')[0]);
+  const [medRecordDate, setMedRecordDate] = useState(() => getLocalDateISO());
   const [medRecordValidUntil, setMedRecordValidUntil] = useState('');
   const [medRecordVet, setMedRecordVet] = useState('');
   const [medRecordNotes, setMedRecordNotes] = useState('');

@@ -25,8 +25,8 @@ services:
     ports:
       - "${HESTIA_PORT:-8000}:8000"
     environment:
-      # Bezpečnostní klíč pro JWT tokeny (doporučujeme nastavit vlastní řetězec)
-      - SECRET_KEY=${SECRET_KEY:-hestia-super-secret-key-change-in-production-123456789}
+      # Bezpečnostní klíč pro JWT tokeny - POVINNÉ, bez něj kontejner nenastartuje
+      - SECRET_KEY=${SECRET_KEY:?SECRET_KEY není nastaven. Spustit: echo "SECRET_KEY=$(python -c 'import secrets; print(secrets.token_urlsafe(48))')" > .env}
       # Volitelný klíč pro AI funkce Google Gemini (OCR účtenek, recepty z webu, kytky atd.)
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       # Cesta k interní databázi a souborům

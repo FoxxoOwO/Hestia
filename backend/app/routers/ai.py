@@ -1,6 +1,9 @@
 import base64
+import binascii
+import os
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from app.config import settings
+from app.utils.uploads import read_upload, RECIPE_EXT, MAX_UPLOAD_BYTES
 from app.models.user import User
 from app.schemas.gemini import (
     GeminiImportRequest, GeminiExtractedRecipe,
@@ -68,17 +71,12 @@ async def import_recipe_from_file(
     current_user: User = Depends(get_current_user)
 ):
     try:
-        content = await file.read()
-        if not content:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Nahraný soubor je prázdný."
-            )
+        orig_name, _, content = await read_upload(file, RECIPE_EXT)
 
         service = GeminiRecipeService(api_key=settings.GEMINI_API_KEY)
         recipes = await service.parse_recipe_file(
             file_bytes=content,
-            filename=file.filename or "recept.txt",
+            filename=orig_name or "recept.txt",
             content_type=file.content_type,
             target_language=target_language or current_user.preferred_language or "cs"
         )
@@ -87,7 +85,7 @@ async def import_recipe_from_file(
         return RecipeFileImportResponse(
             recipes=recipes,
             total=len(recipes),
-            filename=file.filename or "recept"
+            filename=orig_name or "recept"
         )
     except HTTPException:
         raise
@@ -103,11 +101,37 @@ async def import_recipe_from_base64(
     current_user: User = Depends(get_current_user)
 ):
     try:
+        clean_name = os.path.basename((req.filename or "recept.txt").replace("\\", "/")) or "recept.txt"
+        ext = os.path.splitext(clean_name)[1].lower()
+        if ext and ext not in RECIPE_EXT:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Nepodporovaný typ souboru ({ext}).",
+            )
+
         clean_b64 = req.file_base64
         if "," in clean_b64:
             clean_b64 = clean_b64.split(",", 1)[1]
 
-        file_bytes = base64.b64decode(clean_b64)
+        if len(clean_b64) > (MAX_UPLOAD_BYTES * 4) // 3 + 64:
+            raise HTTPException(
+                status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                detail=f"Soubor je příliš velký (limit {MAX_UPLOAD_BYTES // (1024 * 1024)} MB).",
+            )
+
+        try:
+            file_bytes = base64.b64decode(clean_b64, validate=True)
+        except (binascii.Error, ValueError):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Neplatný Base64 obsah souboru.",
+            )
+
+        if len(file_bytes) > MAX_UPLOAD_BYTES:
+            raise HTTPException(
+                status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                detail=f"Soubor je příliš velký (limit {MAX_UPLOAD_BYTES // (1024 * 1024)} MB).",
+            )
         if not file_bytes:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -117,7 +141,7 @@ async def import_recipe_from_base64(
         service = GeminiRecipeService(api_key=settings.GEMINI_API_KEY)
         recipes = await service.parse_recipe_file(
             file_bytes=file_bytes,
-            filename=req.filename or "recept.txt",
+            filename=clean_name,
             target_language=req.target_language or current_user.preferred_language or "cs"
         )
         for r in recipes:
@@ -125,7 +149,7 @@ async def import_recipe_from_base64(
         return RecipeFileImportResponse(
             recipes=recipes,
             total=len(recipes),
-            filename=req.filename or "recept"
+            filename=clean_name
         )
     except HTTPException:
         raise

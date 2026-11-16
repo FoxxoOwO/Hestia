@@ -2,7 +2,7 @@ import json
 import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import func
 
 from app.database import get_db
@@ -31,7 +31,7 @@ def _format_chore_response(chore: Chore) -> dict:
     is_overdue = False
     if chore.due_date:
         try:
-            due = datetime.datetime.strptime(chore.due_date, "%Y-%m-%d").date()
+            due = datetime.datetime.strptime(chore.due_date[:10], "%Y-%m-%d").date()
             today = datetime.date.today()
             delta = (due - today).days
             days_until = delta
@@ -109,7 +109,10 @@ def get_chores(
         )
 
     # Order: overdue first, then by due_date ascending
-    chores = query.order_by(Chore.due_date.asc().nullslast()).all()
+    chores = query.options(
+        selectinload(Chore.current_assignee),
+        selectinload(Chore.last_completed_by),
+    ).order_by(Chore.due_date.asc().nullslast()).all()
     return [_format_chore_response(c) for c in chores]
 
 
@@ -179,23 +182,36 @@ def get_leaderboard(
     one_week_ago = datetime.datetime.utcnow() - datetime.timedelta(days=7)
 
     leaderboard = []
+
+    # Three grouped queries instead of four per user
+    totals = {
+        uid: (int(pts or 0), int(cnt or 0))
+        for uid, pts, cnt in db.query(
+            ChoreCompletion.user_id,
+            func.coalesce(func.sum(ChoreCompletion.points_awarded), 0),
+            func.count(ChoreCompletion.id)
+        ).group_by(ChoreCompletion.user_id).all()
+    }
+    weekly = {
+        uid: int(pts or 0)
+        for uid, pts in db.query(
+            ChoreCompletion.user_id,
+            func.coalesce(func.sum(ChoreCompletion.points_awarded), 0)
+        ).filter(ChoreCompletion.completed_at >= one_week_ago)
+        .group_by(ChoreCompletion.user_id).all()
+    }
+    spent = {
+        uid: int(pts or 0)
+        for uid, pts in db.query(
+            ChoreRewardRedemption.user_id,
+            func.coalesce(func.sum(ChoreRewardRedemption.points_spent), 0)
+        ).group_by(ChoreRewardRedemption.user_id).all()
+    }
+
     for u in users:
-        # Total points & completions
-        total_pts = db.query(func.coalesce(func.sum(ChoreCompletion.points_awarded), 0))\
-            .filter(ChoreCompletion.user_id == u.id).scalar() or 0
-        
-        completions_count = db.query(func.count(ChoreCompletion.id))\
-            .filter(ChoreCompletion.user_id == u.id).scalar() or 0
-
-        # Weekly points
-        weekly_pts = db.query(func.coalesce(func.sum(ChoreCompletion.points_awarded), 0))\
-            .filter(ChoreCompletion.user_id == u.id, ChoreCompletion.completed_at >= one_week_ago).scalar() or 0
-
-        # Spent points
-        spent_pts = db.query(func.coalesce(func.sum(ChoreRewardRedemption.points_spent), 0))\
-            .filter(ChoreRewardRedemption.user_id == u.id).scalar() or 0
-
-        available_pts = max(0, total_pts - spent_pts)
+        total_pts, completions_count = totals.get(u.id, (0, 0))
+        weekly_pts = weekly.get(u.id, 0)
+        available_pts = max(0, total_pts - spent.get(u.id, 0))
 
         leaderboard.append({
             "user_id": u.id,
@@ -219,7 +235,10 @@ def get_panic_mode_tasks(
     current_user: User = Depends(get_current_user)
 ):
     # Panic mode tasks: category panic_mode or routine chores with estimated_minutes <= 10
-    tasks = db.query(Chore).filter(
+    tasks = db.query(Chore).options(
+        selectinload(Chore.current_assignee),
+        selectinload(Chore.last_completed_by),
+    ).filter(
         Chore.is_active == True,
         (Chore.category == "panic_mode") | (Chore.estimated_minutes <= 10)
     ).order_by(Chore.estimated_minutes.asc()).limit(8).all()
@@ -309,7 +328,10 @@ def get_chore(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    chore = db.query(Chore).filter(Chore.id == chore_id).first()
+    chore = db.query(Chore).options(
+        selectinload(Chore.current_assignee),
+        selectinload(Chore.last_completed_by),
+    ).filter(Chore.id == chore_id).first()
     if not chore:
         raise HTTPException(status_code=404, detail="Úkol nebyl nalezen")
     return _format_chore_response(chore)

@@ -12,6 +12,7 @@ from app.models.user import User
 from app.models.asset import Asset
 from app.schemas.asset import AssetCreate, AssetUpdate, AssetResponse, AssetStats
 from app.utils.auth import get_current_user
+from app.utils.uploads import read_upload, safe_upload_subpath, IMAGE_EXT
 from app.services.activity_service import log_activity
 
 router = APIRouter(prefix="/assets", tags=["Assets & Appliances"])
@@ -137,22 +138,21 @@ def create_asset(
 ):
     asset = Asset(**asset_in.model_dump())
     db.add(asset)
+    db.flush()
+
+    log_activity(
+        db=db,
+        user=current_user,
+        module="assets",
+        action_type="create",
+        title="Nový spotřebič / majetek",
+        description=f"{current_user.display_name} přidal(a) spotřebič: {asset.name} ({asset.brand or 'bez značky'})",
+        entity_type="Asset",
+        entity_id=asset.id,
+    )
+
     db.commit()
     db.refresh(asset)
-
-    try:
-        log_activity(
-            db=db,
-            user_id=current_user.id,
-            action_type="create",
-            entity_type="asset",
-            entity_id=asset.id,
-            description=f"Přidán spotřebič/vybavení: {asset.name} ({asset.brand or 'bez značky'})",
-            extra_data={"room": asset.room, "category": asset.category}
-        )
-    except Exception:
-        pass
-
     return _format_asset_response(asset)
 
 @router.put("/{asset_id}", response_model=AssetResponse)
@@ -170,22 +170,30 @@ def update_asset(
     for key, val in update_data.items():
         setattr(asset, key, val)
 
+    log_activity(
+        db=db,
+        user=current_user,
+        module="assets",
+        action_type="update",
+        title="Úprava spotřebiče / majetku",
+        description=f"{current_user.display_name} upravil(a) informace o spotřebiči: {asset.name}",
+        entity_type="Asset",
+        entity_id=asset.id,
+    )
+
     db.commit()
     db.refresh(asset)
-
-    try:
-        log_activity(
-            db=db,
-            user_id=current_user.id,
-            action_type="update",
-            entity_type="asset",
-            entity_id=asset.id,
-            description=f"Upraveny informace o spotřebiči: {asset.name}"
-        )
-    except Exception:
-        pass
-
     return _format_asset_response(asset)
+
+def _remove_local_asset_file(url_or_path: Optional[str]) -> None:
+    if not url_or_path or not url_or_path.startswith("/uploads/"):
+        return
+    full_path = safe_upload_subpath(settings.UPLOAD_DIR, url_or_path)
+    if full_path and os.path.isfile(full_path):
+        try:
+            os.remove(full_path)
+        except OSError:
+            pass
 
 @router.delete("/{asset_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_asset(
@@ -198,20 +206,22 @@ def delete_asset(
         raise HTTPException(status_code=404, detail="Spotřebič / majetek nebyl nalezen")
 
     name = asset.name
+    _remove_local_asset_file(asset.invoice_url)
+    _remove_local_asset_file(asset.manual_url)
     db.delete(asset)
-    db.commit()
 
-    try:
-        log_activity(
-            db=db,
-            user_id=current_user.id,
-            action_type="delete",
-            entity_type="asset",
-            entity_id=asset_id,
-            description=f"Odstraněn spotřebič: {name}"
-        )
-    except Exception:
-        pass
+    log_activity(
+        db=db,
+        user=current_user,
+        module="assets",
+        action_type="delete",
+        title="Odstranění spotřebiče",
+        description=f"{current_user.display_name} odstranil(a) spotřebič: {name}",
+        entity_type="Asset",
+        entity_id=asset_id,
+    )
+
+    db.commit()
 
 @router.post("/{asset_id}/upload-file")
 async def upload_asset_file(
@@ -225,20 +235,21 @@ async def upload_asset_file(
     if not asset:
         raise HTTPException(status_code=404, detail="Spotřebič / majetek nebyl nalezen")
 
-    ext = os.path.splitext(file.filename)[1].lower() or ".pdf"
+    orig_name, ext, contents = await read_upload(file, IMAGE_EXT)
     unique_filename = f"asset_{asset_id}_{file_type}_{uuid.uuid4().hex[:8]}{ext}"
     asset_upload_dir = os.path.join(settings.UPLOAD_DIR, "assets")
     os.makedirs(asset_upload_dir, exist_ok=True)
     
     file_path = os.path.join(asset_upload_dir, unique_filename)
-    contents = await file.read()
     with open(file_path, "wb") as f:
         f.write(contents)
 
     rel_url = f"/uploads/assets/{unique_filename}"
     if file_type == "invoice":
+        _remove_local_asset_file(asset.invoice_url)
         asset.invoice_url = rel_url
     else:
+        _remove_local_asset_file(asset.manual_url)
         asset.manual_url = rel_url
 
     db.commit()

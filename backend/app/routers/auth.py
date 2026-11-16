@@ -1,5 +1,5 @@
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -8,8 +8,11 @@ from app.schemas.user import (
     UserCreate, UserUpdate, UserResponse, Token, LoginRequest, PublicMember
 )
 from app.utils.auth import (
-    verify_password, get_password_hash, create_access_token,
+    verify_password_or_dummy, get_password_hash, create_access_token,
     get_current_user, get_current_active_admin
+)
+from app.utils.rate_limit import (
+    check_login_rate_limit, register_failed_login, reset_login_attempts
 )
 from app.services.activity_service import log_activity
 
@@ -34,18 +37,26 @@ def get_public_members(db: Session = Depends(get_db)):
     ]
 
 @router.post("/login", response_model=Token)
-def login(login_data: LoginRequest, db: Session = Depends(get_db)):
+def login(login_data: LoginRequest, request: Request, db: Session = Depends(get_db)):
+    client_ip = request.client.host if request.client else "unknown"
+    rate_key = f"{client_ip}|{login_data.username.strip().lower()}"
+    check_login_rate_limit(rate_key)
+
     user = db.query(User).filter(User.username == login_data.username).first()
-    if not user or not verify_password(login_data.password, user.hashed_password):
+    if not verify_password_or_dummy(login_data.password, user.hashed_password if user else None):
+        register_failed_login(rate_key)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Neplatné uživatelské jméno nebo heslo (Invalid credentials)"
         )
     if not user.is_active:
+        reset_login_attempts(rate_key)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Uživatelský účet je deaktivován (Account inactive)"
         )
+
+    reset_login_attempts(rate_key)
 
     # Log login activity
     log_activity(

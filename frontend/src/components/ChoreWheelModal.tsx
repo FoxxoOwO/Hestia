@@ -157,12 +157,12 @@ export const ChoreWheelModal: React.FC<ChoreWheelModalProps> = ({
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative border border-gray-200 dark:border-gray-700">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl max-w-md w-full p-6 shadow-2xl relative border border-zinc-200 dark:border-zinc-800">
         
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+          className="absolute top-4 right-4 p-1 rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700"
         >
           <X className="w-5 h-5" />
         </button>
@@ -172,10 +172,10 @@ export const ChoreWheelModal: React.FC<ChoreWheelModalProps> = ({
           <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 mb-2">
             <Sparkles className="w-5 h-5" />
           </div>
-          <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+          <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
             {t('chores.wheel_modal.title')}
           </h2>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
             {t('chores.wheel_modal.subtitle')}
           </p>
         </div>
@@ -183,7 +183,7 @@ export const ChoreWheelModal: React.FC<ChoreWheelModalProps> = ({
         {/* Target chore selector */}
         {chores.length > 0 && (
           <div className="mb-4">
-            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
               Vyberte úkol k vylosování:
             </label>
             <select
@@ -192,7 +192,7 @@ export const ChoreWheelModal: React.FC<ChoreWheelModalProps> = ({
                 const found = chores.find(c => c.id === Number(e.target.value));
                 if (found) setTargetChore(found);
               }}
-              className="w-full text-xs rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-500"
+              className="w-full text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-orange-500"
             >
               {chores.map(c => (
                 <option key={c.id} value={c.id}>

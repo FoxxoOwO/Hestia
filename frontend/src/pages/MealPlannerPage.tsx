@@ -39,6 +39,7 @@ export const MealPlannerPage: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [modalDate, setModalDate] = useState('');
   const [modalMealType, setModalMealType] = useState<MealType>('dinner');
+  const [modalRecipeId, setModalRecipeId] = useState<number | null>(null);
 
   // Shopping generation feedback
   const [isGeneratingShopping, setIsGeneratingShopping] = useState(false);
@@ -121,6 +122,7 @@ export const MealPlannerPage: React.FC = () => {
   const handleOpenAddModal = (dateStr: string, mealType: MealType) => {
     setModalDate(dateStr);
     setModalMealType(mealType);
+    setModalRecipeId(null);
     setIsAddModalOpen(true);
   };
 
@@ -241,8 +243,11 @@ export const MealPlannerPage: React.FC = () => {
             </Link>
             <button
               onClick={() => {
-                setModalDate(formatDateISO(new Date()));
+                const todayStr = formatDateISO(new Date());
+                const inViewedWeek = todayStr >= startDateStr && todayStr <= endDateStr;
+                setModalDate(inViewedWeek ? todayStr : startDateStr);
                 setModalMealType('dinner');
+                setModalRecipeId(randomTipRecipe.id);
                 setIsAddModalOpen(true);
               }}
               className="px-3 py-1.5 rounded-xl bg-amber-500 text-white text-xs font-bold hover:bg-amber-600 transition shadow-sm"
@@ -481,6 +486,7 @@ export const MealPlannerPage: React.FC = () => {
         onClose={() => setIsAddModalOpen(false)}
         defaultDate={modalDate}
         defaultMealType={modalMealType}
+        defaultRecipeId={modalRecipeId}
         onAdd={handleAddMeal}
       />
 

@@ -2,7 +2,7 @@ import datetime
 import json
 from typing import List, Optional, Dict
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db
 from app.models.user import User
@@ -26,14 +26,14 @@ def _calculate_days_diff(target_date_str: Optional[str]) -> Optional[int]:
     if not target_date_str:
         return None
     try:
-        target_date = datetime.date.fromisoformat(target_date_str)
+        target_date = datetime.date.fromisoformat(target_date_str[:10])
         today = datetime.date.today()
         return (target_date - today).days
     except Exception:
         return None
 
 
-def _format_medicine_response(m: Medicine, db: Session) -> MedicineResponse:
+def _format_medicine_response(m: Medicine, db: Optional[Session] = None) -> MedicineResponse:
     today = datetime.date.today()
 
     # 1. Check expiration date
@@ -51,7 +51,7 @@ def _format_medicine_response(m: Medicine, db: Session) -> MedicineResponse:
     after_opening_expired = False
     if m.opened_date and m.validity_months_after_opening:
         try:
-            opened = datetime.date.fromisoformat(m.opened_date)
+            opened = datetime.date.fromisoformat(m.opened_date[:10])
             # Approx 30 days per month
             max_days = m.validity_months_after_opening * 30
             if (today - opened).days > max_days:
@@ -66,9 +66,11 @@ def _format_medicine_response(m: Medicine, db: Session) -> MedicineResponse:
         if m.current_quantity <= m.min_quantity_warning:
             is_low_stock = True
 
-    # 4. Assigned user name
+    # 4. Assigned user name (uses eager-loaded relationship when available)
     assigned_user_name = None
-    if m.assigned_user_id:
+    if m.assigned_user:
+        assigned_user_name = m.assigned_user.display_name or m.assigned_user.username
+    elif m.assigned_user_id and db is not None:
         u = db.query(User).filter(User.id == m.assigned_user_id).first()
         if u:
             assigned_user_name = u.display_name or u.username
@@ -486,8 +488,8 @@ def get_medicines(
             (Medicine.notes.ilike(s))
         )
 
-    medicines = query.order_by(Medicine.name.asc()).all()
-    results = [_format_medicine_response(m, db) for m in medicines]
+    medicines = query.options(selectinload(Medicine.assigned_user)).order_by(Medicine.name.asc()).all()
+    results = [_format_medicine_response(m) for m in medicines]
 
     # Post-filtering for computed fields if requested
     if is_low_stock is not None:
@@ -559,19 +561,25 @@ def get_medication_schedules(
     if is_active is not None:
         query = query.filter(MedicationSchedule.is_active == is_active)
 
-    schedules = query.order_by(MedicationSchedule.id.asc()).all()
+    schedules = query.options(
+        selectinload(MedicationSchedule.medicine),
+        selectinload(MedicationSchedule.user),
+    ).order_by(MedicationSchedule.id.asc()).all()
     today_date = datetime.date.today()
     start_of_today = datetime.datetime(today_date.year, today_date.month, today_date.day)
 
+    taken_schedule_ids = set()
+    if schedules:
+        taken_schedule_ids = {
+            sid for (sid,) in db.query(MedicationLog.schedule_id).filter(
+                MedicationLog.schedule_id.in_([s.id for s in schedules]),
+                MedicationLog.taken_at >= start_of_today,
+                MedicationLog.status == "taken",
+            ).distinct().all()
+        }
+
     responses = []
     for s in schedules:
-        # Check if taken today
-        log = db.query(MedicationLog).filter(
-            MedicationLog.schedule_id == s.id,
-            MedicationLog.taken_at >= start_of_today,
-            MedicationLog.status == "taken"
-        ).first()
-
         med_name = s.medicine.name if s.medicine else "Neznámý lék"
         u_name = s.user.display_name if s.user else "Neznámý uživatel"
 
@@ -597,7 +605,7 @@ def get_medication_schedules(
             created_at=s.created_at,
             medicine_name=med_name,
             user_name=u_name,
-            is_taken_today=log is not None
+            is_taken_today=s.id in taken_schedule_ids
         ))
     return responses
 
@@ -736,7 +744,10 @@ def get_medication_logs(
     if user_id:
         query = query.filter(MedicationLog.user_id == user_id)
 
-    logs = query.order_by(MedicationLog.taken_at.desc()).limit(limit).all()
+    logs = query.options(
+        selectinload(MedicationLog.medicine),
+        selectinload(MedicationLog.user),
+    ).order_by(MedicationLog.taken_at.desc()).limit(limit).all()
     responses = []
     for l in logs:
         responses.append(MedicationLogResponse(

@@ -46,7 +46,8 @@ Oddělený backend (FastAPI) a frontend (Nginx reverse proxy) sestavený přímo
    ```bash
    cp .env.example .env
    ```
-   *(V souboru `.env` můžete nastavit svůj `GEMINI_API_KEY` a vlastní silný `SECRET_KEY`)*
+   *(V souboru `.env` nastavte `SECRET_KEY` - aplikace bez něj odmítne nastartovat - a volitelně `GEMINI_API_KEY`)*
+   > `SECRET_KEY` vygenerujete příkazem: `python -c "import secrets; print(secrets.token_urlsafe(48))"`
 
 3. Spusťte kontejnery:
    ```bash
@@ -115,7 +116,7 @@ Na zařízeních **Synology** stačí složku namapovat do sdílené složky a z
 
 | Proměnná | Popis | Výchozí hodnota |
 |---|---|---|
-| `SECRET_KEY` | Šifrovací klíč pro generování bezpečných JWT tokenů | *(náhodný řetězec)* |
+| `SECRET_KEY` | Klíč pro podepisování JWT tokenů. **Povinný**, min. 32 znaků. | *(žádná - start selže)* |
 | `GEMINI_API_KEY` | API klíč Google Gemini pro AI asistenta, OCR účtenek a analýzu | *(volitelné)* |
 | `DATABASE_URL` | Připojení k SQLite databázi | `sqlite:////app/data/hestia.db` |
 | `UPLOAD_DIR` | Složka pro nahrávané soubory | `/app/uploads` |
@@ -175,3 +176,8 @@ Nebo při použití publikovaných image z GitHub Container Registry:
 docker compose pull
 docker compose up -d
 ```
+
+**Migrace databáze probíhají automaticky při startu kontejneru** (Alembic).
+Databáze z dřívějších verzí nemá tabulku `alembic_version` – ta se při prvním startu
+automaticky doplní a data zůstanou zachována. Přesto doporučujeme před aktualizací
+zálohu podle sekce 3.

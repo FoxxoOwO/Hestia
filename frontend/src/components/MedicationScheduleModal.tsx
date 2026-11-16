@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Calendar, Clock, Check, AlertCircle } from 'lucide-react';
 import { MedicationSchedule, MedicationScheduleCreate, MedicationScheduleUpdate, Medicine, User } from '../types';
+import { getLocalDateISO } from '../utils/date';
 
 interface MedicationScheduleModalProps {
   isOpen: boolean;
@@ -25,7 +26,7 @@ export const MedicationScheduleModal: React.FC<MedicationScheduleModalProps> = (
   const [medicineId, setMedicineId] = useState<number>(defaultMedicineId || (medicines[0]?.id ?? 0));
   const [userId, setUserId] = useState<number>(users[0]?.id ?? 1);
   const [scheduleType, setScheduleType] = useState<'chronic' | 'acute_course' | 'as_needed'>('chronic');
-  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [startDate, setStartDate] = useState(() => getLocalDateISO());
   const [endDate, setEndDate] = useState('');
   const [timesPerDay, setTimesPerDay] = useState(1);
   const [timeSlots, setTimeSlots] = useState<string[]>(['morning']);
@@ -51,7 +52,7 @@ export const MedicationScheduleModal: React.FC<MedicationScheduleModalProps> = (
       setMedicineId(defaultMedicineId || (medicines[0]?.id ?? 0));
       setUserId(users[0]?.id ?? 1);
       setScheduleType('chronic');
-      setStartDate(new Date().toISOString().split('T')[0]);
+      setStartDate(getLocalDateISO());
       setEndDate('');
       setTimesPerDay(1);
       setTimeSlots(['morning']);

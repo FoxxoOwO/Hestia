@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User
 from app.utils.auth import get_current_active_admin, verify_password
+from app.utils.uploads import read_upload, JSON_EXT
 from app.services.clean_data import clean_all_sample_data
 from app.services.activity_service import log_activity
 from app.services.backup_service import (
@@ -125,8 +126,9 @@ async def import_database_data(
             detail="Režim importu musí být 'merge' nebo 'replace'."
         )
 
+    _, _, content = await read_upload(file, JSON_EXT)
+
     try:
-        content = await file.read()
         backup_json = json.loads(content.decode("utf-8"))
     except Exception as e:
         raise HTTPException(
