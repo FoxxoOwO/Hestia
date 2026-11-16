@@ -31,7 +31,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.PROJECT_NAME,
     description="Komplexní modulární self-hosted systém pro chytrou domácnost Hestia",
-    version="1.6.0",
+    version="1.6.1",
     lifespan=lifespan
 )
 
@@ -48,8 +48,8 @@ app.add_middleware(
 )
 
 # Static file serving for uploads
-if os.path.exists(settings.UPLOAD_DIR):
-    app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
+os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
 
 # Include API v1 routers
 api_prefix = settings.API_V1_STR
@@ -75,7 +75,7 @@ def health_check():
     return {
         "status": "healthy",
         "app": "Hestia Smart Home OS",
-        "version": "1.6.0",
+        "version": "1.6.1",
         "modules": ["recipes", "pantry", "shopping", "auth", "gemini-ai", "plants", "pets", "chores", "finance", "documents", "vehicles", "medicines", "activities", "assets", "meal-plans"]
     }
 

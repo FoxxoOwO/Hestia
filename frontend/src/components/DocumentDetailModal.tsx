@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
   X, FileText, Calendar, Building2, MapPin, Tag,
@@ -8,6 +8,7 @@ import {
 import { DocumentItem } from '../types';
 import { DOCUMENT_CATEGORIES } from './DocumentUploadModal';
 import { useTranslation } from '../i18n';
+import { api, resolveDocumentFileUrl } from '../services/api';
 
 interface DocumentDetailModalProps {
   isOpen: boolean;
@@ -27,6 +28,16 @@ export const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
   const [copiedOcr, setCopiedOcr] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const [previewBroken, setPreviewBroken] = useState(false);
+
+  useEffect(() => {
+    setFileError(null);
+    setPreviewBroken(false);
+    setConfirmDelete(false);
+    setShowOcr(false);
+  }, [doc?.id, isOpen]);
 
   if (!isOpen || !doc) return null;
 
@@ -75,7 +86,36 @@ export const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
     }
   };
 
-  const fileUrl = doc.file_path.startsWith('/') ? doc.file_path : `/${doc.file_path}`;
+  const fileUrl = resolveDocumentFileUrl(doc.file_path);
+  const isImageFile = Boolean(
+    fileUrl &&
+      ((doc.file_type && doc.file_type.startsWith('image/')) ||
+        /\.(png|jpe?g|webp)$/i.test(fileUrl))
+  );
+
+  const handleDownload = async () => {
+    try {
+      setIsDownloading(true);
+      setFileError(null);
+      const { blob, filename } = await api.fetchDocumentFileBlob(
+        doc.id,
+        true,
+        doc.file_name || 'dokument'
+      );
+      const blobUrl = URL.createObjectURL(blob);
+      const link = window.document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename;
+      window.document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+    } catch (err: any) {
+      setFileError(err?.message || 'Soubor se nepodařilo stáhnout.');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-900/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
@@ -258,39 +298,63 @@ export const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
           )}
 
           {/* Attached File Preview / Download */}
-          <div className="p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3 overflow-hidden">
-              <div className="p-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
-                <FileText className="w-6 h-6" />
-              </div>
-              <div className="truncate">
-                <div className="text-sm font-medium text-zinc-900 dark:text-white truncate">
-                  {doc.file_name}
+          <div className="p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 space-y-3">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-3 overflow-hidden min-w-0">
+                <div className="p-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 shrink-0">
+                  <FileText className="w-6 h-6" />
                 </div>
-                <div className="text-xs text-zinc-400">
-                  {formatBytes(doc.file_size)} • {doc.file_type || 'soubor'}
+                <div className="truncate">
+                  <div className="text-sm font-medium text-zinc-900 dark:text-white truncate">
+                    {doc.file_name || 'Přiložený dokument'}
+                  </div>
+                  <div className="text-xs text-zinc-400">
+                    {fileUrl
+                      ? `${formatBytes(doc.file_size)}${doc.file_size ? ' • ' : ''}${doc.file_type || 'soubor'}`
+                      : 'Pouze záznam bez přílohy'}
+                  </div>
                 </div>
               </div>
+              {fileUrl && (
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <a
+                    href={fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    {t('documents.view_file')}
+                  </a>
+                  <button
+                    type="button"
+                    onClick={handleDownload}
+                    disabled={isDownloading}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition disabled:opacity-50"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    {isDownloading ? 'Stahuji...' : t('documents.download_file')}
+                  </button>
+                </div>
+              )}
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <a
-                href={fileUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition"
-              >
-                <ExternalLink className="w-3.5 h-3.5" />
-                {t('documents.view_file')}
-              </a>
-              <a
-                href={fileUrl}
-                download={doc.file_name}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition"
-              >
-                <Download className="w-3.5 h-3.5" />
-                {t('documents.download_file')}
-              </a>
-            </div>
+
+            {fileError && (
+              <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/50 text-xs text-rose-700 dark:text-rose-300">
+                {fileError}
+              </div>
+            )}
+
+            {isImageFile && fileUrl && !previewBroken && (
+              <div className="rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/40 max-h-64 flex items-center justify-center">
+                <img
+                  src={fileUrl}
+                  alt={doc.title}
+                  onError={() => setPreviewBroken(true)}
+                  className="max-h-64 w-auto object-contain"
+                />
+              </div>
+            )}
           </div>
 
           {/* OCR Full-text Accordion */}

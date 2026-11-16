@@ -1,20 +1,20 @@
-# 🔥 Hestia – Komplexní modulární systém pro chytrou domácnost
+# Hestia – Komplexní modulární systém pro chytrou domácnost
 
 **Hestia** je moderní, modulární, self-hosted systém navržený pro efektivní a pohodlnou správu rodinné domácnosti. Běží na vlastním serveru v Dockeru, chrání soukromí vašich dat a umožňuje přístup přes web i mobilní rozhraní (PWA).
 
 ---
 
-## 🌟 Klíčové vlastnosti
+## Klíčové vlastnosti
 
 - **Víceuživatelský systém (Multi-user)**: Každý člen domácnosti má svůj profil, roli (správce/člen), barvu avatara a osobní nastavení.
-- **Dvojjazyčné rozhraní (i18n)**: Plná podpora **češtiny 🇨🇿** i **angličtiny 🇬🇧**.
+- **Dvojjazyčné rozhraní (i18n)**: Plná podpora **češtiny** i **angličtiny**.
 - **Světlý i tmavý režim (Dark / Light mode)**: Elegantní vzhled s detekcí preferencí systému i ručním přepínáním.
 - **Responsivní PWA pro mobil i počítač**: Optimalizováno pro dotykové telefony (spodní navigační lišta) i velké monitory (postranní panel). Lze nainstalovat na plochu mobilu.
 - **Self-hosted & Docker ready**: Jednoduché spuštění pomocí jednoho příkazu `docker compose up -d` s perzistentními volumes.
 
 ---
 
-## 🍳 Modul 1: Receptář, Spíž & Nákupní seznam
+## Modul 1: Receptář, Spíž & Nákupní seznam
 
 ### 1. Kuchařka a recepty
 - Evidence receptů: název, popis, fotografie, čas přípravy a vaření, náročnost (*Snadné*, *Střední*, *Náročné*), cenová kategorie (*$*, *$$*, *$$$*), tagy a potřebné nádobí/nástroje.
@@ -35,9 +35,9 @@
 ### 3. Sledování jídla doma (Spíž & Lednice)
 - Evidence trvanlivosti a zásob: Lednice, Mrazák, Spíž, Ovoce a zelenina, Koření, Pečivo.
 - Barevné indikátory expirace:
-  - 🟢 **Čerstvé**
-  - 🟡 **Brzy spotřebovat** (expirace do 3 dnů)
-  - 🔴 **Po spotřebě**
+  - **Čerstvé**
+  - **Brzy spotřebovat** (expirace do 3 dnů)
+  - **Po spotřebě**
 - **Funkce "Co mohu uvařit ze zásob"**:
   - Automaticky vyhodnocuje recepty proti stavu zásob.
   - Zobrazuje jídla, která můžete uvařit **ihned (100 % surovin máme)**, i ta, kde chybí pouze 1–2 ingredience.
@@ -50,7 +50,7 @@
 
 ---
 
-## 🪴 Modul 2: Sledování kytek (Plant Care Tracker)
+## Modul 2: Sledování kytek (Plant Care Tracker)
 
 Kompletní péče o pokojové i venkovní rostliny v domácnosti podpořená umělou inteligencí.
 
@@ -70,7 +70,7 @@ Kompletní péče o pokojové i venkovní rostliny v domácnosti podpořená um�
 
 ---
 
-## 🐾 Modul 3: Domácí mazlíčci (Pet Care Tracker)
+## Modul 3: Domácí mazlíčci (Pet Care Tracker)
 
 Zdraví, péče a každodenní rutina pro všechna zvířata v rodině.
 
@@ -91,16 +91,16 @@ Zdraví, péče a každodenní rutina pro všechna zvířata v rodině.
 - **Veterinární karta**: Přímé volání na lékaře i nonstop pohotovostní kliniku (24/7 emergency).
 
 ### 4. Gemini AI Bezpečnost potravin & Veterinární rádce
-- 🟢 **AI Food Safety Checker**: Semafor bezpečnosti potravin (*Může to pes/kočka jíst?*) s vysvětlením rizik a alternativami.
-- 🩺 **AI Veterinární rádce**: Konzultace příznaků, možnost nahrát foto vyrážky či rány, triage závažnosti a první pomoc.
+- **AI Food Safety Checker**: Semafor bezpečnosti potravin (*Může to pes/kočka jíst?*) s vysvětlením rizik a alternativami.
+- **AI Veterinární rádce**: Konzultace příznaků, možnost nahrát foto vyrážky či rány, triage závažnosti a první pomoc.
 
 ### 5. Pet Sitter Handover & SOS Plakát
 - **Pet Sitter Guide**: Přehledný tiskový předávací protokol pro hlídače mazlíčka během dovolené.
-- 🚨 **SOS Plakát ztraceného zvířete**: Formátovaný leták s fotografií, číslem čipu a kontaktem na majitele připravený k tisku při zaběhnutí.
+- **SOS Plakát ztraceného zvířete**: Formátovaný leták s fotografií, číslem čipu a kontaktem na majitele připravený k tisku při zaběhnutí.
 
 ---
 
-## 🧹 Modul 4: Domácí práce a úklid (Household Chores)
+## Modul 4: Domácí práce a úklid (Household Chores)
 
 Chytré plánování, férová rotace prací v rodině, servisní knížka spotřebičů a gamifikace.
 
@@ -120,16 +120,16 @@ Chytré plánování, férová rotace prací v rodině, servisní knížka spot�
 - **Obchod s rodinnými odměnami**: Možnost směnit nasbírané body za reálné výhody (např. *výběr pátečního filmu, večeře na přání z Receptáře, zmrzlinový pohár, žolík bez úklidu*).
 
 ### 4. Akční režimy úklidu
-- 🌪️ **Panic Mode („Návštěva zvoní za 15 minut!“)**: Bleskový úklidový sprint s 15minutovým odpočtem a sadou top prioritních zón.
-- 🎡 **Kolo štěstí (Fair Wheel of Chores)**: Interaktivní animované kolo osudu pro spravedlivé vylosování neoblíbeného úkolu.
-- 🧽 **Generální úklid**: Zónové checklisty s progress bary dokončení jednotlivých místností.
-- 🛒 **1-klik do nákupního seznamu**: Přidání tablet do myčky, pytlů do koše nebo čističů přímo do rodinného nákupu.
+- **Panic Mode („Návštěva zvoní za 15 minut!“)**: Bleskový úklidový sprint s 15minutovým odpočtem a sadou top prioritních zón.
+- **Kolo štěstí (Fair Wheel of Chores)**: Interaktivní animované kolo osudu pro spravedlivé vylosování neoblíbeného úkolu.
+- **Generální úklid**: Zónové checklisty s progress bary dokončení jednotlivých místností.
+- **1-klik do nákupního seznamu**: Přidání tablet do myčky, pytlů do koše nebo čističů přímo do rodinného nákupu.
 
 ---
 
 ---
 
-## 💰 Modul 5: Rodinné finance a rozpočet (Family Finance & Budget)
+## Modul 5: Rodinné finance a rozpočet (Family Finance & Budget)
 
 Kompletní správa rodinných peněz bezpečně pod vaší střechou.
 - **Měsíční rozpočet a obálková metoda**: 10 rodinných kategorií s barevnými semafory čerpání (zelená / žlutá / červená) a rychlou úpravou limitů.
@@ -142,7 +142,7 @@ Kompletní správa rodinných peněz bezpečně pod vaší střechou.
 
 ---
 
-## 📑 Modul 6: Digitální archiv a šanony (Documents, Warranty & Vault)
+## Modul 6: Digitální archiv a šanony (Documents, Warranty & Vault)
 
 Digitalizace papírových složek s hlídačem záruk a ochranou citlivých smluv.
 - **9 virtuálních šanonů**: Záruky, smlouvy, technické revize, manuály, osobní doklady, zdraví, bydlení, vozidla a ostatní.
@@ -153,7 +153,7 @@ Digitalizace papírových složek s hlídačem záruk a ochranou citlivých smlu
 
 ---
 
-## 🚗 Modul 7: Vozový park a rodinná garáž (Fleet & Garage)
+## Modul 7: Vozový park a rodinná garáž (Fleet & Garage)
 
 Péče o rodinná auta a motocykly s hlídáním české legislativy.
 - **Karty vozidel & Tachometr**: Přehled aut s českou SPZ, fotkou a rychlou aktualizací stavu kilometrů.
@@ -165,7 +165,7 @@ Péče o rodinná auta a motocykly s hlídáním české legislativy.
 
 ---
 
-## 💊 Modul 8: Domácí lékárnička a první pomoc (Medicine Cabinet & First Aid)
+## Modul 8: Domácí lékárnička a první pomoc (Medicine Cabinet & First Aid)
 
 Bezpečné léky, hlídání expirací a krizový průvodce pro rodinu.
 - **Evidence zásob a účinných látek**: Prevence předávkování sledováním účinné látky (Paracetamol, Ibuprofen atd.), evidence umístění (koupelna, lednice, chata, cestovní).
@@ -177,16 +177,16 @@ Bezpečné léky, hlídání expirací a krizový průvodce pro rodinu.
 
 ---
 
-## 🗺️ Roadmapa budoucích modulů
+## Roadmapa budoucích modulů
 
 Hestia je připravena pro postupné zapínání dalších modulů:
-- ⚡ **Měřiče energií**: Odečty elektřiny, plynu a vody se spotřebními grafy a výpočtem nákladů.
-- 📦 **QR Sklad a krabice**: Evidence úložných boxů ve sklepě a na půdě s tištěnými QR štítky.
-- 🏠 **Smart Home integrace**: Obousměrná integrace s Home Assistant a MQTT.
+- **Měřiče energií**: Odečty elektřiny, plynu a vody se spotřebními grafy a výpočtem nákladů.
+- **QR Sklad a krabice**: Evidence úložných boxů ve sklepě a na půdě s tištěnými QR štítky.
+- **Smart Home integrace**: Obousměrná integrace s Home Assistant a MQTT.
 
 ---
 
-## 🚀 Jak aplikaci spustit
+## Jak aplikaci spustit
 
 Podrobný průvodce se všemi možnostmi nasazení, Synology / Portainer šablonami a zálohováním naleznete v samostatném dokumentu **[DOCKER.md](DOCKER.md)**.
 
@@ -266,19 +266,19 @@ Frontend poběží na `http://localhost:3000` a automaticky komunikuje s backend
 
 ---
 
-## 🔑 Výchozí přednastavené účty
+## Výchozí přednastavené účty
 
 Při prvním spuštění se databáze automaticky naplní ukázkovými recepty, zásobami a následujícími účty:
 
 | Uživatel | Heslo | Role | Jazyk |
 | :--- | :--- | :--- | :--- |
-| **admin** | `hestia123` | Správce (Admin) | Čeština 🇨🇿 |
-| **anna** | `hestia123` | Člen rodiny | Čeština 🇨🇿 |
-| **petr** | `hestia123` | Člen rodiny | English 🇬🇧 |
+| **admin** | `hestia123` | Správce (Admin) | Čeština |
+| **anna** | `hestia123` | Člen rodiny | Čeština |
+| **petr** | `hestia123` | Člen rodiny | English |
 
 ---
 
-## 🛡️ Technologie
+## Technologie
 
 - **Backend**: Python 3.13, FastAPI, SQLAlchemy + Alembic, SQLite (WAL mode), Pydantic v2, PyJWT, bcrypt, google-genai SDK
 - **Frontend**: React 19, TypeScript, Vite, Tailwind CSS, Lucide Icons, Custom i18n

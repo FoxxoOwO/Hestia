@@ -28,6 +28,16 @@ import {
 
 const API_BASE = '/api/v1';
 
+export const resolveDocumentFileUrl = (filePath?: string | null): string | null => {
+  if (!filePath || filePath === 'manual_entry') return null;
+  const trimmed = filePath.trim();
+  if (!trimmed) return null;
+  if (/^(https?:|data:|blob:)/i.test(trimmed)) return trimmed;
+  const clean = trimmed.replace(/^\/+/, '');
+  if (clean.startsWith('uploads/')) return `/${clean}`;
+  return `/uploads/${clean}`;
+};
+
 const getHeaders = () => {
   const token = localStorage.getItem('hestia_token');
   const headers: Record<string, string> = {
@@ -1140,6 +1150,28 @@ export const api = {
       headers: getHeaders(),
     });
     if (!res.ok) throw new Error('Failed to delete document');
+  },
+
+  async fetchDocumentFileBlob(
+    id: number,
+    download: boolean = false,
+    fallbackName: string = 'dokument'
+  ): Promise<{ blob: Blob; filename: string }> {
+    const res = await fetch(`${API_BASE}/documents/${id}/file?download=${download ? 'true' : 'false'}`, {
+      headers: getAuthOnlyHeaders(),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Soubor dokumentu se nepodařilo načíst.');
+    }
+    const disposition = res.headers.get('Content-Disposition') || '';
+    const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+    const asciiMatch = disposition.match(/filename="?([^";]+)"?/i);
+    const filename = utf8Match
+      ? decodeURIComponent(utf8Match[1])
+      : asciiMatch?.[1] || fallbackName;
+    const blob = await res.blob();
+    return { blob, filename };
   },
 
   async verifyVaultPin(pin: string): Promise<{ status: string; message: string }> {

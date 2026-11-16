@@ -1,9 +1,11 @@
 import hmac
+import mimetypes
 import os
 import uuid
 import datetime
 from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, File, Form, status
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
 
@@ -151,6 +153,44 @@ def get_document_stats(
         "vault_count": vault_count,
         "categories": cat_counts
     }
+
+
+@router.get("/{id}/file")
+def get_document_file(
+    id: int,
+    download: bool = Query(False),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    doc = db.query(Document).filter(Document.id == id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Dokument nebyl nalezen")
+
+    if not doc.file_path or doc.file_path == "manual_entry":
+        raise HTTPException(status_code=404, detail="Dokument nemá přiložený soubor.")
+
+    full_path = safe_upload_subpath(settings.UPLOAD_DIR, doc.file_path)
+    if not full_path or not os.path.isfile(full_path):
+        raise HTTPException(status_code=404, detail="Soubor dokumentu nebyl na serveru nalezen.")
+
+    disk_ext = os.path.splitext(full_path)[1].lower()
+    guessed_mime, _ = mimetypes.guess_type(full_path)
+    if disk_ext == ".txt":
+        media_type = "text/plain; charset=utf-8"
+    else:
+        media_type = guessed_mime or doc.file_type or "application/octet-stream"
+
+    download_name = doc.file_name or os.path.basename(full_path)
+    if disk_ext == ".txt" and download_name.lower().endswith(".pdf"):
+        download_name = f"{os.path.splitext(download_name)[0]}.txt"
+
+    return FileResponse(
+        path=full_path,
+        media_type=media_type,
+        filename=download_name,
+        content_disposition_type="attachment" if download else "inline",
+        headers={"Access-Control-Expose-Headers": "Content-Disposition"},
+    )
 
 
 @router.get("/{id}", response_model=DocumentResponse)

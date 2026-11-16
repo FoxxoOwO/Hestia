@@ -215,3 +215,70 @@ def test_deleting_recipe_unlinks_meal_plans(client, auth, db):
     updated_mp = db.query(MealPlanItem).filter(MealPlanItem.id == mp_id).first()
     assert updated_mp is not None
     assert updated_mp.recipe_id is None
+
+
+def test_document_view_and_download_endpoints(client, auth):
+    """Nahraný dokument musí jít zobrazit přes /uploads i stáhnout přes /documents/{id}/file."""
+    pdf_bytes = b"%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n"
+    up = client.post(
+        f"{API}/documents/upload",
+        headers=auth,
+        files={"file": ("faktura.pdf", pdf_bytes, "application/pdf")},
+        data={"auto_analyze": "false"},
+    )
+    assert up.status_code == 200, up.text
+    file_path = up.json()["file_path"]
+    assert file_path.startswith("documents/")
+
+    created = client.post(
+        f"{API}/documents",
+        headers=auth,
+        json={
+            "title": "Testovací faktura",
+            "category": "warranty",
+            "file_path": file_path,
+            "file_name": "faktura.pdf",
+            "file_size": len(pdf_bytes),
+            "file_type": "application/pdf",
+        },
+    )
+    assert created.status_code == 201, created.text
+    doc_id = created.json()["id"]
+
+    # 1. Přímé zobrazení přes /uploads/<file_path>
+    static_res = client.get(f"/uploads/{file_path}")
+    assert static_res.status_code == 200
+    assert static_res.content == pdf_bytes
+
+    # 2. Inline zobrazení přes API
+    inline_res = client.get(f"{API}/documents/{doc_id}/file", headers=auth)
+    assert inline_res.status_code == 200
+    assert inline_res.content == pdf_bytes
+    assert inline_res.headers.get("content-disposition", "").startswith("inline")
+
+    # 3. Stažení přes API s Content-Disposition: attachment
+    dl_res = client.get(f"{API}/documents/{doc_id}/file?download=true", headers=auth)
+    assert dl_res.status_code == 200
+    assert dl_res.content == pdf_bytes
+    assert "attachment" in dl_res.headers.get("content-disposition", "")
+    assert "faktura.pdf" in dl_res.headers.get("content-disposition", "")
+
+    # 4. Záznam bez přílohy (manual_entry) vrací srozumitelné 404 místo tiché chyby
+    manual = client.post(
+        f"{API}/documents",
+        headers=auth,
+        json={
+            "title": "Ruční záznam bez souboru",
+            "category": "other",
+            "file_path": "",
+            "file_name": "manual",
+        },
+    )
+    assert manual.status_code == 201, manual.text
+    manual_id = manual.json()["id"]
+    missing_res = client.get(f"{API}/documents/{manual_id}/file", headers=auth)
+    assert missing_res.status_code == 404
+
+    # Úklid
+    client.delete(f"{API}/documents/{doc_id}", headers=auth)
+    client.delete(f"{API}/documents/{manual_id}", headers=auth)
