@@ -124,7 +124,7 @@ export const AssetsPage: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
             <Wrench className="w-7 h-7 text-orange-500" />
-            <span>Majetek a spotřebiče</span>
+            <span>{t('assets.title')}</span>
           </h1>
           <p className="text-xs md:text-sm text-zinc-500 dark:text-zinc-400 mt-1">
             Evidence domácího vybavení, odpočet záruk, PDF manuály a servisní záznamy
@@ -139,7 +139,7 @@ export const AssetsPage: React.FC = () => {
           className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 shadow-md shadow-orange-500/20 active:scale-95 transition self-start md:self-auto"
         >
           <Plus className="w-4 h-4" />
-          <span>Přidat spotřebič</span>
+          <span>{t('assets.add_asset')}</span>
         </button>
       </div>
 
@@ -171,7 +171,7 @@ export const AssetsPage: React.FC = () => {
               <span className="text-xl sm:text-2xl font-extrabold text-zinc-900 dark:text-zinc-100 mt-0.5 block">
                 {stats.total_value.toLocaleString('cs-CZ')} Kč
               </span>
-              <span className="text-[10px] text-zinc-500">pořizovací cena</span>
+              <span className="text-[10px] text-zinc-500">{t('assets.purchase_price')}</span>
             </div>
             <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
               <Store className="w-5 h-5" />
@@ -187,7 +187,7 @@ export const AssetsPage: React.FC = () => {
               <span className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5 block">
                 {stats.active_warranties}
               </span>
-              <span className="text-[10px] text-zinc-500">platných záruk</span>
+              <span className="text-[10px] text-zinc-500">{t('assets.active_warranties')}</span>
             </div>
             <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
               <ShieldCheck className="w-5 h-5" />
@@ -234,7 +234,7 @@ export const AssetsPage: React.FC = () => {
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Hledat název, značku, model, S/N..."
+              placeholder={t('assets.search_placeholder')}
               className="w-full pl-10 pr-4 py-2 rounded-2xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/80 text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
             {searchQuery && (
@@ -264,10 +264,10 @@ export const AssetsPage: React.FC = () => {
               onChange={e => setSelectedWarranty(e.target.value)}
               className="text-xs px-3 py-2 rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
             >
-              <option value="all">Všechny záruky</option>
-              <option value="valid">V záruce</option>
-              <option value="expiring_soon">Končí brzy (do 30 dní)</option>
-              <option value="expired">Po záruce</option>
+              <option value="all">{t('assets.warranty_all')}</option>
+              <option value="valid">{t('assets.warranty_valid')}</option>
+              <option value="expiring_soon">{t('assets.warranty_expiring')}</option>
+              <option value="expired">{t('assets.warranty_expired')}</option>
             </select>
           </div>
         </div>
@@ -317,7 +317,7 @@ export const AssetsPage: React.FC = () => {
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-orange-500 text-white text-xs font-bold shadow-md shadow-orange-500/20 hover:bg-orange-600 transition"
             >
               <Plus className="w-4 h-4" />
-              <span>Přidat první spotřebič</span>
+              <span>{t('assets.add_first')}</span>
             </button>
           )}
         </div>
@@ -389,13 +389,13 @@ export const AssetsPage: React.FC = () => {
                   {asset.invoice_url && (
                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-300 flex items-center gap-0.5">
                       <FileText className="w-2.5 h-2.5" />
-                      <span>Účtenka</span>
+                      <span>{t('assets.receipt')}</span>
                     </span>
                   )}
                   {asset.manual_url && (
                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-300 flex items-center gap-0.5">
                       <FileText className="w-2.5 h-2.5" />
-                      <span>Návod</span>
+                      <span>{t('assets.manual')}</span>
                     </span>
                   )}
                 </div>

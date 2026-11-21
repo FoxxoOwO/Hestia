@@ -46,8 +46,8 @@ android {
         applicationId = "com.example.hestia"
         minSdk = 24
         targetSdk = 36
-        versionCode = 4
-        versionName = "1.6.1"
+        versionCode = 5
+        versionName = "1.7.0"
     }
 
     signingConfigs {
@@ -78,7 +78,7 @@ android {
     buildFeatures {
       compose = true
       aidl = false
-      buildConfig = false
+      buildConfig = true
       shaders = false
     }
 

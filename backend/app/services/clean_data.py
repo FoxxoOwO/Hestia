@@ -5,6 +5,7 @@ leaving a clean production environment with only the default Administrator accou
 """
 
 import os
+import secrets
 import shutil
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -50,9 +51,9 @@ def clean_all_sample_data(db: Session, preserve_user_id: int | None = None, uplo
     # 4. Documents, Assets & Vault
     deleted_counts["documents"] = db.query(Document).delete()
     deleted_counts["assets"] = db.query(Asset).delete()
-    # Reset vault setting to clean default
+    # Trezor zůstává po resetu zamčený, dokud správce nenastaví nový PIN.
     db.query(VaultSetting).delete()
-    db.add(VaultSetting(pin_hash=get_password_hash("1234"), is_active=True))
+    db.add(VaultSetting(pin_hash="", is_active=False))
 
     # 5. Finance
     deleted_counts["finance_transactions"] = db.query(FinanceTransaction).delete()
@@ -106,12 +107,15 @@ def clean_all_sample_data(db: Session, preserve_user_id: int | None = None, uplo
             username="admin",
             display_name="Správce Domácnosti",
             email="admin@hestia.home",
-            hashed_password=get_password_hash("hestia123"),
+            hashed_password=get_password_hash(
+                settings.INITIAL_ADMIN_PASSWORD or secrets.token_urlsafe(18)
+            ),
             role="admin",
             avatar_color="#f97316",
             preferred_language="cs",
             preferred_theme="system",
-            is_active=True
+            is_active=True,
+            must_change_password=True,
         )
         db.add(target_admin)
     else:

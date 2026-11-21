@@ -11,6 +11,11 @@ from app.database import engine
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Staré databáze vzniklé přes Base.metadata.create_all odpovídají počáteční
+# migraci. Orazítkujeme je na ni (ne na „head“), aby se následné migrace
+# (např. přidání sloupce users.must_change_password) skutečně aplikovaly.
+LEGACY_BASELINE_REVISION = "475f56d6d79d"
+
 
 def _alembic_config() -> Config:
     config = Config(str(BASE_DIR / "alembic.ini"))
@@ -31,7 +36,7 @@ def run_migrations() -> Optional[str]:
     tables = set(inspect(engine).get_table_names())
     stamped = False
     if tables and "alembic_version" not in tables:
-        command.stamp(config, "head")
+        command.stamp(config, LEGACY_BASELINE_REVISION)
         stamped = True
     command.upgrade(config, "head")
     return "stamped-legacy-db" if stamped else "upgraded"

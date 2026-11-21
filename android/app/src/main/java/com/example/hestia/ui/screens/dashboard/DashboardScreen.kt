@@ -1,5 +1,6 @@
 package com.example.hestia.ui.screens.dashboard
 
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -40,62 +41,12 @@ fun DashboardScreen(
     onNavigate: (Screen) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val scope = rememberCoroutineScope()
-    var loading by remember { mutableStateOf(true) }
-    var error by remember { mutableStateOf<String?>(null) }
+    val viewModel: DashboardViewModel = viewModel(
+        factory = DashboardViewModelFactory(repository)
+    )
+    val uiState by viewModel.uiState.collectAsState()
 
-    var pendingShopping by remember { mutableStateOf(0) }
-    var choresDue by remember { mutableStateOf(0) }
-    var choresOverdue by remember { mutableStateOf(0) }
-    var myChores by remember { mutableStateOf<List<Chore>>(emptyList()) }
-    var panicTasks by remember { mutableStateOf<List<Chore>>(emptyList()) }
-    var leaderboard by remember { mutableStateOf<List<LeaderboardMember>>(emptyList()) }
-    var thirstyPlants by remember { mutableStateOf(0) }
-    var petTasks by remember { mutableStateOf(0) }
-    var pets by remember { mutableStateOf<List<Pet>>(emptyList()) }
-    var medicineStats by remember { mutableStateOf<MedicineStats?>(null) }
-    var finance by remember { mutableStateOf<FinanceSummary?>(null) }
-    var fleet by remember { mutableStateOf<VehicleFleetStats?>(null) }
-    var expiringDocs by remember { mutableStateOf(0) }
-    var activities by remember { mutableStateOf<List<ActivityLog>>(emptyList()) }
-    var aiStatus by remember { mutableStateOf<AiStatus?>(null) }
-
-    suspend fun load() {
-        loading = true
-        coroutineScope {
-            val jobs = listOf(
-                async { repository.getShoppingItems().onSuccess { list -> pendingShopping = list.count { !it.is_checked } } },
-                async {
-                    repository.getChores().onSuccess { list ->
-                        choresDue = list.count { it.days_until_due != null && it.days_until_due!! <= 0 && it.days_until_due!! > -1 }
-                        choresOverdue = list.count { it.is_overdue }
-                        myChores = list.filter { it.current_assignee_id == currentUser?.id && (it.is_overdue || (it.days_until_due ?: 99) <= 1) }
-                            .sortedBy { it.days_until_due ?: 99 }
-                    }
-                },
-                async { repository.getPanicModeTasks().onSuccess { panicTasks = it } },
-                async { repository.getLeaderboard().onSuccess { leaderboard = it } },
-                async { repository.getPlants(needsWatering = true).onSuccess { thirstyPlants = it.size } },
-                async {
-                    repository.getPets().onSuccess { list ->
-                        pets = list.take(4)
-                        petTasks = list.sumOf { p -> p.tasks.count { !it.is_completed } }
-                    }
-                },
-                async { repository.getMedicineStats().onSuccess { medicineStats = it } },
-                async { repository.getFinanceSummary().onSuccess { finance = it } },
-                async { repository.getVehicleStats().onSuccess { fleet = it } },
-                async { repository.getDocuments(status = "expiring_soon").onSuccess { expiringDocs = it.size } },
-                async { repository.getActivities(limit = 6).onSuccess { activities = it.items } },
-                async { repository.getAiStatus().onSuccess { aiStatus = it } }
-            )
-            val results = jobs.awaitAll()
-            error = results.firstNotNullOfOrNull { it.exceptionOrNull()?.friendly() }
-        }
-        loading = false
-    }
-
-    LaunchedEffect(currentUser?.id) { if (currentUser != null) load() }
+    LaunchedEffect(currentUser?.id) { if (currentUser != null) viewModel.load(currentUser) }
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -130,41 +81,41 @@ fun DashboardScreen(
             Spacer(Modifier.height(8.dp))
         }
 
-        if (error != null) {
-            item { ErrorBox(error, onRetry = { scope.launch { load() } }) }
+        if (uiState.error != null) {
+            item { ErrorBox(uiState.error, onRetry = { viewModel.load(currentUser) }) }
         }
 
-        if (loading) {
+        if (uiState.loading) {
             item { LoadingBox() }
         } else {
             item {
                 SectionTitle("Rychlý přehled")
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     StatCard(
-                        "Nákup", pendingShopping.toString(), Icons.Default.ShoppingCart, HestiaOrange,
+                        "Nákup", uiState.pendingShopping.toString(), Icons.Default.ShoppingCart, HestiaOrange,
                         Modifier.weight(1f), "položek") { onNavigate(Screen.Shopping) }
                     StatCard(
-                        "Úkoly", choresDue.toString(), Icons.Default.CleaningServices, StatusBlue,
-                        Modifier.weight(1f), if (choresOverdue > 0) "$choresOverdue po termínu" else "do termínu") { onNavigate(Screen.Chores) }
+                        "Úkoly", uiState.choresDue.toString(), Icons.Default.CleaningServices, StatusBlue,
+                        Modifier.weight(1f), if (uiState.choresOverdue > 0) "$uiState.choresOverdue po termínu" else "do termínu") { onNavigate(Screen.Chores) }
                     StatCard(
-                        "Kytky", thirstyPlants.toString(), Icons.Default.LocalFlorist, StatusGreen,
+                        "Kytky", uiState.thirstyPlants.toString(), Icons.Default.LocalFlorist, StatusGreen,
                         Modifier.weight(1f), "k zálivce") { onNavigate(Screen.Plants) }
                 }
                 Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     StatCard(
-                        "Mazlíčci", petTasks.toString(), Icons.Default.Pets, StatusPurple,
+                        "Mazlíčci", uiState.petTasks.toString(), Icons.Default.Pets, StatusPurple,
                         Modifier.weight(1f), "úkolů") { onNavigate(Screen.Pets) }
                     StatCard(
-                        "Léky", (medicineStats?.expiring_soon_count ?: 0).toString(), Icons.Default.Medication, StatusYellow,
+                        "Léky", (uiState.medicineStats?.expiring_soon_count ?: 0).toString(), Icons.Default.Medication, StatusYellow,
                         Modifier.weight(1f), "brzy expiruje") { onNavigate(Screen.Medicines) }
                     StatCard(
-                        "Vozidla", (fleet?.warning_deadlines_count ?: 0).toString(), Icons.Default.DirectionsCar, StatusRed,
+                        "Vozidla", (uiState.fleet?.warning_deadlines_count ?: 0).toString(), Icons.Default.DirectionsCar, StatusRed,
                         Modifier.weight(1f), "lhůt") { onNavigate(Screen.Vehicles) }
                 }
             }
 
-            finance?.let { f ->
+            uiState.finance?.let { f ->
                 item {
                     Spacer(Modifier.height(10.dp))
                     SectionCard(title = "Finance – ${Fmt.monthLabel(f.month)}") {
@@ -186,17 +137,17 @@ fun DashboardScreen(
                             }
                         }
                         Spacer(Modifier.height(6.dp))
-                        TextButton(onClick = { onNavigate(Screen.Finance) }) { Text("Otevřít finance", fontSize = 12.sp) }
+                        TextButton(onClick = { onNavigate(Screen.Finance) }) { Text("Otevřít uiState.finance", fontSize = 12.sp) }
                     }
                 }
             }
 
-            if (myChores.isNotEmpty()) {
+            if (uiState.myChores.isNotEmpty()) {
                 item {
                     Spacer(Modifier.height(10.dp))
                     SectionTitle("Moje úkoly")
                 }
-                items(myChores, key = { "chore-${it.id}" }) { chore ->
+                items(uiState.myChores, key = { "chore-${it.id}" }) { chore ->
                     Card(shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
                         Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.CheckCircleOutline, null, tint = HestiaOrange, modifier = Modifier.size(18.dp))
@@ -216,7 +167,7 @@ fun DashboardScreen(
                 }
             }
 
-            if (panicTasks.isNotEmpty()) {
+            if (uiState.panicTasks.isNotEmpty()) {
                 item {
                     Spacer(Modifier.height(10.dp))
                     Card(
@@ -230,7 +181,7 @@ fun DashboardScreen(
                                 Spacer(Modifier.width(6.dp))
                                 Text("Panic mode – přijde návštěva", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = StatusRed)
                             }
-                            panicTasks.take(4).forEach {
+                            uiState.panicTasks.take(4).forEach {
                                 Text("• ${it.title} (${Labels.label(Labels.rooms, it.room)})", fontSize = 12.sp)
                             }
                         }
@@ -238,7 +189,7 @@ fun DashboardScreen(
                 }
             }
 
-            if (pets.isNotEmpty()) {
+            if (uiState.pets.isNotEmpty()) {
                 item {
                     Spacer(Modifier.height(10.dp))
                     SectionTitle("Mazlíčci")
@@ -248,7 +199,7 @@ fun DashboardScreen(
                         Modifier.fillMaxWidth().padding(vertical = 2.dp),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        pets.forEach { p ->
+                        uiState.pets.forEach { p ->
                             Card(
                                 shape = RoundedCornerShape(12.dp),
                                 modifier = Modifier.weight(1f)
@@ -257,7 +208,7 @@ fun DashboardScreen(
                                     Icon(Icons.Default.Pets, null, tint = StatusPurple, modifier = Modifier.size(20.dp))
                                     Text(p.name, fontSize = 11.sp, fontWeight = FontWeight.Medium)
                                     Text(
-                                        p.latest_weight_kg?.let { "${Fmt.number(it)} kg" } ?: (p.age_formatted ?: ""),
+                                        p.latest_weight_kg?.let { "${Fmt.number(it)} kg" } ?: p.age_formatted,
                                         fontSize = 9.sp,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -268,11 +219,11 @@ fun DashboardScreen(
                 }
             }
 
-            if (leaderboard.isNotEmpty()) {
+            if (uiState.leaderboard.isNotEmpty()) {
                 item {
                     Spacer(Modifier.height(10.dp))
                     SectionCard(title = "Žebříček týdne", actionText = "Vše", onAction = { onNavigate(Screen.Chores) }) {
-                        leaderboard.sortedByDescending { it.weekly_points }.take(4).forEachIndexed { i, m ->
+                        uiState.leaderboard.sortedByDescending { it.weekly_points }.take(4).forEachIndexed { i, m ->
                             Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Text(
                                     "${i + 1}.",
@@ -289,7 +240,7 @@ fun DashboardScreen(
                 }
             }
 
-            if (expiringDocs > 0) {
+            if (uiState.expiringDocs > 0) {
                 item {
                     Spacer(Modifier.height(10.dp))
                     Card(
@@ -300,7 +251,7 @@ fun DashboardScreen(
                         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Description, null, tint = StatusYellow, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text("$expiringDocs dokumentů brzy expiruje", fontSize = 12.sp, modifier = Modifier.weight(1f))
+                            Text("$uiState.expiringDocs dokumentů brzy expiruje", fontSize = 12.sp, modifier = Modifier.weight(1f))
                             TextButton(onClick = { onNavigate(Screen.Documents) }) { Text("Zobrazit", fontSize = 11.sp) }
                         }
                     }
@@ -311,7 +262,7 @@ fun DashboardScreen(
                 Spacer(Modifier.height(10.dp))
                 SectionTitle("Poslední aktivita")
             }
-            if (activities.isEmpty()) {
+            if (uiState.activities.isEmpty()) {
                 item {
                     Text(
                         "Zatím žádná aktivita.",
@@ -321,7 +272,7 @@ fun DashboardScreen(
                     )
                 }
             }
-            items(activities, key = { "act-${it.id}" }) { log ->
+            items(uiState.activities, key = { "act-${it.id}" }) { log ->
                 Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Circle, null, tint = HestiaOrange, modifier = Modifier.size(6.dp))
                     Spacer(Modifier.width(8.dp))
@@ -337,7 +288,7 @@ fun DashboardScreen(
                 }
             }
 
-            aiStatus?.let { ai ->
+            uiState.aiStatus?.let { ai ->
                 item {
                     Spacer(Modifier.height(10.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {

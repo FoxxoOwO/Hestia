@@ -4,7 +4,7 @@ import os
 import uuid
 import datetime
 from typing import List, Optional, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, File, Form, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, UploadFile, File, Form, status
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
@@ -18,7 +18,10 @@ from app.schemas.document import (
     DocumentStatsResponse, DocumentAiScanResponse,
     VaultVerifyRequest, VaultSetPinRequest
 )
-from app.utils.auth import get_current_user, get_password_hash, verify_password
+from app.utils.auth import (
+    get_current_user, get_current_active_admin, get_password_hash, verify_password,
+    create_vault_unlock_token, decode_vault_unlock_token, VAULT_TOKEN_TTL_SECONDS,
+)
 from app.utils.rate_limit import (
     check_login_rate_limit, register_failed_login, reset_login_attempts
 )
@@ -59,12 +62,46 @@ def _format_document_response(doc: Document) -> DocumentResponse:
     return resp
 
 
+def _relocate_vault_file(rel_path: Optional[str], to_vault: bool) -> Optional[str]:
+    """Presune soubor trezorového dokumentu do podadresáře, který veřejný /uploads neobsluhuje."""
+    if not rel_path or rel_path == "manual_entry":
+        return rel_path
+    rel = rel_path.replace("\\", "/")
+    in_vault = rel.startswith("vault/")
+    if in_vault == to_vault:
+        return rel
+
+    src = safe_upload_subpath(settings.UPLOAD_DIR, rel)
+    if not src or not os.path.isfile(src):
+        return rel
+    new_rel = f"vault/{rel}" if to_vault else rel[len("vault/"):]
+    dst = safe_upload_subpath(settings.UPLOAD_DIR, new_rel)
+    if not dst:
+        return rel
+    os.makedirs(os.path.dirname(dst), exist_ok=True)
+    os.replace(src, dst)
+    return new_rel
+
+
+def _has_vault_access(x_vault_token: Optional[str], current_user: User) -> bool:
+    """Přístup k trezoru se odvozuje výhradně z serverem vydaného tokenu."""
+    return decode_vault_unlock_token(x_vault_token) == current_user.username
+
+
+def _require_vault_access(doc: Document, x_vault_token: Optional[str], current_user: User) -> None:
+    if doc.is_vault_protected and not _has_vault_access(x_vault_token, current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Dokument je v trezoru. Zadejte PIN trezoru."
+        )
+
+
 @router.get("", response_model=List[DocumentResponse])
 def get_documents(
     category: Optional[str] = None,
     doc_status: Optional[str] = Query(None, alias="status"),
     search: Optional[str] = None,
-    vault_unlocked: bool = Query(False),
+    x_vault_token: Optional[str] = Header(None, alias="X-Vault-Token"),
     sort_by: str = Query("created_at"),
     sort_order: str = Query("desc"),
     db: Session = Depends(get_db),
@@ -72,8 +109,8 @@ def get_documents(
 ):
     query = db.query(Document)
 
-    # Filter vault items if not unlocked
-    if not vault_unlocked:
+    # Trezorové dokumenty jsou viditelné jedině s platným tokenem z PINu.
+    if not _has_vault_access(x_vault_token, current_user):
         query = query.filter(Document.is_vault_protected == False)
 
     # Category filter
@@ -124,12 +161,14 @@ def get_documents(
 
 @router.get("/stats", response_model=DocumentStatsResponse)
 def get_document_stats(
+    x_vault_token: Optional[str] = Header(None, alias="X-Vault-Token"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    rows = db.query(
-        Document.category, Document.is_vault_protected, Document.expiry_date
-    ).all()
+    query = db.query(Document.category, Document.is_vault_protected, Document.expiry_date)
+    if not _has_vault_access(x_vault_token, current_user):
+        query = query.filter(Document.is_vault_protected == False)
+    rows = query.all()
     total = len(rows)
     expiring_soon = 0
     expired = 0
@@ -159,12 +198,14 @@ def get_document_stats(
 def get_document_file(
     id: int,
     download: bool = Query(False),
+    x_vault_token: Optional[str] = Header(None, alias="X-Vault-Token"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     doc = db.query(Document).filter(Document.id == id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Dokument nebyl nalezen")
+    _require_vault_access(doc, x_vault_token, current_user)
 
     if not doc.file_path or doc.file_path == "manual_entry":
         raise HTTPException(status_code=404, detail="Dokument nemá přiložený soubor.")
@@ -196,12 +237,14 @@ def get_document_file(
 @router.get("/{id}", response_model=DocumentResponse)
 def get_document(
     id: int,
+    x_vault_token: Optional[str] = Header(None, alias="X-Vault-Token"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     doc = db.query(Document).filter(Document.id == id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Dokument nebyl nalezen")
+    _require_vault_access(doc, x_vault_token, current_user)
     return _format_document_response(doc)
 
 
@@ -269,7 +312,7 @@ def create_document(
     doc = Document(
         title=payload.title,
         category=payload.category,
-        file_path=payload.file_path,
+        file_path=_relocate_vault_file(payload.file_path, bool(payload.is_vault_protected)),
         file_name=payload.file_name,
         file_size=payload.file_size,
         file_type=payload.file_type,
@@ -311,16 +354,21 @@ def create_document(
 def update_document(
     id: int,
     payload: DocumentUpdate,
+    x_vault_token: Optional[str] = Header(None, alias="X-Vault-Token"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     doc = db.query(Document).filter(Document.id == id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Dokument nebyl nalezen")
+    _require_vault_access(doc, x_vault_token, current_user)
 
     old_loc = doc.physical_location
-    for k, v in payload.model_dump(exclude_unset=True).items():
+    changed = payload.model_dump(exclude_unset=True)
+    for k, v in changed.items():
         setattr(doc, k, v)
+    if "is_vault_protected" in changed:
+        doc.file_path = _relocate_vault_file(doc.file_path, bool(doc.is_vault_protected))
     db.flush()
 
     desc = f"{current_user.display_name} upravil(a) dokument: {doc.title}"
@@ -347,12 +395,14 @@ def update_document(
 @router.delete("/{id}")
 def delete_document(
     id: int,
+    x_vault_token: Optional[str] = Header(None, alias="X-Vault-Token"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     doc = db.query(Document).filter(Document.id == id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Dokument nebyl nalezen")
+    _require_vault_access(doc, x_vault_token, current_user)
 
     # Attempt to remove disk file safely inside UPLOAD_DIR
     if doc.file_path:
@@ -390,38 +440,78 @@ def verify_vault_pin(
     check_login_rate_limit(rate_key)
 
     setting = db.query(VaultSetting).first()
-    expected_pin = setting.pin_hash if setting else "1234"
+    if not setting or not setting.is_active or not setting.pin_hash:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="PIN trezoru není nastaven. Nejprve ho nastavte v nastavení (pouze správce)."
+        )
 
-    if _verify_vault_pin_value(payload.pin, expected_pin):
+    if _verify_vault_pin_value(payload.pin, setting.pin_hash):
         reset_login_attempts(rate_key)
         # Upgrade legacy plaintext PIN to bcrypt hash on successful verification
-        if setting and not expected_pin.startswith("$2"):
+        if not setting.pin_hash.startswith("$2"):
             setting.pin_hash = get_password_hash(payload.pin)
             db.commit()
-        return {"status": "success", "message": "PIN je správný. Trezor byl odemčen."}
-    else:
-        register_failed_login(rate_key)
-        raise HTTPException(status_code=401, detail="Nesprávný PIN kód trezoru.")
+        return {
+            "status": "success",
+            "message": "PIN je správný. Trezor byl odemčen.",
+            "vault_token": create_vault_unlock_token(current_user.username),
+            "expires_in": VAULT_TOKEN_TTL_SECONDS,
+        }
+
+    register_failed_login(rate_key)
+    raise HTTPException(status_code=401, detail="Nesprávný PIN kód trezoru.")
 
 
 @router.post("/vault/pin")
 def change_vault_pin(
     payload: VaultSetPinRequest,
+    request: Request,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_active_admin)
 ):
+    """Nastavení / změna PINu – pouze správce, s rate limitem a auditním záznamem."""
+    client_ip = request.client.host if request.client else "unknown"
+    rate_key = f"vault-pin|{client_ip}|{current_user.id}"
+    check_login_rate_limit(rate_key)
+
     setting = db.query(VaultSetting).first()
-    if not setting:
-        setting = VaultSetting(pin_hash=get_password_hash("1234"))
+    if setting is None:
+        setting = VaultSetting(pin_hash="", is_active=False)
         db.add(setting)
         db.flush()
 
-    if not payload.old_pin or not _verify_vault_pin_value(payload.old_pin, setting.pin_hash):
-        raise HTTPException(status_code=400, detail="Původní PIN není správný.")
+    # Při prvním nastavení (nebo po zrušení známého výchozího PINu) se starý PIN nevyžaduje.
+    if setting.is_active:
+        if not payload.old_pin or not _verify_vault_pin_value(payload.old_pin, setting.pin_hash):
+            register_failed_login(rate_key)
+            raise HTTPException(status_code=400, detail="Původní PIN není správný.")
 
-    if len(payload.new_pin.strip()) < 4:
-        raise HTTPException(status_code=400, detail="PIN musí mít alespoň 4 znaky.")
+    new_pin = (payload.new_pin or "").strip()
+    if len(new_pin) < 6 or not new_pin.isdigit():
+        raise HTTPException(status_code=400, detail="PIN musí mít alespoň 6 číslic.")
 
-    setting.pin_hash = get_password_hash(payload.new_pin.strip())
+    if setting.is_active and _verify_vault_pin_value(new_pin, setting.pin_hash):
+        raise HTTPException(status_code=400, detail="Nový PIN se musí lišit od původního.")
+
+    reset_login_attempts(rate_key)
+    setting.pin_hash = get_password_hash(new_pin)
+    setting.is_active = True
+
+    log_activity(
+        db=db,
+        user=current_user,
+        module="documents",
+        action_type="update",
+        title="Změna PINu trezoru",
+        description=f"Správce {current_user.display_name} nastavil(a) nový PIN digitálního trezoru.",
+        entity_type="VaultSetting",
+        entity_id=setting.id,
+    )
     db.commit()
-    return {"status": "success", "message": "PIN kód trezoru byl úspěšně změněn."}
+    return {
+        "status": "success",
+        "message": "PIN kód trezoru byl úspěšně změněn.",
+        "vault_token": create_vault_unlock_token(current_user.username),
+        "expires_in": VAULT_TOKEN_TTL_SECONDS,
+    }

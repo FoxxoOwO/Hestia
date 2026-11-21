@@ -1,5 +1,6 @@
 package com.example.hestia.ui.screens.recipes
 
+import androidx.lifecycle.viewmodel.compose.viewModel
 import android.net.Uri
 import android.util.Base64
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -39,16 +40,13 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun RecipesScreen(repository: HestiaRepository) {
+    val vm: RecipesViewModel = viewModel(factory = RecipesViewModelFactory(repository))
+    val uiState by vm.uiState.collectAsState()
+
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    var recipes by remember { mutableStateOf<List<Recipe>>(emptyList()) }
-    var loading by remember { mutableStateOf(true) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var search by remember { mutableStateOf("") }
-    var difficulty by remember { mutableStateOf<String?>(null) }
-    var priceLevel by remember { mutableStateOf<String?>(null) }
-    var favoriteOnly by remember { mutableStateOf(false) }
-    var maxTime by remember { mutableStateOf("") }
+
+    // Čistě UI stav
     var showForm by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<Recipe?>(null) }
     var detail by remember { mutableStateOf<Recipe?>(null) }
@@ -56,22 +54,8 @@ fun RecipesScreen(repository: HestiaRepository) {
     var showAi by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
 
-    suspend fun load() {
-        loading = true
-        repository.getRecipes(
-            query = search.ifBlank { null },
-            difficulty = difficulty,
-            priceLevel = priceLevel,
-            maxTime = maxTime.toIntOrNull(),
-            favoriteOnly = favoriteOnly.takeIf { it }
-        ).onSuccess { recipes = it; error = null }.onFailure { error = it.friendly() }
-        loading = false
-    }
+    LaunchedEffect(Unit) { vm.load() }
 
-    LaunchedEffect(difficulty, priceLevel, favoriteOnly, search, maxTime) {
-        if (search.isNotBlank() || maxTime.isNotBlank()) kotlinx.coroutines.delay(350)
-        load()
-    }
 
     val fileLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         if (uri != null) {
@@ -80,15 +64,15 @@ fun RecipesScreen(repository: HestiaRepository) {
                     runCatching { context.contentResolver.openInputStream(uri)?.use { it.readBytes() } }.getOrNull()
                 }
                 if (bytes == null) {
-                    error = "Soubor nelze přečíst"
+                    vm.setErrorMessage("Soubor nelze přečíst")
                 } else {
                     val name = uri.lastPathSegment ?: "recept.txt"
                     repository.aiImportRecipeFile(name, Base64.encodeToString(bytes, Base64.NO_WRAP))
                         .onSuccess {
                             message = "AI naimportovala ${it.total} receptů"
-                            load()
+                            vm.load()
                         }
-                        .onFailure { error = it.friendly() }
+                        .onFailure { vm.setError(it) }
                 }
             }
         }
@@ -96,18 +80,18 @@ fun RecipesScreen(repository: HestiaRepository) {
 
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-            HestiaField(search, { search = it }, "Hledat recept")
+            HestiaField(uiState.search, { vm.setSearch(it) }, "Hledat recept")
             Spacer(Modifier.height(6.dp))
-            ChipSelector(Labels.difficulty, difficulty, { difficulty = it.ifBlank { null } }, includeAll = true)
+            ChipSelector(Labels.difficulty, uiState.difficulty, { vm.setDifficulty(it.ifBlank { null }) }, includeAll = true)
             Spacer(Modifier.height(4.dp))
-            ChipSelector(Labels.priceLevel, priceLevel, { priceLevel = it.ifBlank { null } }, includeAll = true)
+            ChipSelector(Labels.priceLevel, uiState.priceLevel, { vm.setPriceLevel(it.ifBlank { null }) }, includeAll = true)
             Spacer(Modifier.height(6.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                HestiaNumberField(maxTime, { maxTime = it }, "Max minut", Modifier.width(110.dp))
+                HestiaNumberField(uiState.maxTime, { vm.setMaxTime(it) }, "Max minut", Modifier.width(110.dp))
                 Spacer(Modifier.width(8.dp))
                 FilterChip(
-                    selected = favoriteOnly,
-                    onClick = { favoriteOnly = !favoriteOnly },
+                    selected = uiState.favoriteOnly,
+                    onClick = { vm.setFavoriteOnly(!uiState.favoriteOnly) },
                     label = { Text("Oblíbené", fontSize = 11.sp) },
                     leadingIcon = { Icon(Icons.Default.Favorite, null, modifier = Modifier.size(14.dp)) }
                 )
@@ -134,21 +118,21 @@ fun RecipesScreen(repository: HestiaRepository) {
             }
         }
 
-        ErrorBox(error, onRetry = { scope.launch { load() } })
+        ErrorBox(uiState.error, onRetry = { scope.launch { vm.load() } })
 
-        if (loading) LoadingBox() else LazyColumn(
+        if (uiState.loading) LoadingBox() else LazyColumn(
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
             modifier = Modifier.fillMaxSize()
         ) {
-            if (recipes.isEmpty()) {
+            if (uiState.recipes.isEmpty()) {
                 item { EmptyState(Icons.Default.RestaurantMenu, "Žádné recepty", "Přidejte recept nebo použijte AI import.") }
             }
-            items(recipes, key = { it.id }) { r ->
+            items(uiState.recipes, key = { it.id }) { r ->
                 RecipeCard(
                     recipe = r,
                     onOpen = { detail = r },
                     onFavorite = {
-                        scope.launch { repository.toggleRecipeFavorite(r.id).onSuccess { load() } }
+                        scope.launch { repository.toggleRecipeFavorite(r.id).onSuccess { vm.load() } }
                     },
                     onEdit = { editing = r },
                     onDelete = { deleteTarget = r },
@@ -162,7 +146,7 @@ fun RecipesScreen(repository: HestiaRepository) {
                                     )
                                 }
                             ).onSuccess { message = "Ingredience přidány do nákupu" }
-                                .onFailure { error = it.friendly() }
+                                .onFailure { vm.setError(it) }
                         }
                     }
                 )
@@ -202,8 +186,8 @@ fun RecipesScreen(repository: HestiaRepository) {
                             source_url = create.source_url
                         )
                     )
-                    res.onSuccess { showForm = false; editing = null; load() }
-                        .onFailure { error = it.friendly() }
+                    res.onSuccess { showForm = false; editing = null; vm.load() }
+                        .onFailure { vm.setError(it) }
                 }
             }
         )
@@ -222,7 +206,7 @@ fun RecipesScreen(repository: HestiaRepository) {
                             AddFromRecipeIngredient(name = it.name, amount = it.amount, unit = it.unit, category = it.category)
                         }
                     ).onSuccess { message = "Ingredience přidány do nákupu"; detail = null }
-                        .onFailure { error = it.friendly() }
+                        .onFailure { vm.setError(it) }
                 }
             }
         )
@@ -234,14 +218,14 @@ fun RecipesScreen(repository: HestiaRepository) {
             onPickFile = { showAi = false; fileLauncher.launch("*/*") },
             onImportUrl = { url ->
                 scope.launch {
-                    repository.aiImportRecipe(url = url).onSuccess { message = "Recept importován"; showAi = false; load() }
-                        .onFailure { error = it.friendly() }
+                    repository.aiImportRecipe(url = url).onSuccess { message = "Recept importován"; showAi = false; vm.load() }
+                        .onFailure { vm.setError(it) }
                 }
             },
             onImportText = { text ->
                 scope.launch {
-                    repository.aiImportRecipe(rawText = text).onSuccess { message = "Recept importován"; showAi = false; load() }
-                        .onFailure { error = it.friendly() }
+                    repository.aiImportRecipe(rawText = text).onSuccess { message = "Recept importován"; showAi = false; vm.load() }
+                        .onFailure { vm.setError(it) }
                 }
             }
         )
@@ -251,7 +235,7 @@ fun RecipesScreen(repository: HestiaRepository) {
         ConfirmDialog(
             title = "Smazat recept",
             message = "Opravdu smazat „${r.title}“?",
-            onConfirm = { scope.launch { repository.deleteRecipe(r.id).onSuccess { load() } } },
+            onConfirm = { scope.launch { repository.deleteRecipe(r.id).onSuccess { vm.load() } } },
             onDismiss = { deleteTarget = null }
         )
     }

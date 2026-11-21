@@ -1,5 +1,6 @@
 package com.example.hestia.ui.screens.plants
 
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -30,53 +31,37 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun PlantsScreen(repository: HestiaRepository) {
+    val vm: PlantsViewModel = viewModel(factory = PlantsViewModelFactory(repository))
+    val uiState by vm.uiState.collectAsState()
+
     val scope = rememberCoroutineScope()
-    var plants by remember { mutableStateOf<List<Plant>>(emptyList()) }
-    var sitter by remember { mutableStateOf<List<PlantSitterItem>>(emptyList()) }
-    var loading by remember { mutableStateOf(true) }
-    var error by remember { mutableStateOf<String?>(null) }
+
+    // Čistě UI stav
     var tab by remember { mutableStateOf(0) }
-    var onlyThirsty by remember { mutableStateOf(false) }
-    var search by remember { mutableStateOf("") }
     var detail by remember { mutableStateOf<Plant?>(null) }
     var showCreate by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<Plant?>(null) }
     var deleteTarget by remember { mutableStateOf<Plant?>(null) }
     var showAiIdentify by remember { mutableStateOf(false) }
 
-    suspend fun load() {
-        loading = true
-        repository.getPlants(query = search.ifBlank { null }, needsWatering = onlyThirsty.takeIf { it })
-            .onSuccess { plants = it; error = null }
-            .onFailure { error = it.friendly() }
-        loading = false
-    }
+    LaunchedEffect(Unit) { vm.load() }
 
-    suspend fun loadSitter() {
-        repository.getPlantSitterSchedule().onSuccess { sitter = it }.onFailure { error = it.friendly() }
-    }
-
-    LaunchedEffect(onlyThirsty, search) {
-        if (search.isNotBlank()) kotlinx.coroutines.delay(350)
-        load()
-    }
-    LaunchedEffect(tab) { if (tab == 1) loadSitter() }
 
     Column(Modifier.fillMaxSize()) {
         TabRow(selectedTabIndex = tab, containerColor = MaterialTheme.colorScheme.surface) {
-            Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Květiny (${plants.size})") })
+            Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Květiny (${uiState.plants.size})") })
             Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Zálivka / Hlídač") })
         }
 
-        ErrorBox(error, onRetry = { scope.launch { load() } })
+        ErrorBox(uiState.error, onRetry = { scope.launch { vm.load() } })
 
         if (tab == 0) {
             Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                HestiaField(search, { search = it }, "Hledat rostlinu")
+                HestiaField(uiState.search, { vm.setSearch(it) }, "Hledat rostlinu")
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     FilterChip(
-                        selected = onlyThirsty,
-                        onClick = { onlyThirsty = !onlyThirsty },
+                        selected = uiState.onlyThirsty,
+                        onClick = { vm.setOnlyThirsty(!uiState.onlyThirsty) },
                         label = { Text("Jen žíznivé") },
                         leadingIcon = { Icon(Icons.Default.WaterDrop, null, modifier = Modifier.size(14.dp)) }
                     )
@@ -89,32 +74,32 @@ fun PlantsScreen(repository: HestiaRepository) {
                 }
             }
 
-            if (loading) LoadingBox() else LazyColumn(
+            if (uiState.loading) LoadingBox() else LazyColumn(
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
-                if (plants.isEmpty()) {
+                if (uiState.plants.isEmpty()) {
                     item { EmptyState(Icons.Default.LocalFlorist, "Žádné rostliny", "Přidejte květiny a Hestia pohlídá zálivku.") }
                 }
-                items(plants, key = { it.id }) { plant ->
+                items(uiState.plants, key = { it.id }) { plant ->
                     PlantCard(
                         plant = plant,
                         onOpen = { detail = plant },
                         onWater = {
                             scope.launch {
                                 repository.waterPlant(plant.id)
-                                    .onSuccess { load() }
-                                    .onFailure { error = it.friendly() }
+                                    .onSuccess { vm.load() }
+                                    .onFailure { vm.setError(it) }
                             }
                         },
                         onToggleWinter = {
                             scope.launch {
-                                repository.togglePlantWinterMode(plant.id).onSuccess { load() }.onFailure { error = it.friendly() }
+                                repository.togglePlantWinterMode(plant.id).onSuccess { vm.load() }.onFailure { vm.setError(it) }
                             }
                         },
                         onToggleFavorite = {
                             scope.launch {
-                                repository.togglePlantFavorite(plant.id).onSuccess { load() }.onFailure { error = it.friendly() }
+                                repository.togglePlantFavorite(plant.id).onSuccess { vm.load() }.onFailure { vm.setError(it) }
                             }
                         },
                         onEdit = { editing = plant },
@@ -125,10 +110,10 @@ fun PlantsScreen(repository: HestiaRepository) {
             }
         } else {
             LazyColumn(contentPadding = PaddingValues(12.dp)) {
-                if (sitter.isEmpty()) {
+                if (uiState.sitter.isEmpty()) {
                     item { EmptyState(Icons.Default.EventAvailable, "Nic k zalití", "Všechny rostliny jsou zalité.") }
                 }
-                items(sitter) { item ->
+                items(uiState.sitter) { item ->
                     Card(shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.LocalFlorist, null, tint = StatusGreen)
@@ -173,7 +158,7 @@ fun PlantsScreen(repository: HestiaRepository) {
             repository = repository,
             plantId = plant.id,
             onDismiss = { detail = null },
-            onChanged = { scope.launch { load() } }
+            onChanged = { scope.launch { vm.load() } }
         )
     }
 
@@ -201,7 +186,7 @@ fun PlantsScreen(repository: HestiaRepository) {
                             is_favorite = create.is_favorite, notes = create.notes
                         )
                     )
-                    res.onSuccess { showCreate = false; editing = null; load() }.onFailure { error = it.friendly() }
+                    res.onSuccess { showCreate = false; editing = null; vm.load() }.onFailure { vm.setError(it) }
                 }
             }
         )
@@ -211,7 +196,7 @@ fun PlantsScreen(repository: HestiaRepository) {
         ConfirmDialog(
             title = "Smazat rostlinu",
             message = "Smazat „${plant.name}“?",
-            onConfirm = { scope.launch { repository.deletePlant(plant.id).onSuccess { load() } } },
+            onConfirm = { scope.launch { repository.deletePlant(plant.id).onSuccess { vm.load() } } },
             onDismiss = { deleteTarget = null }
         )
     }
@@ -239,7 +224,7 @@ fun PlantsScreen(repository: HestiaRepository) {
                             pet_toxicity_notes = extracted.pet_toxicity_details.ifBlank { null },
                             notes = extracted.description.ifBlank { null }
                         )
-                    ).onSuccess { load() }.onFailure { error = it.friendly() }
+                    ).onSuccess { vm.load() }.onFailure { vm.setError(it) }
                 }
             }
         )

@@ -16,6 +16,7 @@ import os
 from app.utils.auth import get_password_hash
 import datetime
 import json
+import secrets
 
 def seed_demo_data(db: Session):
     today = datetime.date.today()
@@ -28,7 +29,7 @@ def seed_demo_data(db: Session):
             username="admin",
             display_name="Správce Domácnosti",
             email="admin@hestia.home",
-            hashed_password=get_password_hash("hestia123"),
+            hashed_password=get_password_hash(settings.INITIAL_ADMIN_PASSWORD or secrets.token_urlsafe(18)),
             role="admin",
             avatar_color="#f97316", # Orange
             preferred_language="cs",
@@ -45,7 +46,7 @@ def seed_demo_data(db: Session):
             username="anna",
             display_name="Anna",
             email="anna@hestia.home",
-            hashed_password=get_password_hash("hestia123"),
+            hashed_password=get_password_hash(settings.INITIAL_ADMIN_PASSWORD or secrets.token_urlsafe(18)),
             role="member",
             avatar_color="#ec4899", # Pink
             preferred_language="cs",
@@ -62,7 +63,7 @@ def seed_demo_data(db: Session):
             username="petr",
             display_name="Petr",
             email="petr@hestia.home",
-            hashed_password=get_password_hash("hestia123"),
+            hashed_password=get_password_hash(settings.INITIAL_ADMIN_PASSWORD or secrets.token_urlsafe(18)),
             role="member",
             avatar_color="#3b82f6", # Blue
             preferred_language="en",
@@ -975,7 +976,7 @@ def seed_demo_data(db: Session):
 
     # 9. Seed Documents & Vault Settings
     if db.query(VaultSetting).count() == 0:
-        db.add(VaultSetting(pin_hash="1234", is_active=True))
+        db.add(VaultSetting(pin_hash="", is_active=False))
         db.commit()
 
     if db.query(Document).count() == 0:

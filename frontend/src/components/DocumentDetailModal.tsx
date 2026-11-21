@@ -8,7 +8,7 @@ import {
 import { DocumentItem } from '../types';
 import { DOCUMENT_CATEGORIES } from './DocumentUploadModal';
 import { useTranslation } from '../i18n';
-import { api, resolveDocumentFileUrl } from '../services/api';
+import { api } from '../services/api';
 
 interface DocumentDetailModalProps {
   isOpen: boolean;
@@ -31,12 +31,35 @@ export const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
   const [isDownloading, setIsDownloading] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
   const [previewBroken, setPreviewBroken] = useState(false);
+  const [fileUrl, setFileUrl] = useState<string | null>(null);
 
+  // Soubor se vždy načítá přes autentizovaný endpoint (včetně trezoru).
+  // Veřejný /uploads odkaz by obešel kontrolu PINu.
   useEffect(() => {
     setFileError(null);
     setPreviewBroken(false);
     setConfirmDelete(false);
     setShowOcr(false);
+    setFileUrl(null);
+
+    if (!isOpen || !doc?.file_path || doc.file_path === 'manual_entry') return;
+    let cancelled = false;
+    let objectUrl: string | null = null;
+
+    api.fetchDocumentFileBlob(doc.id, false, doc.file_name || 'dokument')
+      .then(({ blob }) => {
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setFileUrl(objectUrl);
+      })
+      .catch((err) => {
+        if (!cancelled) setFileError(err?.message || 'Soubor se nepodařilo načíst.');
+      });
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
   }, [doc?.id, isOpen]);
 
   if (!isOpen || !doc) return null;
@@ -86,11 +109,9 @@ export const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({
     }
   };
 
-  const fileUrl = resolveDocumentFileUrl(doc.file_path);
   const isImageFile = Boolean(
-    fileUrl &&
-      ((doc.file_type && doc.file_type.startsWith('image/')) ||
-        /\.(png|jpe?g|webp)$/i.test(fileUrl))
+    (doc.file_type && doc.file_type.startsWith('image/')) ||
+      /\.(png|jpe?g|webp)$/i.test(doc.file_name || doc.file_path || '')
   );
 
   const handleDownload = async () => {

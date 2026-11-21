@@ -1,5 +1,6 @@
 package com.example.hestia.ui.screens.medicines
 
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -31,37 +32,23 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun MedicinesScreen(repository: HestiaRepository, currentUser: User?) {
+    val vm: MedicinesViewModel = viewModel(factory = MedicinesViewModelFactory(repository))
+    val uiState by vm.uiState.collectAsState()
+
     val scope = rememberCoroutineScope()
+
+    // Čistě UI stav
     var tab by remember { mutableStateOf(0) }
-    var medicines by remember { mutableStateOf<List<Medicine>>(emptyList()) }
-    var stats by remember { mutableStateOf<MedicineStats?>(null) }
-    var schedules by remember { mutableStateOf<List<MedicationSchedule>>(emptyList()) }
-    var logs by remember { mutableStateOf<List<MedicationLog>>(emptyList()) }
-    var guides by remember { mutableStateOf<List<FirstAidGuide>>(emptyList()) }
-    var loading by remember { mutableStateOf(true) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var search by remember { mutableStateOf("") }
-    var category by remember { mutableStateOf("") }
     var dialog by remember { mutableStateOf<String?>(null) }
     var editing by remember { mutableStateOf<Medicine?>(null) }
     var detail by remember { mutableStateOf<Medicine?>(null) }
     var deleteTarget by remember { mutableStateOf<Medicine?>(null) }
 
-    suspend fun load() {
-        loading = true
-        repository.getMedicines(
-            category = category.ifBlank { null },
-            location = null,
-            query = search.ifBlank { null }
-        ).onSuccess { medicines = it; error = null }.onFailure { error = it.friendly() }
-        repository.getMedicineStats().onSuccess { stats = it }
-        repository.getMedicationSchedules(currentUser?.id, true).onSuccess { schedules = it }
-        repository.getMedicationLogs(limit = 40).onSuccess { logs = it }
-        repository.getFirstAidGuides().onSuccess { guides = it }
-        loading = false
+    LaunchedEffect(currentUser?.id) {
+        vm.setCurrentUser(currentUser?.id)
+        vm.load()
     }
 
-    LaunchedEffect(search, category) { kotlinx.coroutines.delay(300); load() }
 
     Column(Modifier.fillMaxSize()) {
         ScrollableTabRow(selectedTabIndex = tab, edgePadding = 8.dp) {
@@ -69,15 +56,15 @@ fun MedicinesScreen(repository: HestiaRepository, currentUser: User?) {
                 Tab(selected = tab == i, onClick = { tab = i }, text = { Text(label, fontSize = 12.sp) })
             }
         }
-        ErrorBox(error, onRetry = { scope.launch { load() } })
-        if (loading) {
+        ErrorBox(uiState.error, onRetry = { scope.launch { vm.load() } })
+        if (uiState.loading) {
             LoadingBox()
             return@Column
         }
         when (tab) {
             0 -> Box(Modifier.fillMaxSize()) {
                 LazyColumn(contentPadding = PaddingValues(12.dp)) {
-                    stats?.let { s ->
+                    uiState.stats?.let { s ->
                         item {
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 StatCard("Celkem", s.total_items.toString(), Icons.Default.Medication, HestiaOrange, Modifier.weight(1f))
@@ -90,22 +77,22 @@ fun MedicinesScreen(repository: HestiaRepository, currentUser: User?) {
                     }
                     // Hledání a filtr musí být dostupné i když se statistiky nepodaří načíst.
                     item {
-                        HestiaField(search, { search = it }, "Hledat lék")
+                        HestiaField(uiState.search, { vm.setSearch(it) }, "Hledat lék")
                         Spacer(Modifier.height(6.dp))
-                        ChipSelector(Labels.medicineCategories, category, { category = it })
+                        ChipSelector(Labels.medicineCategories, uiState.category, { vm.setCategory(it) })
                         Spacer(Modifier.height(6.dp))
                     }
-                    if (medicines.isEmpty()) {
+                    if (uiState.medicines.isEmpty()) {
                         item { EmptyState(Icons.Default.Medication, "Prázdná lékárnička", "Přidejte léky a hlídejte expiraci i zásoby.") }
                     }
-                    items(medicines, key = { it.id }) { m ->
+                    items(uiState.medicines, key = { it.id }) { m ->
                         MedicineCard(
                             medicine = m,
                             onOpen = { detail = m },
                             onEdit = { editing = m },
                             onDelete = { deleteTarget = m },
                             onAdjust = { delta ->
-                                scope.launch { repository.adjustMedicineStock(m.id, delta).onSuccess { load() } }
+                                scope.launch { repository.adjustMedicineStock(m.id, delta).onSuccess { vm.load() } }
                             },
                             onShopping = { scope.launch { repository.addMedicineToShopping(m.id) } }
                         )
@@ -128,9 +115,9 @@ fun MedicinesScreen(repository: HestiaRepository, currentUser: User?) {
                         Text("+ Nový plán užívání")
                     }
                     Spacer(Modifier.height(8.dp))
-                    if (schedules.isEmpty()) Text("Žádné aktivní plány.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (uiState.schedules.isEmpty()) Text("Žádné aktivní plány.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                items(schedules, key = { it.id }) { s ->
+                items(uiState.schedules, key = { it.id }) { s ->
                     Card(shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
                         Column(Modifier.padding(10.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -157,13 +144,13 @@ fun MedicinesScreen(repository: HestiaRepository, currentUser: User?) {
                                         val userId = uid ?: return@TextButton
                                         scope.launch {
                                             repository.takeMedicineDose(s.medicine_id, userId, s.dosage_per_take, s.time_slots.firstOrNull())
-                                                .onSuccess { load() }.onFailure { error = it.friendly() }
+                                                .onSuccess { vm.load() }.onFailure { vm.setError(it) }
                                         }
                                     }
                                 ) { Text("Vzato", fontSize = 11.sp) }
                                 Spacer(Modifier.weight(1f))
                                 TextButton(onClick = {
-                                    scope.launch { repository.deleteMedicationSchedule(s.id).onSuccess { load() } }
+                                    scope.launch { repository.deleteMedicationSchedule(s.id).onSuccess { vm.load() } }
                                 }) { Text("Smazat", fontSize = 11.sp, color = StatusRed) }
                             }
                         }
@@ -172,8 +159,8 @@ fun MedicinesScreen(repository: HestiaRepository, currentUser: User?) {
             }
 
             2 -> LazyColumn(contentPadding = PaddingValues(12.dp)) {
-                if (logs.isEmpty()) item { Text("Žádné záznamy.", fontSize = 12.sp) }
-                items(logs, key = { it.id }) { l ->
+                if (uiState.logs.isEmpty()) item { Text("Žádné záznamy.", fontSize = 12.sp) }
+                items(uiState.logs, key = { it.id }) { l ->
                     Card(shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
                         Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(
@@ -224,7 +211,7 @@ fun MedicinesScreen(repository: HestiaRepository, currentUser: User?) {
                     }
                     Spacer(Modifier.height(8.dp))
                 }
-                items(guides, key = { it.id }) { g ->
+                items(uiState.guides, key = { it.id }) { g ->
                     ExpandableCard(
                         title = g.title,
                         subtitle = g.summary
@@ -251,9 +238,9 @@ fun MedicinesScreen(repository: HestiaRepository, currentUser: User?) {
             medicine = m,
             onDismiss = { detail = null },
             onOpened = {
-                scope.launch { repository.markMedicineOpened(m.id).onSuccess { detail = it; load() } }
+                scope.launch { repository.markMedicineOpened(m.id).onSuccess { detail = it; vm.load() } }
             },
-            onAdjust = { d -> scope.launch { repository.adjustMedicineStock(m.id, d).onSuccess { detail = it; load() } } },
+            onAdjust = { d -> scope.launch { repository.adjustMedicineStock(m.id, d).onSuccess { detail = it; vm.load() } } },
             onShopping = { scope.launch { repository.addMedicineToShopping(m.id) } }
         )
     }
@@ -266,7 +253,7 @@ fun MedicinesScreen(repository: HestiaRepository, currentUser: User?) {
                 scope.launch {
                     val res = editing?.let { repository.updateMedicine(it.id, body.second) }
                         ?: repository.createMedicine(body.first)
-                    res.onSuccess { dialog = null; editing = null; load() }.onFailure { error = it.friendly() }
+                    res.onSuccess { dialog = null; editing = null; vm.load() }.onFailure { vm.setError(it) }
                 }
             }
         )
@@ -274,12 +261,12 @@ fun MedicinesScreen(repository: HestiaRepository, currentUser: User?) {
 
     if (dialog == "schedule") {
         ScheduleFormDialog(
-            medicines = medicines,
+            medicines = uiState.medicines,
             users = listOfNotNull(currentUser).ifEmpty { emptyList() },
             repository = repository,
             defaultUserId = currentUser?.id ?: 1,
             onDismiss = { dialog = null },
-            onSaved = { dialog = null; scope.launch { load() } }
+            onSaved = { dialog = null; scope.launch { vm.load() } }
         )
     }
 
@@ -291,7 +278,7 @@ fun MedicinesScreen(repository: HestiaRepository, currentUser: User?) {
         ConfirmDialog(
             title = "Smazat lék",
             message = "Smazat „${m.name}“?",
-            onConfirm = { scope.launch { repository.deleteMedicine(m.id).onSuccess { load() } } },
+            onConfirm = { scope.launch { repository.deleteMedicine(m.id).onSuccess { vm.load() } } },
             onDismiss = { deleteTarget = null }
         )
     }

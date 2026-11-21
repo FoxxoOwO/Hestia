@@ -1,15 +1,19 @@
-from typing import List
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+import secrets
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.database import get_db
 from app.models.user import User
 from app.schemas.user import (
-    UserCreate, UserUpdate, UserResponse, Token, LoginRequest, PublicMember
+    UserCreate, UserUpdate, UserResponse, Token, LoginRequest, PublicMember,
+    ChangePasswordRequest, VerifyPasswordRequest, RefreshRequest
 )
 from app.utils.auth import (
     verify_password_or_dummy, get_password_hash, create_access_token,
-    get_current_user, get_current_active_admin
+    create_refresh_token, decode_token, get_current_user, get_current_active_admin,
+    ACCESS_COOKIE, REFRESH_COOKIE, CSRF_COOKIE,
 )
 from app.utils.rate_limit import (
     check_login_rate_limit, register_failed_login, reset_login_attempts
@@ -17,6 +21,33 @@ from app.utils.rate_limit import (
 from app.services.activity_service import log_activity
 
 router = APIRouter(prefix="/auth", tags=["Authentication & Household Members"])
+
+
+def _set_auth_cookies(response: Response, username: str, token_version: int) -> tuple[str, str, str]:
+    """Vytvoří tokeny a nastaví httpOnly cookies (double-submit CSRF)."""
+    access_token = create_access_token({"sub": username}, token_version=token_version)
+    refresh_token = create_refresh_token(username, token_version)
+    csrf_token = secrets.token_urlsafe(32)
+    secure = settings.COOKIE_SECURE
+
+    response.set_cookie(
+        ACCESS_COOKIE, access_token,
+        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        httponly=True, secure=secure, samesite="lax", path="/",
+    )
+    response.set_cookie(
+        REFRESH_COOKIE, refresh_token,
+        max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400,
+        httponly=True, secure=secure, samesite="lax",
+        path=f"{settings.API_V1_STR}/auth",
+    )
+    response.set_cookie(
+        CSRF_COOKIE, csrf_token,
+        max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400,
+        httponly=False, secure=secure, samesite="lax", path="/",
+    )
+    return access_token, refresh_token, csrf_token
+
 
 @router.get("/public-members", response_model=List[PublicMember])
 def get_public_members(db: Session = Depends(get_db)):
@@ -37,7 +68,7 @@ def get_public_members(db: Session = Depends(get_db)):
     ]
 
 @router.post("/login", response_model=Token)
-def login(login_data: LoginRequest, request: Request, db: Session = Depends(get_db)):
+def login(login_data: LoginRequest, request: Request, response: Response, db: Session = Depends(get_db)):
     client_ip = request.client.host if request.client else "unknown"
     rate_key = f"{client_ip}|{login_data.username.strip().lower()}"
     check_login_rate_limit(rate_key)
@@ -71,12 +102,139 @@ def login(login_data: LoginRequest, request: Request, db: Session = Depends(get_
     )
     db.commit()
 
-    access_token = create_access_token(data={"sub": user.username})
+    access_token, refresh_token, csrf_token = _set_auth_cookies(
+        response, user.username, user.token_version
+    )
     return {
         "access_token": access_token,
+        "refresh_token": refresh_token,
+        "csrf_token": csrf_token,
         "token_type": "bearer",
         "user": user
     }
+
+
+@router.post("/refresh")
+def refresh_access_token(
+    request: Request,
+    response: Response,
+    payload: Optional[RefreshRequest] = None,
+    db: Session = Depends(get_db),
+):
+    """Vydá nový access token z platného refresh tokenu (cookie nebo tělo)."""
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Neplatný nebo vypršelý refresh token",
+    )
+    raw = (
+        (payload.refresh_token if payload else None)
+        or (request.cookies.get(REFRESH_COOKIE) if request else None)
+    )
+    if not raw:
+        raise credentials_exception
+    try:
+        decoded = decode_token(raw, expected_type="refresh")
+    except Exception:
+        raise credentials_exception
+
+    user = db.query(User).filter(User.username == decoded.get("sub")).first()
+    if not user or not user.is_active or decoded.get("ver", 0) != user.token_version:
+        raise credentials_exception
+
+    access_token, refresh_token, csrf_token = _set_auth_cookies(
+        response, user.username, user.token_version
+    )
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "csrf_token": csrf_token,
+        "token_type": "bearer",
+    }
+
+
+@router.post("/logout")
+def logout(response: Response):
+    """Smaže autentizační cookies; nativní klient si token odstraní sám."""
+    response.delete_cookie(ACCESS_COOKIE, path="/")
+    response.delete_cookie(REFRESH_COOKIE, path=f"{settings.API_V1_STR}/auth")
+    response.delete_cookie(CSRF_COOKIE, path="/")
+    return {"status": "success", "message": "Odhlášeno"}
+
+
+@router.post("/change-password")
+def change_password(
+    payload: ChangePasswordRequest,
+    request: Request,
+    response: Response,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Vlastní změna hesla; po úspěchu se zruší příznak povinné změny hesla."""
+    client_ip = request.client.host if request.client else "unknown"
+    rate_key = f"pwdchange|{client_ip}|{current_user.id}"
+    check_login_rate_limit(rate_key)
+
+    if not verify_password_or_dummy(payload.current_password, current_user.hashed_password):
+        register_failed_login(rate_key)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Aktuální heslo není správné."
+        )
+    if len(payload.new_password) < 12:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Nové heslo musí mít alespoň 12 znaků."
+        )
+    if payload.new_password == payload.current_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Nové heslo se musí lišit od aktuálního."
+        )
+
+    reset_login_attempts(rate_key)
+    current_user.hashed_password = get_password_hash(payload.new_password)
+    current_user.must_change_password = False
+    # Zneplatní všechny staré tokeny (včetně odcizených).
+    current_user.token_version += 1
+
+    # Staré tokeny zneplatníme a vydáme nové, aby uživatel zůstal přihlášený.
+    _set_auth_cookies(response, current_user.username, current_user.token_version)
+
+    log_activity(
+        db=db,
+        user=current_user,
+        module="auth",
+        action_type="update",
+        title="Změna hesla",
+        description=f"{current_user.display_name} změnil(a) své heslo.",
+        entity_type="User",
+        entity_id=current_user.id
+    )
+    db.commit()
+    return {"status": "success", "message": "Heslo bylo změněno."}
+
+
+@router.post("/verify-password")
+def verify_password_for_sensitive_action(
+    payload: VerifyPasswordRequest,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Opětovné ověření hesla před citlivou operací (export, odemčení trezoru)."""
+    client_ip = request.client.host if request.client else "unknown"
+    rate_key = f"pwdverify|{client_ip}|{current_user.id}"
+    check_login_rate_limit(rate_key)
+
+    if not verify_password_or_dummy(payload.password, current_user.hashed_password):
+        register_failed_login(rate_key)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Nesprávné heslo."
+        )
+
+    reset_login_attempts(rate_key)
+    return {"status": "success"}
 
 
 @router.get("/me", response_model=UserResponse)
@@ -101,6 +259,8 @@ def update_my_profile(
         current_user.preferred_theme = update_data.preferred_theme
     if update_data.password:
         current_user.hashed_password = get_password_hash(update_data.password)
+        current_user.must_change_password = False
+        current_user.token_version += 1
 
     log_activity(
         db=db,
@@ -150,7 +310,8 @@ def create_household_member(
         avatar_color=user_data.avatar_color or "#f97316",
         preferred_language=user_data.preferred_language or "cs",
         preferred_theme=user_data.preferred_theme or "system",
-        is_active=True
+        is_active=True,
+        must_change_password=True,
     )
     db.add(new_user)
     db.flush()
@@ -229,6 +390,8 @@ def update_household_member(
         target_user.preferred_theme = user_data.preferred_theme
     if user_data.password and user_data.password.strip():
         target_user.hashed_password = get_password_hash(user_data.password.strip())
+        target_user.must_change_password = False
+        target_user.token_version += 1
 
     log_activity(
         db=db,

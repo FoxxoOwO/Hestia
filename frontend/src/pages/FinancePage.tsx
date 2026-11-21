@@ -597,7 +597,7 @@ export const FinancePage: React.FC = () => {
                   onChange={(e) => setSelectedCatFilter(e.target.value)}
                   className="px-3 py-1.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-amber-500 dark:text-white"
                 >
-                  <option value="all">Všechny kategorie</option>
+                  <option value="all">{t('finance.all_categories')}</option>
                   {CATEGORIES.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.icon} {c.nameCs}
@@ -824,7 +824,7 @@ export const FinancePage: React.FC = () => {
                           ) : s.to_user_iban ? (
                             <span>IBAN: {s.to_user_iban}</span>
                           ) : (
-                            <span className="text-amber-500">Číslo účtu zatím nenastaveno</span>
+                            <span className="text-amber-500">{t('finance.no_account')}</span>
                           )}
                         </div>
                       </div>
@@ -869,7 +869,7 @@ export const FinancePage: React.FC = () => {
                   type="text"
                   value={bankAccountInput}
                   onChange={(e) => setBankAccountInput(e.target.value)}
-                  placeholder="např. 123456789/0800"
+                  placeholder={t('finance.account_placeholder')}
                   className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white"
                 />
               </div>
@@ -999,7 +999,7 @@ export const FinancePage: React.FC = () => {
                   </div>
 
                   <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between text-xs">
-                    <span className="text-zinc-400">Příští platba:</span>
+                    <span className="text-zinc-400">{t('finance.next_payment')}</span>
                     <span className={`font-semibold px-2 py-0.5 rounded-md ${
                       isDueSoon
                         ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 animate-pulse'

@@ -1,6 +1,7 @@
 package com.example.hestia.ui.screens.vehicles
 
 import androidx.activity.compose.BackHandler
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -32,40 +33,32 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun VehiclesScreen(repository: HestiaRepository) {
+    val vm: VehiclesViewModel = viewModel(factory = VehiclesViewModelFactory(repository))
+    val uiState by vm.uiState.collectAsState()
+
     val scope = rememberCoroutineScope()
-    var vehicles by remember { mutableStateOf<List<Vehicle>>(emptyList()) }
-    var stats by remember { mutableStateOf<VehicleFleetStats?>(null) }
-    var loading by remember { mutableStateOf(true) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var search by remember { mutableStateOf("") }
+
+    // Čistě UI stav
     var showForm by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<Vehicle?>(null) }
     var deleteTarget by remember { mutableStateOf<Vehicle?>(null) }
     var selectedId by remember { mutableStateOf<Int?>(null) }
 
-    suspend fun load() {
-        loading = true
-        repository.getVehicles(query = search.ifBlank { null })
-            .onSuccess { vehicles = it; error = null }
-            .onFailure { error = it.friendly() }
-        repository.getVehicleStats().onSuccess { stats = it }
-        loading = false
-    }
+    LaunchedEffect(Unit) { vm.load() }
 
-    LaunchedEffect(search) { kotlinx.coroutines.delay(350); load() }
 
     val id = selectedId
     if (id != null) {
         BackHandler { selectedId = null }
-        VehicleDetailScreen(repository, id) { selectedId = null; scope.launch { load() } }
+        VehicleDetailScreen(repository, id) { selectedId = null; scope.launch { vm.load() } }
         return
     }
 
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
-            HestiaField(search, { search = it }, "Hledat vozidlo")
+            HestiaField(uiState.search, { vm.setSearch(it) }, "Hledat vozidlo")
         }
-        stats?.let { s ->
+        uiState.stats?.let { s ->
             Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 StatCard("Vozidla", s.total_vehicles.toString(), Icons.Default.DirectionsCar, StatusBlue, Modifier.weight(1f))
                 StatCard("Varování", s.warning_deadlines_count.toString(), Icons.Default.Warning, StatusYellow, Modifier.weight(1f))
@@ -80,15 +73,15 @@ fun VehiclesScreen(repository: HestiaRepository) {
                 }
             }
         }
-        ErrorBox(error, onRetry = { scope.launch { load() } })
-        if (loading) LoadingBox() else LazyColumn(
+        ErrorBox(uiState.error, onRetry = { scope.launch { vm.load() } })
+        if (uiState.loading) LoadingBox() else LazyColumn(
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
             modifier = Modifier.fillMaxSize()
         ) {
-            if (vehicles.isEmpty()) {
+            if (uiState.vehicles.isEmpty()) {
                 item { EmptyState(Icons.Default.DirectionsCar, "Žádná vozidla", "Přidejte auto a hlídejte STK, dálniční známku i servis.") }
             }
-            items(vehicles, key = { it.id }) { v ->
+            items(uiState.vehicles, key = { it.id }) { v ->
                 VehicleCard(
                     vehicle = v,
                     onOpen = { selectedId = v.id },
@@ -145,8 +138,8 @@ fun VehiclesScreen(repository: HestiaRepository) {
                             notes = create.notes
                         )
                     )
-                    res.onSuccess { showForm = false; editing = null; load() }
-                        .onFailure { error = it.friendly() }
+                    res.onSuccess { showForm = false; editing = null; vm.load() }
+                        .onFailure { vm.setError(it) }
                 }
             }
         )
@@ -156,7 +149,7 @@ fun VehiclesScreen(repository: HestiaRepository) {
         ConfirmDialog(
             title = "Smazat vozidlo",
             message = "Smazat „${v.name}“ včetně historie?",
-            onConfirm = { scope.launch { repository.deleteVehicle(v.id).onSuccess { load() } } },
+            onConfirm = { scope.launch { repository.deleteVehicle(v.id).onSuccess { vm.load() } } },
             onDismiss = { deleteTarget = null }
         )
     }

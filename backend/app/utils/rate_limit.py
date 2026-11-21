@@ -45,3 +45,32 @@ def register_failed_login(key: str) -> None:
 
 def reset_login_attempts(key: str) -> None:
     _failures.pop(key, None)
+
+
+# --- Kvóty pro drahá AI volání (Gemini) -------------------------------------
+
+AI_MAX_CALLS_PER_HOUR = 20
+AI_WINDOW_SECONDS = 3600
+
+_ai_usage: Dict[str, List[float]] = {}
+
+
+def check_ai_quota(key: str) -> None:
+    now = time.monotonic()
+    stamps = [t for t in _ai_usage.get(key, ()) if now - t < AI_WINDOW_SECONDS]
+    if stamps:
+        _ai_usage[key] = stamps
+    if len(stamps) >= AI_MAX_CALLS_PER_HOUR:
+        retry_after = int(AI_WINDOW_SECONDS - (now - stamps[0])) + 1
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=(
+                f"Denní limit AI volání byl dosažen (max. {AI_MAX_CALLS_PER_HOUR}/hodinu). "
+                f"Zkuste to znovu za {retry_after} s."
+            ),
+            headers={"Retry-After": str(retry_after)},
+        )
+
+
+def register_ai_use(key: str) -> None:
+    _ai_usage.setdefault(key, []).append(time.monotonic())

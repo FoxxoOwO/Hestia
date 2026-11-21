@@ -1,6 +1,7 @@
 package com.example.hestia.ui.screens.pets
 
 import androidx.activity.compose.BackHandler
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -32,35 +33,18 @@ import com.example.hestia.util.Labels
 import com.example.hestia.util.friendly
 import kotlinx.coroutines.launch
 
+
 @Composable
 fun PetsScreen(repository: HestiaRepository) {
-    val scope = rememberCoroutineScope()
-    var pets by remember { mutableStateOf<List<Pet>>(emptyList()) }
-    var loading by remember { mutableStateOf(true) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var search by remember { mutableStateOf("") }
-    var speciesFilter by remember { mutableStateOf<String?>(null) }
-    var favOnly by remember { mutableStateOf(false) }
+    val vm: PetsViewModel = viewModel(factory = PetsViewModelFactory(repository))
+    val uiState by vm.uiState.collectAsState()
+
     var showCreate by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<Pet?>(null) }
     var deleteTarget by remember { mutableStateOf<Pet?>(null) }
     var selectedPetId by remember { mutableStateOf<Int?>(null) }
-    var baseUrl by remember { mutableStateOf("") }
 
-    LaunchedEffect(Unit) { baseUrl = repository.serverUrl() }
-
-    suspend fun load() {
-        loading = true
-        repository.getPets(species = speciesFilter, favoriteOnly = favOnly.takeIf { it }, query = search.ifBlank { null })
-            .onSuccess { pets = it; error = null }
-            .onFailure { error = it.friendly() }
-        loading = false
-    }
-
-    LaunchedEffect(speciesFilter, favOnly, search) {
-        if (search.isNotBlank()) kotlinx.coroutines.delay(350)
-        load()
-    }
+    LaunchedEffect(Unit) { vm.load() }
 
     val petId = selectedPetId
     if (petId != null) {
@@ -68,57 +52,49 @@ fun PetsScreen(repository: HestiaRepository) {
         PetDetailScreen(
             repository = repository,
             petId = petId,
-            onBack = { selectedPetId = null; scope.launch { load() } }
+            onBack = { selectedPetId = null; vm.load() }
         )
         return
     }
 
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-            HestiaField(search, { search = it }, "Hledat mazlíčka")
+            HestiaField(uiState.search, { vm.setSearch(it) }, "Hledat mazlíčka")
             Spacer(Modifier.height(6.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 ChipSelector(
                     options = Labels.petSpecies,
-                    selected = speciesFilter,
-                    onSelect = { speciesFilter = it.ifBlank { null } },
+                    selected = uiState.speciesFilter,
+                    onSelect = { vm.setSpecies(it.ifBlank { null }) },
                     includeAll = true,
                     modifier = Modifier.weight(1f)
                 )
-                IconButton(onClick = { favOnly = !favOnly }) {
+                IconButton(onClick = { vm.setFavOnly(!uiState.favOnly) }) {
                     Icon(
-                        if (favOnly) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                        if (uiState.favOnly) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
                         "Oblíbení",
-                        tint = if (favOnly) StatusRed else MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = if (uiState.favOnly) StatusRed else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
         }
 
-        ErrorBox(error, onRetry = { scope.launch { load() } })
+        ErrorBox(uiState.error, onRetry = { vm.load() })
 
-        if (loading) LoadingBox() else LazyColumn(
+        if (uiState.loading) LoadingBox() else LazyColumn(
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
             modifier = Modifier.fillMaxSize()
         ) {
-            if (pets.isEmpty()) {
+            if (uiState.pets.isEmpty()) {
                 item { EmptyState(Icons.Default.Pets, "Žádní mazlíčci", "Přidejte psa, kočku nebo jiného parťáka.") }
             }
-            items(pets, key = { it.id }) { pet ->
+            items(uiState.pets, key = { it.id }) { pet ->
                 PetCard(
                     pet = pet,
-                    baseUrl = baseUrl,
+                    baseUrl = uiState.baseUrl,
                     onOpen = { selectedPetId = pet.id },
-                    onFeed = {
-                        scope.launch {
-                            repository.feedPet(pet.id).onSuccess { load() }.onFailure { error = it.friendly() }
-                        }
-                    },
-                    onToggleFavorite = {
-                        scope.launch {
-                            repository.togglePetFavorite(pet.id).onSuccess { load() }.onFailure { error = it.friendly() }
-                        }
-                    },
+                    onFeed = { vm.runAction(action = { repository.feedPet(pet.id) }) },
+                    onToggleFavorite = { vm.runAction(action = { repository.togglePetFavorite(pet.id) }) },
                     onEdit = { editing = pet },
                     onDelete = { deleteTarget = pet }
                 )
@@ -143,11 +119,12 @@ fun PetsScreen(repository: HestiaRepository) {
             initial = editing,
             onDismiss = { showCreate = false; editing = null },
             onSave = { create ->
-                scope.launch {
-                    val initial = editing
-                    val res = if (initial == null) repository.createPet(create)
-                    else repository.updatePet(
-                        initial.id,
+                val initial = editing
+                vm.runAction(
+                    action = {
+                        if (initial == null) repository.createPet(create)
+                        else repository.updatePet(
+                            initial.id,
                         PetUpdate(
                             name = create.name, species = create.species, breed = create.breed,
                             birth_date = create.birth_date, gender = create.gender, is_neutered = create.is_neutered,
@@ -159,9 +136,10 @@ fun PetsScreen(repository: HestiaRepository) {
                             vet_address = create.vet_address, emergency_vet_phone = create.emergency_vet_phone,
                             emergency_vet_clinic = create.emergency_vet_clinic, notes = create.notes
                         )
-                    )
-                    res.onSuccess { showCreate = false; editing = null; load() }.onFailure { error = it.friendly() }
-                }
+                        )
+                    },
+                    onSuccess = { showCreate = false; editing = null }
+                )
             }
         )
     }
@@ -170,7 +148,7 @@ fun PetsScreen(repository: HestiaRepository) {
         ConfirmDialog(
             title = "Smazat mazlíčka",
             message = "Smazat „${pet.name}“ včetně záznamů?",
-            onConfirm = { scope.launch { repository.deletePet(pet.id).onSuccess { load() } } },
+            onConfirm = { vm.runAction({ repository.deletePet(pet.id) }) { deleteTarget = null } },
             onDismiss = { deleteTarget = null }
         )
     }

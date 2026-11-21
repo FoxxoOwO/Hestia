@@ -1,7 +1,9 @@
 # Environments & Secrets
 .env
+.env.*
 .env.local
 *.env
+*.bak*
 !.env.example
 
 # Python
@@ -51,6 +53,7 @@ yarn-error.log*
 *~
 
 # OS artifacts
+nul
 .DS_Store
 Thumbs.db
 desktop.ini

@@ -5,7 +5,7 @@ import {
   Grid, List, FileText, ExternalLink, MapPin, Eye,
   Building2, Sparkles, Filter, RefreshCw, X, ShieldCheck
 } from 'lucide-react';
-import { api } from '../services/api';
+import { api, clearVaultToken } from '../services/api';
 import {
   DocumentItem, DocumentCategory, DocumentStatus, DocumentStats
 } from '../types';
@@ -55,7 +55,6 @@ export const DocumentsPage: React.FC = () => {
         category: selectedCategory === 'all' ? undefined : selectedCategory,
         status: selectedStatus === 'all' ? undefined : selectedStatus,
         search: searchQuery.trim() || undefined,
-        vault_unlocked: isVaultUnlocked
       });
       setDocuments(data);
     } catch (e: any) {
@@ -96,7 +95,10 @@ export const DocumentsPage: React.FC = () => {
 
   const handleVaultToggle = () => {
     if (isVaultUnlocked) {
+      clearVaultToken();
       setIsVaultUnlocked(false);
+      fetchDocuments();
+      fetchStats();
       showNotification('Trezor byl uzamčen');
     } else {
       setIsPinModalOpen(true);
@@ -105,6 +107,7 @@ export const DocumentsPage: React.FC = () => {
 
   const handleVaultPinSuccess = () => {
     setIsVaultUnlocked(true);
+    fetchStats();
     showNotification('Trezor byl úspěšně odemčen');
   };
 
@@ -303,7 +306,7 @@ export const DocumentsPage: React.FC = () => {
         <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto">
           {(
             [
-              { id: 'all', label: 'Všechny stavy' },
+              { id: 'all', label: t('documents.filter_all_states') },
               { id: 'active', label: t('documents.filter_active') },
               { id: 'expiring_soon', label: t('documents.filter_expiring_soon') },
               { id: 'expired', label: t('documents.filter_expired') },
@@ -354,7 +357,7 @@ export const DocumentsPage: React.FC = () => {
                   ? 'bg-white dark:bg-zinc-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
                   : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
               }`}
-              title="Mřížka"
+              title={t('documents.grid_view')}
             >
               <Grid className="w-4 h-4" />
             </button>
@@ -398,7 +401,7 @@ export const DocumentsPage: React.FC = () => {
             {t('documents.no_documents')}
           </h3>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-md mx-auto mb-6">
-            Nahrajte PDF fakturu, vyfocený záruční list, revizní zprávu nebo smlouvu. Gemini AI automaticky vytěží všechny údaje.
+            {t('documents.empty_desc')}
           </p>
           <button
             onClick={() => setIsUploadModalOpen(true)}
@@ -443,7 +446,7 @@ export const DocumentsPage: React.FC = () => {
 
                     {doc.is_vault_protected && (
                       <span
-                        title="V rodinném trezoru (chráněno PINem)"
+                        title={t('documents.vault_locked_title')}
                         className="p-1.5 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 flex-shrink-0"
                       >
                         <Lock className="w-3.5 h-3.5" />
@@ -490,25 +493,27 @@ export const DocumentsPage: React.FC = () => {
                     {doc.status === 'expiring_soon' && (
                       <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400">
                         <AlertTriangle className="w-3 h-3" />
-                        {doc.days_until_expiry !== null && `Zbývá ${doc.days_until_expiry} dní`}
+                        {doc.days_until_expiry !== null && t('documents.days_left', { days: doc.days_until_expiry })}
                       </span>
                     )}
                     {doc.status === 'expired' && (
                       <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400">
                         <ShieldAlert className="w-3 h-3" />
-                        Vypršelo
+                        {t('documents.expired_badge')}
                       </span>
                     )}
                     {doc.status === 'active' && doc.expiry_date && (
                       <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                         <CheckCircle2 className="w-3 h-3" />
-                        {doc.days_until_expiry !== null ? `Záruka ještě ${doc.days_until_expiry} d.` : 'Platný'}
+                        {doc.days_until_expiry !== null
+                          ? t('documents.warranty_days_left', { days: doc.days_until_expiry })
+                          : t('documents.valid_badge')}
                       </span>
                     )}
                     {doc.status === 'permanent' && (
                       <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500">
                         <Clock className="w-3 h-3" />
-                        Trvalé
+                        {t('documents.permanent_badge')}
                       </span>
                     )}
                   </div>
@@ -543,12 +548,12 @@ export const DocumentsPage: React.FC = () => {
           <table className="w-full text-left text-sm">
             <thead className="bg-zinc-50 dark:bg-zinc-800/60 text-zinc-500 text-xs uppercase border-b border-zinc-200 dark:border-zinc-800">
               <tr>
-                <th className="px-5 py-3.5">Dokument</th>
-                <th className="px-4 py-3.5">Vystavitel / Číslo</th>
-                <th className="px-4 py-3.5">Stav / Expirace</th>
-                <th className="px-4 py-3.5">Částka</th>
-                <th className="px-4 py-3.5">Kde leží originál</th>
-                <th className="px-4 py-3.5 text-right">Akce</th>
+                <th className="px-5 py-3.5">{t('documents.table_document')}</th>
+                <th className="px-4 py-3.5">{t('documents.table_issuer')}</th>
+                <th className="px-4 py-3.5">{t('documents.table_status')}</th>
+                <th className="px-4 py-3.5">{t('documents.table_amount')}</th>
+                <th className="px-4 py-3.5">{t('documents.table_location')}</th>
+                <th className="px-4 py-3.5 text-right">{t('documents.table_actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800 text-zinc-700 dark:text-zinc-300">
@@ -630,7 +635,7 @@ export const DocumentsPage: React.FC = () => {
                           <span className="truncate max-w-[200px]">{doc.physical_location}</span>
                         </div>
                       ) : (
-                        <span className="text-zinc-400 italic">Digitální</span>
+                        <span className="text-zinc-400 italic">{t('documents.digital_badge')}</span>
                       )}
                     </td>
 

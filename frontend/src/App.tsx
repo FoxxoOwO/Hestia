@@ -5,6 +5,8 @@ import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
+import { PasswordChangeGate } from './components/PasswordChangeGate';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Flame } from 'lucide-react';
 
 const lazyPage = <T extends Record<string, React.ComponentType<any>>>(
@@ -43,7 +45,7 @@ const RouteFallback: React.FC = () => (
 );
 
 const AppContent: React.FC = () => {
-  const { user, token, isLoading } = useAuth();
+  const { user, isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -59,12 +61,17 @@ const AppContent: React.FC = () => {
     );
   }
 
-  if (!user || !token) {
+  if (!user) {
     return (
       <Suspense fallback={<RouteFallback />}>
         <LoginPage />
       </Suspense>
     );
+  }
+
+  // Výchozí/dočasné heslo musí být nahrazeno dřív, než se uživatel dostane k datům.
+  if (user.must_change_password) {
+    return <PasswordChangeGate />;
   }
 
   return (
@@ -75,6 +82,7 @@ const AppContent: React.FC = () => {
         <div className="flex-1 flex max-w-7xl w-full mx-auto overflow-x-hidden">
           <Sidebar />
           <main className="flex-1 p-3 sm:p-6 lg:p-8 min-w-0 w-full max-w-full overflow-x-hidden">
+            <ErrorBoundary>
             <Suspense fallback={<RouteFallback />}>
               <Routes>
               <Route path="/" element={<DashboardPage />} />
@@ -107,6 +115,7 @@ const AppContent: React.FC = () => {
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
             </Suspense>
+            </ErrorBoundary>
           </main>
         </div>
       </div>

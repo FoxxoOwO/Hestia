@@ -90,7 +90,7 @@ export const QrPaymentModal: React.FC<QrPaymentModalProps> = ({
           <div className="w-full bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl p-4 border border-zinc-100 dark:border-zinc-800 space-y-3">
             {/* Amount */}
             <div className="flex items-center justify-between text-sm">
-              <span className="text-zinc-500 dark:text-zinc-400">Částka k úhradě:</span>
+              <span className="text-zinc-500 dark:text-zinc-400">{t('finance.qr_amount')}</span>
               <span className="font-bold text-xl text-emerald-600 dark:text-emerald-400">
                 {settlement.amount.toLocaleString('cs-CZ')} Kč
               </span>
@@ -98,7 +98,7 @@ export const QrPaymentModal: React.FC<QrPaymentModalProps> = ({
 
             {/* From -> To */}
             <div className="flex items-center justify-between text-sm">
-              <span className="text-zinc-500 dark:text-zinc-400">Platba:</span>
+              <span className="text-zinc-500 dark:text-zinc-400">{t('finance.qr_payment')}</span>
               <span className="font-semibold text-zinc-800 dark:text-zinc-200">
                 {settlement.from_user_name} ➔ {settlement.to_user_name}
               </span>
@@ -107,7 +107,7 @@ export const QrPaymentModal: React.FC<QrPaymentModalProps> = ({
             {/* Account / IBAN */}
             {settlement.to_user_account && (
               <div className="flex items-center justify-between text-sm">
-                <span className="text-zinc-500 dark:text-zinc-400">Číslo účtu:</span>
+                <span className="text-zinc-500 dark:text-zinc-400">{t('finance.qr_account')}</span>
                 <span className="font-mono font-medium text-zinc-800 dark:text-zinc-200">
                   {settlement.to_user_account}
                 </span>
@@ -116,7 +116,7 @@ export const QrPaymentModal: React.FC<QrPaymentModalProps> = ({
 
             {settlement.to_user_iban && (
               <div className="flex items-center justify-between text-sm">
-                <span className="text-zinc-500 dark:text-zinc-400">IBAN:</span>
+                <span className="text-zinc-500 dark:text-zinc-400">{t('finance.qr_iban')}</span>
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-xs font-medium text-zinc-800 dark:text-zinc-200">
                     {settlement.to_user_iban}
@@ -124,7 +124,7 @@ export const QrPaymentModal: React.FC<QrPaymentModalProps> = ({
                   <button
                     onClick={() => copyToClipboard(settlement.to_user_iban!, 'iban')}
                     className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded text-zinc-500"
-                    title="Kopírovat IBAN"
+                    title={t('finance.qr_copy_iban')}
                   >
                     {copiedIban ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
                   </button>
@@ -134,7 +134,7 @@ export const QrPaymentModal: React.FC<QrPaymentModalProps> = ({
 
             <div className="text-xs text-zinc-400 dark:text-zinc-500 pt-2 border-t border-zinc-200 dark:border-zinc-700/60 flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
-              <span>Standard Czech SPAYD (Short Payment Descriptor) kompatibilní se všemi bankami v ČR.</span>
+              <span>{t('finance.qr_note')}</span>
             </div>
           </div>
         </div>
@@ -146,7 +146,7 @@ export const QrPaymentModal: React.FC<QrPaymentModalProps> = ({
             className="flex-1 py-3 px-4 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-semibold rounded-2xl transition-colors flex items-center justify-center gap-2 text-sm"
           >
             {copiedSpayd ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
-            {copiedSpayd ? 'Kód zkopírován' : 'Zkopírovat SPAYD kód'}
+            {copiedSpayd ? t('finance.qr_copied') : t('finance.qr_copy_code')}
           </button>
           <button
             onClick={onClose}

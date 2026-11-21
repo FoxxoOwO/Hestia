@@ -1,6 +1,6 @@
-from typing import Optional
+from typing import Literal, Optional
 from datetime import datetime
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 class UserBase(BaseModel):
     username: str
@@ -12,7 +12,8 @@ class UserBase(BaseModel):
     preferred_theme: Optional[str] = "system"
 
 class UserCreate(UserBase):
-    password: str
+    role: Literal["admin", "member"] = "member"
+    password: str = Field(..., min_length=12)
 
 class UserUpdate(BaseModel):
     username: Optional[str] = None
@@ -27,6 +28,7 @@ class UserUpdate(BaseModel):
 class UserResponse(UserBase):
     id: int
     is_active: bool
+    must_change_password: bool = False
     created_at: datetime
     
     class Config:
@@ -35,6 +37,9 @@ class UserResponse(UserBase):
 class Token(BaseModel):
     access_token: str
     token_type: str
+    # Volitelné pro nativní klienty; web používá httpOnly cookies.
+    refresh_token: Optional[str] = None
+    csrf_token: Optional[str] = None
     user: UserResponse
 
 class TokenPayload(BaseModel):
@@ -43,6 +48,20 @@ class TokenPayload(BaseModel):
 class LoginRequest(BaseModel):
     username: str
     password: str
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
+class VerifyPasswordRequest(BaseModel):
+    password: str
+
+
+class RefreshRequest(BaseModel):
+    # Volitelné pro nativní klienty; web používá httpOnly cookie.
+    refresh_token: Optional[str] = None
 
 class PublicMember(BaseModel):
     id: int

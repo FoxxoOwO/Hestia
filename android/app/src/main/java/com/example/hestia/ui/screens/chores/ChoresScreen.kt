@@ -1,5 +1,6 @@
 package com.example.hestia.ui.screens.chores
 
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -31,17 +32,11 @@ import kotlinx.coroutines.launch
 fun ChoresScreen(repository: HestiaRepository) {
     val scope = rememberCoroutineScope()
     var tab by remember { mutableStateOf(0) }
-    var chores by remember { mutableStateOf<List<Chore>>(emptyList()) }
-    var leaderboard by remember { mutableStateOf<List<LeaderboardMember>>(emptyList()) }
-    var rewards by remember { mutableStateOf<List<ChoreRewardItem>>(emptyList()) }
-    var panicTasks by remember { mutableStateOf<List<Chore>>(emptyList()) }
-    var members by remember { mutableStateOf<List<User>>(emptyList()) }
-    var loading by remember { mutableStateOf(true) }
-    var error by remember { mutableStateOf<String?>(null) }
 
-    var roomFilter by remember { mutableStateOf<String?>(null) }
-    var onlyOverdue by remember { mutableStateOf(false) }
-    var search by remember { mutableStateOf("") }
+    val vm: ChoresViewModel = viewModel(factory = ChoresViewModelFactory(repository))
+    val uiState by vm.uiState.collectAsState()
+
+    LaunchedEffect(Unit) { vm.loadChores() }
 
     var showCreate by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<Chore?>(null) }
@@ -52,31 +47,6 @@ fun ChoresScreen(repository: HestiaRepository) {
     var showWheel by remember { mutableStateOf(false) }
     var redeemTarget by remember { mutableStateOf<ChoreRewardItem?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
-
-    suspend fun loadChores() {
-        loading = true
-        repository.getChores(room = roomFilter, search = search.ifBlank { null })
-            .onSuccess { list ->
-                chores = if (onlyOverdue) list.filter { it.is_overdue } else list
-                error = null
-            }
-            .onFailure { error = it.friendly() }
-        loading = false
-    }
-
-    suspend fun loadAll() {
-        loadChores()
-        repository.getLeaderboard().onSuccess { leaderboard = it }
-        repository.getChoreRewards().onSuccess { rewards = it }
-        repository.getPanicModeTasks().onSuccess { panicTasks = it }
-        repository.getUsers().onSuccess { members = it }
-    }
-
-    LaunchedEffect(roomFilter, onlyOverdue, search) {
-        if (search.isNotBlank()) kotlinx.coroutines.delay(350)
-        loadChores()
-    }
-    LaunchedEffect(tab) { if (tab != 0) loadAll() }
 
 
     Column(Modifier.fillMaxSize()) {
@@ -90,7 +60,7 @@ fun ChoresScreen(repository: HestiaRepository) {
             }
         }
 
-        ErrorBox(error, onRetry = { scope.launch { loadAll() } })
+        ErrorBox(uiState.error, onRetry = { scope.launch { vm.loadAll() } })
         message?.let {
             Card(
                 colors = CardDefaults.cardColors(containerColor = StatusGreen.copy(alpha = 0.12f)),
@@ -104,22 +74,22 @@ fun ChoresScreen(repository: HestiaRepository) {
             0 -> Column {
                 Column(Modifier.padding(horizontal = 12.dp)) {
                     HestiaField(
-                        value = search,
-                        onValueChange = { search = it },
+                        value = uiState.search,
+                        onValueChange = { vm.setSearch(it) },
                         label = "Hledat úkol"
                     )
                     Spacer(Modifier.height(6.dp))
                     ChipSelector(
                         options = Labels.rooms,
-                        selected = roomFilter,
-                        onSelect = { roomFilter = it.ifBlank { null } },
+                        selected = uiState.roomFilter,
+                        onSelect = { vm.setRoom(it.ifBlank { null }) },
                         includeAll = true,
                         allLabel = "Všechny místnosti"
                     )
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         FilterChip(
-                            selected = onlyOverdue,
-                            onClick = { onlyOverdue = !onlyOverdue },
+                            selected = uiState.onlyOverdue,
+                            onClick = { vm.setOnlyOverdue(!uiState.onlyOverdue) },
                             label = { Text("Jen po termínu") }
                         )
                         Spacer(Modifier.width(8.dp))
@@ -131,17 +101,17 @@ fun ChoresScreen(repository: HestiaRepository) {
                     }
                 }
 
-                if (loading) {
+                if (uiState.loading) {
                     LoadingBox()
                 } else {
                     LazyColumn(
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        if (chores.isEmpty()) {
+                        if (uiState.chores.isEmpty()) {
                             item { EmptyState(Icons.Default.CheckCircle, "Žádné úkoly", "Vytvořte první úkol pro domácnost.") }
                         }
-                        items(chores, key = { it.id }) { chore ->
+                        items(uiState.chores, key = { it.id }) { chore ->
                             ChoreCard(
                                 chore = chore,
                                 onComplete = { completing = chore },
@@ -152,7 +122,7 @@ fun ChoresScreen(repository: HestiaRepository) {
                                     scope.launch {
                                         repository.addChoreSupplyToShopping(chore.id, null)
                                             .onSuccess { message = "Potřeby přidány do nákupního seznamu" }
-                                            .onFailure { error = it.friendly() }
+                                            .onFailure { vm.setError(it) }
                                     }
                                 }
                             )
@@ -163,10 +133,10 @@ fun ChoresScreen(repository: HestiaRepository) {
             }
 
             1 -> LazyColumn(contentPadding = PaddingValues(12.dp)) {
-                if (leaderboard.isEmpty()) {
+                if (uiState.leaderboard.isEmpty()) {
                     item { EmptyState(Icons.Default.EmojiEvents, "Žebříček je prázdný", "Splňte první úkol a získejte body.") }
                 }
-                items(leaderboard) { m ->
+                items(uiState.leaderboard) { m ->
                     Card(
                         shape = RoundedCornerShape(14.dp),
                         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
@@ -220,10 +190,10 @@ fun ChoresScreen(repository: HestiaRepository) {
                         TextButton(onClick = { showRewardForm = true }) { Text("+ Nová odměna") }
                     }
                 }
-                if (rewards.isEmpty()) {
+                if (uiState.rewards.isEmpty()) {
                     item { EmptyState(Icons.Default.CardGiftcard, "Zatím žádné odměny", "Přidejte odměnu, kterou si členové koupí za body.") }
                 }
-                items(rewards, key = { it.id }) { r ->
+                items(uiState.rewards, key = { it.id }) { r ->
                     Card(shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.CardGiftcard, null, tint = HestiaOrange)
@@ -260,10 +230,10 @@ fun ChoresScreen(repository: HestiaRepository) {
                         }
                     }
                 }
-                if (panicTasks.isEmpty()) {
+                if (uiState.panicTasks.isEmpty()) {
                     item { EmptyState(Icons.Default.Bolt, "Nic k řešení", "Panic mode nemá žádné úkoly.") }
                 }
-                items(panicTasks, key = { it.id }) { chore ->
+                items(uiState.panicTasks, key = { it.id }) { chore ->
                     ChoreCard(
                         chore = chore,
                         onComplete = { completing = chore },
@@ -295,7 +265,7 @@ fun ChoresScreen(repository: HestiaRepository) {
         val initial = editing
         ChoreFormDialog(
             initial = initial,
-            members = members,
+            members = uiState.members,
             onDismiss = { showCreate = false; editing = null },
             onSave = { create ->
                 scope.launch {
@@ -326,8 +296,8 @@ fun ChoresScreen(repository: HestiaRepository) {
                     result.onSuccess {
                         showCreate = false
                         editing = null
-                        loadAll()
-                    }.onFailure { error = it.friendly() }
+                        vm.loadAll()
+                    }.onFailure { vm.setError(it) }
                 }
             }
         )
@@ -343,9 +313,9 @@ fun ChoresScreen(repository: HestiaRepository) {
                         .onSuccess {
                             message = "Úkol „${chore.title}“ splněn (+${points ?: chore.points} b.)"
                             completing = null
-                            loadAll()
+                            vm.loadAll()
                         }
-                        .onFailure { error = it.friendly() }
+                        .onFailure { vm.setError(it) }
                 }
             }
         )
@@ -357,7 +327,7 @@ fun ChoresScreen(repository: HestiaRepository) {
             title = { Text("Přiřadit úkol") },
             text = {
                 Column {
-                    members.forEach { m ->
+                    uiState.members.forEach { m ->
                         Row(
                             Modifier.fillMaxWidth().clickable {
                                 scope.launch {
@@ -365,9 +335,9 @@ fun ChoresScreen(repository: HestiaRepository) {
                                         .onSuccess {
                                             message = "Úkol přiřazen: ${m.display_name}"
                                             assigning = null
-                                            loadAll()
+                                            vm.loadAll()
                                         }
-                                        .onFailure { error = it.friendly() }
+                                        .onFailure { vm.setError(it) }
                                 }
                             }.padding(vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -390,7 +360,7 @@ fun ChoresScreen(repository: HestiaRepository) {
             message = "Smazat „${chore.title}“? Historie zůstane v aktivitách.",
             onConfirm = {
                 scope.launch {
-                    repository.deleteChore(chore.id).onSuccess { loadAll() }.onFailure { error = it.friendly() }
+                    repository.deleteChore(chore.id).onSuccess { vm.loadAll() }.onFailure { vm.setError(it) }
                 }
             },
             onDismiss = { deleteTarget = null }
@@ -415,8 +385,8 @@ fun ChoresScreen(repository: HestiaRepository) {
                         )
                     ).onSuccess {
                         showRewardForm = false
-                        loadAll()
-                    }.onFailure { error = it.friendly() }
+                        vm.loadAll()
+                    }.onFailure { vm.setError(it) }
                 }
             }
         ) {
@@ -438,7 +408,7 @@ fun ChoresScreen(repository: HestiaRepository) {
                 scope.launch {
                     repository.redeemChoreReward(reward.id)
                         .onSuccess { message = "Odměna uplatněna: ${reward.title}" }
-                        .onFailure { error = it.friendly() }
+                        .onFailure { vm.setError(it) }
                 }
             },
             onDismiss = { redeemTarget = null }
@@ -446,18 +416,18 @@ fun ChoresScreen(repository: HestiaRepository) {
     }
 
     if (showWheel) {
-        val publicMembers = remember(members) {
-            members.map { PublicMember(id = it.id, username = it.username, display_name = it.display_name, avatar_color = it.avatar_color) }
+        val publicMembers = remember(uiState.members) {
+            uiState.members.map { PublicMember(id = it.id, username = it.username, display_name = it.display_name, avatar_color = it.avatar_color) }
         }
         ChoreWheelDialog(
             members = publicMembers,
-            chores = chores,
+            chores = uiState.chores,
             onDismiss = { showWheel = false },
             onAssign = { choreId, memberId ->
                 scope.launch {
                     repository.reassignChore(choreId, memberId)
-                        .onSuccess { loadAll() }
-                        .onFailure { error = it.friendly() }
+                        .onSuccess { vm.loadAll() }
+                        .onFailure { vm.setError(it) }
                 }
             }
         )

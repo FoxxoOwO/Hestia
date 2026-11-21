@@ -2,6 +2,7 @@ package com.example.hestia.data.repository
 
 import com.example.hestia.data.api.ApiClient
 import com.example.hestia.data.api.HestiaApiService
+import com.example.hestia.data.api.VaultTokenHolder
 import com.example.hestia.data.local.PreferencesManager
 import com.example.hestia.data.models.*
 import kotlinx.coroutines.CoroutineScope
@@ -24,14 +25,18 @@ class HestiaRepository(
     private var cachedToken: String? = null
 
     @Volatile
+    private var cachedRefreshToken: String? = null
+
+    @Volatile
     private var tokenLoaded = false
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     init {
-        // Načtení tokenu z DataStore nesmí blokovat hlavní vlákno při startu aplikace.
+        // Načtení tokenů z DataStore nesmí blokovat hlavní vlákno při startu aplikace.
         scope.launch {
             cachedToken = runCatching { preferences.authTokenFlow.first() }.getOrNull()
+            cachedRefreshToken = runCatching { preferences.refreshTokenFlow.first() }.getOrNull()
             tokenLoaded = true
         }
     }
@@ -40,6 +45,7 @@ class HestiaRepository(
     private fun currentToken(): String? {
         if (!tokenLoaded) {
             cachedToken = runCatching { runBlocking { preferences.authTokenFlow.first() } }.getOrNull()
+            cachedRefreshToken = runCatching { runBlocking { preferences.refreshTokenFlow.first() } }.getOrNull()
             tokenLoaded = true
         }
         return cachedToken
@@ -47,9 +53,16 @@ class HestiaRepository(
 
     private val apiClient = ApiClient(
         tokenProvider = { currentToken() },
+        refreshTokenProvider = { currentToken(); cachedRefreshToken },
+        onTokensRefreshed = { access, refresh ->
+            cachedToken = access
+            refresh?.let { cachedRefreshToken = it }
+            scope.launch { runCatching { preferences.saveTokens(access, refresh) } }
+        },
         onUnauthorized = {
-            // 401 = token vypršel; odhlásíme, aby se zobrazila přihlašovací obrazovka.
+            // Refresh selhal – odhlásíme uživatele.
             cachedToken = null
+            cachedRefreshToken = null
             tokenLoaded = true
             scope.launch { runCatching { preferences.clearAuth() } }
         }
@@ -75,8 +88,9 @@ class HestiaRepository(
     suspend fun login(username: String, password: String): Result<TokenResponse> = runCatching {
         val response = getService().login(LoginRequest(username, password))
         cachedToken = response.access_token
+        cachedRefreshToken = response.refresh_token
         tokenLoaded = true
-        preferences.saveAuth(response.access_token, response.user)
+        preferences.saveAuth(response.access_token, response.user, response.refresh_token)
         response
     }
 
@@ -637,11 +651,19 @@ class HestiaRepository(
     }
 
     suspend fun verifyVaultPin(pin: String): Result<VaultVerifyResponse> = runCatching {
-        getService().verifyVaultPin(VaultVerifyRequest(pin))
+        getService().verifyVaultPin(VaultVerifyRequest(pin)).also { response ->
+            response.vault_token?.let { VaultTokenHolder.token = it }
+        }
     }
 
     suspend fun setVaultPin(oldPin: String?, newPin: String): Result<SimpleMessageResponse> = runCatching {
-        getService().setVaultPin(VaultSetPinRequest(oldPin, newPin))
+        getService().setVaultPin(VaultSetPinRequest(oldPin, newPin)).also { response ->
+            response.vault_token?.let { VaultTokenHolder.token = it }
+        }
+    }
+
+    fun lockVault() {
+        VaultTokenHolder.clear()
     }
 
     // ---------------- VEHICLES ----------------

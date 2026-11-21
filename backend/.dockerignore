@@ -12,3 +12,5 @@ uploads
 .git
 .gitignore
 .env
+.env.*
+*.bak*

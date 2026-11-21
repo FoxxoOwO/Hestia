@@ -5,6 +5,7 @@ Provides full household data export, import (merge/replace), and server snapshot
 
 import os
 import json
+import secrets
 import datetime
 import glob
 from typing import Dict, Any, List, Optional
@@ -222,7 +223,12 @@ def import_data(db: Session, backup_json: Dict[str, Any], mode: str = "merge", c
             new_u = User(**new_u_data)
             if not new_u.hashed_password:
                 from app.utils.auth import get_password_hash
-                new_u.hashed_password = get_password_hash("hestia123")
+                from app.config import settings
+                # Žádné výchozí heslo – náhodné + povinná změna při prvním přihlášení.
+                new_u.hashed_password = get_password_hash(
+                    settings.INITIAL_ADMIN_PASSWORD or secrets.token_urlsafe(18)
+                )
+                new_u.must_change_password = True
             db.add(new_u)
             db.commit()
             db.refresh(new_u)

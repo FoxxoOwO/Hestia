@@ -11,6 +11,8 @@ services:
     environment:
       - SECRET_KEY=${SECRET_KEY:?SECRET_KEY není nastaven. Spustit: echo "SECRET_KEY=$(python -c 'import secrets; print(secrets.token_urlsafe(48))')" > .env}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - INITIAL_ADMIN_PASSWORD=${INITIAL_ADMIN_PASSWORD:-}
+      - COOKIE_SECURE=${COOKIE_SECURE:-false}
       - DATABASE_URL=sqlite:////app/data/hestia.db
       - UPLOAD_DIR=/app/uploads
     volumes:

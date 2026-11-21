@@ -1,10 +1,15 @@
+import asyncio
 import io
+import ipaddress
 import json
 import logging
 import re
+import socket
 import zipfile
 import csv
 from typing import Optional, List, Tuple, Dict, Any
+from urllib.parse import urljoin, urlparse
+
 import httpx
 from bs4 import BeautifulSoup
 from google import genai
@@ -23,6 +28,50 @@ from app.utils.ingredient_parser import (
 
 logger = logging.getLogger(__name__)
 
+_MAX_FETCH_BYTES = 2 * 1024 * 1024  # 2 MB stačí pro recept
+_MAX_REDIRECTS = 3
+
+
+def _is_public_address(ip: str) -> bool:
+    """Blokuje loopback, privátní sítě, link-local (169.254), metadata IP atd."""
+    try:
+        addr = ipaddress.ip_address(ip)
+    except ValueError:
+        return False
+    if addr.version == 6 and addr.ipv4_mapped is not None:
+        addr = addr.ipv4_mapped
+    return not (
+        addr.is_private
+        or addr.is_loopback
+        or addr.is_link_local
+        or addr.is_reserved
+        or addr.is_multicast
+        or addr.is_unspecified
+    )
+
+
+async def _assert_public_url(url: str) -> str:
+    """Validuje URL a DNS odpověď – ochrana proti SSRF."""
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        raise ValueError("Podporovány jsou pouze HTTP a HTTPS URL.")
+    if parsed.username or parsed.password:
+        raise ValueError("URL nesmí obsahovat přihlašovací údaje.")
+    host = parsed.hostname
+    if not host:
+        raise ValueError("Neplatná URL – chybí hostname.")
+    port = parsed.port or (443 if parsed.scheme == "https" else 80)
+
+    loop = asyncio.get_running_loop()
+    infos = await loop.getaddrinfo(host, port, type=socket.SOCK_STREAM)
+    if not infos:
+        raise ValueError("Hostname se nepodařilo vyřešit.")
+    for info in infos:
+        if not _is_public_address(info[4][0]):
+            raise ValueError("Z bezpečnostních důvodů jsou povoleny pouze veřejné adresy.")
+    return url
+
+
 class GeminiRecipeService:
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or settings.GEMINI_API_KEY
@@ -38,12 +87,36 @@ class GeminiRecipeService:
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language": "cs,en-US;q=0.9,en;q=0.8",
         }
-        async with httpx.AsyncClient(follow_redirects=True, timeout=20.0) as client:
-            response = await client.get(url, headers=headers)
-            response.raise_for_status()
-            html = response.text
+        current_url = url
+        html: bytes = b""
+        encoding = "utf-8"
 
-        soup = BeautifulSoup(html, "html.parser")
+        # Redirecty zpracováváme sami a každou cílovou adresu znovu validujeme.
+        async with httpx.AsyncClient(follow_redirects=False, timeout=20.0) as client:
+            for _ in range(_MAX_REDIRECTS + 1):
+                validated_url = await _assert_public_url(current_url)
+                async with client.stream("GET", validated_url, headers=headers) as response:
+                    if response.status_code in (301, 302, 303, 307, 308):
+                        location = response.headers.get("location")
+                        if not location:
+                            raise ValueError("Přesměrování bez cílové adresy.")
+                        current_url = urljoin(validated_url, location)
+                        continue
+                    response.raise_for_status()
+                    encoding = response.encoding or "utf-8"
+                    chunks: List[bytes] = []
+                    total = 0
+                    async for chunk in response.aiter_bytes():
+                        total += len(chunk)
+                        if total > _MAX_FETCH_BYTES:
+                            raise ValueError("Načtená stránka je příliš velká (limit 2 MB).")
+                        chunks.append(chunk)
+                    html = b"".join(chunks)
+                    break
+            else:
+                raise ValueError("Příliš mnoho přesměrování.")
+
+        soup = BeautifulSoup(html.decode(encoding, errors="replace"), "html.parser")
 
         # Remove irrelevant elements
         for element in soup(["script", "style", "nav", "footer", "header", "aside", "noscript", "svg", "form"]):
@@ -77,7 +150,7 @@ class GeminiRecipeService:
 
         if url:
             source_url = url
-            logger.info(f"Fetching recipe from URL: {url}")
+            logger.info("Fetching recipe from host: %s", urlparse(url).hostname)
             content_to_analyze = await self.fetch_webpage_content(url)
         elif raw_text:
             content_to_analyze = raw_text

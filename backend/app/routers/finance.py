@@ -23,7 +23,9 @@ from app.schemas.finance import (
     ReceiptScanRequest, ReceiptScanResponse,
     UserFinanceProfileUpdate, UserFinanceProfileResponse, UserSimple
 )
+from app.config import settings
 from app.utils.auth import get_current_user
+from app.utils.rate_limit import check_ai_quota, register_ai_use
 from app.utils.uploads import read_upload, TABLE_EXT
 from app.services.spayd_service import generate_spayd_string, czech_account_to_iban
 from app.services.gemini_finance_service import GeminiFinanceService
@@ -867,6 +869,12 @@ async def scan_receipt(
     payload: ReceiptScanRequest,
     current_user: User = Depends(get_current_user)
 ):
+    if not settings.GEMINI_API_KEY:
+        raise HTTPException(status_code=400, detail="Gemini API klíč není nakonfigurován.")
+    quota_key = f"ai|{current_user.id}"
+    check_ai_quota(quota_key)
+    register_ai_use(quota_key)
+
     service = GeminiFinanceService()
     res = await service.scan_receipt(
         image_base64=payload.image_base64,

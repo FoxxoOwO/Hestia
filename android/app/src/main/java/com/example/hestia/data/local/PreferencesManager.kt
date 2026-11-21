@@ -20,6 +20,7 @@ class PreferencesManager(private val context: Context) {
     companion object {
         val KEY_SERVER_URL = stringPreferencesKey("server_url")
         val KEY_AUTH_TOKEN = stringPreferencesKey("auth_token")
+        val KEY_REFRESH_TOKEN = stringPreferencesKey("refresh_token")
         val KEY_USER_DATA = stringPreferencesKey("user_data")
         val KEY_APP_MODE = stringPreferencesKey("app_mode")
         val KEY_THEME = stringPreferencesKey("theme")
@@ -48,6 +49,10 @@ class PreferencesManager(private val context: Context) {
 
     val authTokenFlow: Flow<String?> = context.dataStore.data.map { preferences ->
         preferences[KEY_AUTH_TOKEN]
+    }
+
+    val refreshTokenFlow: Flow<String?> = context.dataStore.data.map { preferences ->
+        preferences[KEY_REFRESH_TOKEN]
     }
 
     val themeFlow: Flow<String> = context.dataStore.data.map { preferences ->
@@ -94,11 +99,19 @@ class PreferencesManager(private val context: Context) {
         }
     }
 
-    suspend fun saveAuth(token: String, user: User) {
+    suspend fun saveAuth(token: String, user: User, refreshToken: String? = null) {
         val userJson = json.encodeToString(user)
         context.dataStore.edit { preferences ->
             preferences[KEY_AUTH_TOKEN] = token
+            if (refreshToken != null) preferences[KEY_REFRESH_TOKEN] = refreshToken
             preferences[KEY_USER_DATA] = userJson
+        }
+    }
+
+    suspend fun saveTokens(accessToken: String, refreshToken: String?) {
+        context.dataStore.edit { preferences ->
+            preferences[KEY_AUTH_TOKEN] = accessToken
+            if (refreshToken != null) preferences[KEY_REFRESH_TOKEN] = refreshToken
         }
     }
 
@@ -112,6 +125,7 @@ class PreferencesManager(private val context: Context) {
     suspend fun clearAuth() {
         context.dataStore.edit { preferences ->
             preferences.remove(KEY_AUTH_TOKEN)
+            preferences.remove(KEY_REFRESH_TOKEN)
             preferences.remove(KEY_USER_DATA)
         }
     }

@@ -1,7 +1,8 @@
 import base64
 import binascii
+import logging
 import os
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, Request, status, UploadFile, File, Form
 from app.config import settings
 from app.utils.uploads import read_upload, RECIPE_EXT, MAX_UPLOAD_BYTES
 from app.models.user import User
@@ -22,8 +23,30 @@ from app.services.gemini_plant_service import GeminiPlantService
 from app.services.gemini_pet_service import GeminiPetService
 from app.utils.auth import get_current_user
 from app.utils.ingredient_parser import sanitize_ingredients
+from app.utils.rate_limit import check_ai_quota, register_ai_use
 
-router = APIRouter(prefix="/ai", tags=["Gemini AI Assistant"])
+logger = logging.getLogger(__name__)
+
+
+async def _ai_quota_guard(request: Request, current_user: User = Depends(get_current_user)) -> User:
+    """Omezí počet drahých Gemini volání na uživatele (20/hodinu)."""
+    if request.method == "POST":
+        if not settings.GEMINI_API_KEY:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Gemini API klíč není nakonfigurován. Nastavte GEMINI_API_KEY v .env.",
+            )
+        key = f"ai|{current_user.id}"
+        check_ai_quota(key)
+        register_ai_use(key)
+    return current_user
+
+
+router = APIRouter(
+    prefix="/ai",
+    tags=["Gemini AI Assistant"],
+    dependencies=[Depends(_ai_quota_guard)],
+)
 
 @router.get("/status")
 def get_ai_status(current_user: User = Depends(get_current_user)):
@@ -58,10 +81,13 @@ async def import_recipe_with_gemini(
         )
         extracted.ingredients = sanitize_ingredients(extracted.ingredients)
         return extracted
-    except Exception as e:
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception:
+        logger.exception("Gemini recipe import failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Chyba při zpracování receptu pomocí Gemini AI: {str(e)}"
+            detail="Zpracování receptu pomocí Gemini AI se nepodařilo. Zkuste to prosím později."
         )
 
 @router.post("/import-recipe-file", response_model=RecipeFileImportResponse)
@@ -89,10 +115,11 @@ async def import_recipe_from_file(
         )
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
+        logger.exception("Gemini recipe file import failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Chyba při zpracování souboru s receptem: {str(e)}"
+            detail="Zpracování souboru s receptem se nepodařilo."
         )
 
 @router.post("/import-recipe-base64", response_model=RecipeFileImportResponse)
@@ -153,10 +180,11 @@ async def import_recipe_from_base64(
         )
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
+        logger.exception("Gemini base64 recipe import failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Chyba při zpracování Base64 souboru s receptem: {str(e)}"
+            detail="Zpracování Base64 souboru s receptem se nepodařilo."
         )
 
 @router.post("/analyze-plant", response_model=PlantAiExtracted)
@@ -185,10 +213,11 @@ async def analyze_plant_with_gemini(
             target_language=req.target_language or current_user.preferred_language or "cs"
         )
         return result
-    except Exception as e:
+    except Exception:
+        logger.exception("Gemini plant analysis failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Chyba při botanické analýze rostliny přes Gemini AI: {str(e)}"
+            detail="Botanická analýza rostliny se nepodařila."
         )
 
 @router.post("/diagnose-plant-health", response_model=PlantDiagnosisResponse)
@@ -218,10 +247,11 @@ async def diagnose_plant_health_with_gemini(
             target_language=req.target_language or current_user.preferred_language or "cs"
         )
         return result
-    except Exception as e:
+    except Exception:
+        logger.exception("Gemini plant diagnosis failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Chyba při diagnostice rostliny přes AI Doktora: {str(e)}"
+            detail="Diagnostika rostliny se nepodařila."
         )
 
 
@@ -250,10 +280,11 @@ async def check_pet_food_safety_with_gemini(
             target_language=req.target_language or current_user.preferred_language or "cs"
         )
         return result
-    except Exception as e:
+    except Exception:
+        logger.exception("Gemini food safety check failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Chyba při kontrole bezpečnosti potraviny přes Gemini AI: {str(e)}"
+            detail="Kontrola bezpečnosti potraviny se nepodařila."
         )
 
 
@@ -286,9 +317,10 @@ async def diagnose_pet_symptoms_with_gemini(
             target_language=req.target_language or current_user.preferred_language or "cs"
         )
         return result
-    except Exception as e:
+    except Exception:
+        logger.exception("Gemini vet consultation failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Chyba při veterinární konzultaci přes Gemini AI: {str(e)}"
+            detail="Veterinární konzultace se nepodařila."
         )
 

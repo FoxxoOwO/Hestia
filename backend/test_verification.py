@@ -1,5 +1,10 @@
 import os
 import datetime
+
+# Demo seeder už nevytváří účet s veřejně známým heslem – nastavíme ho před importem aplikace.
+os.environ.setdefault("INITIAL_ADMIN_PASSWORD", "VerificationAdminPass!2026")
+ADMIN_PASSWORD = os.environ["INITIAL_ADMIN_PASSWORD"]
+
 from fastapi.testclient import TestClient
 from app.main import app
 from app.database import engine, Base, SessionLocal
@@ -24,7 +29,7 @@ def run_tests():
     print("1. Health check:", health_data["app"], "- OK")
 
     # 2. Login
-    login_res = client.post("/api/v1/auth/login", json={"username": "admin", "password": "hestia123"})
+    login_res = client.post("/api/v1/auth/login", json={"username": "admin", "password": ADMIN_PASSWORD})
     assert login_res.status_code == 200, f"Login failed: {login_res.text}"
     token = login_res.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
@@ -561,30 +566,35 @@ def run_tests():
     doc_stats = doc_stats_res.json()
     assert doc_stats["total_documents"] >= 10
     assert "warranty" in doc_stats["categories"]
-    assert doc_stats["vault_count"] >= 2
-    print(f"13.1 Statistiky archivu ({doc_stats['total_documents']} dokumentů, {doc_stats['vault_count']} v trezoru) - OK")
+    # Zamčený trezor nesmí prozrazovat počet ani kategorie svých dokumentů.
+    assert doc_stats["vault_count"] == 0
+    print(f"13.1 Statistiky archivu ({doc_stats['total_documents']} dokumentů, 0 v trezoru) - OK")
 
     # 13.2 Filtrování zamčeného trezoru a ověření PIN kódu
-    locked_docs_res = client.get("/api/v1/documents?vault_unlocked=false", headers=headers)
+    locked_docs_res = client.get("/api/v1/documents", headers=headers)
     assert locked_docs_res.status_code == 200
     locked_docs = locked_docs_res.json()
     assert all(not d["is_vault_protected"] for d in locked_docs), "V zamčeném trezoru nesmí být citlivé dokumenty"
 
+    # První nastavení PINu správcem (žádné výchozí 1234)
+    set_pin_res = client.post("/api/v1/documents/vault/pin", json={"new_pin": "246810"}, headers=headers)
+    assert set_pin_res.status_code == 200, set_pin_res.text
+
     # Chybný PIN
-    bad_pin_res = client.post("/api/v1/documents/vault/verify", json={"pin": "9999"}, headers=headers)
+    bad_pin_res = client.post("/api/v1/documents/vault/verify", json={"pin": "999999"}, headers=headers)
     assert bad_pin_res.status_code == 401
 
-    # Správný PIN (výchozí 1234)
-    good_pin_res = client.post("/api/v1/documents/vault/verify", json={"pin": "1234"}, headers=headers)
+    good_pin_res = client.post("/api/v1/documents/vault/verify", json={"pin": "246810"}, headers=headers)
     assert good_pin_res.status_code == 200
     assert good_pin_res.json()["status"] == "success"
+    vault_headers = {**headers, "X-Vault-Token": good_pin_res.json()["vault_token"]}
 
     # Odemčený trezor
-    unlocked_docs_res = client.get("/api/v1/documents?vault_unlocked=true", headers=headers)
+    unlocked_docs_res = client.get("/api/v1/documents", headers=vault_headers)
     assert unlocked_docs_res.status_code == 200
     unlocked_docs = unlocked_docs_res.json()
     assert any(d["is_vault_protected"] for d in unlocked_docs), "V odemčeném trezoru musí být i citlivé dokumenty"
-    print("13.2 Zabezpečení digitálního trezoru a PIN ověření (1234) - OK")
+    print("13.2 Zabezpečení digitálního trezoru a PIN ověření - OK")
 
     # 13.3 Nahrání souboru (Upload)
     sample_file_bytes = b"%PDF-1.4 Testovaci PDF faktura Hestia\n"
@@ -960,7 +970,7 @@ def run_tests():
     print("16.2 Neplatné heslo správně zamítnuto (401 Unauthorized) - OK")
 
     # 16.3 Úspěšné přihlášení a vytvoření relace
-    good_login_res = client.post("/api/v1/auth/login", json={"username": "admin", "password": "hestia123"})
+    good_login_res = client.post("/api/v1/auth/login", json={"username": "admin", "password": ADMIN_PASSWORD})
     assert good_login_res.status_code == 200
     auth_data = good_login_res.json()
     assert "access_token" in auth_data
@@ -1118,7 +1128,7 @@ def run_tests():
     # 18.1 Neplatný potvrzovací řetězec (400)
     bad_conf_res = client.post(
         "/api/v1/system/reset-data",
-        json={"confirmation": "NEPLATNY_TEXT", "password": "hestia123"},
+        json={"confirmation": "NEPLATNY_TEXT", "password": ADMIN_PASSWORD},
         headers=headers
     )
     assert bad_conf_res.status_code == 400
@@ -1138,7 +1148,7 @@ def run_tests():
     # 18.3 Úspěšné spuštění resetu databáze přes API (200)
     valid_reset_res = client.post(
         "/api/v1/system/reset-data",
-        json={"confirmation": "SMAZAT", "password": "hestia123"},
+        json={"confirmation": "SMAZAT", "password": ADMIN_PASSWORD},
         headers=headers
     )
     assert valid_reset_res.status_code == 200

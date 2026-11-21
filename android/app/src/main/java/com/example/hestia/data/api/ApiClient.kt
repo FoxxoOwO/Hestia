@@ -1,5 +1,6 @@
 package com.example.hestia.data.api
 
+import com.example.hestia.BuildConfig
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -10,6 +11,8 @@ import java.util.concurrent.TimeUnit
 
 class ApiClient(
     private val tokenProvider: () -> String?,
+    private val refreshTokenProvider: () -> String? = { null },
+    private val onTokensRefreshed: (String, String?) -> Unit = { _, _ -> },
     private val onUnauthorized: () -> Unit = {}
 ) {
     private val json = Json {
@@ -26,10 +29,16 @@ class ApiClient(
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(20, TimeUnit.SECONDS)
             .writeTimeout(20, TimeUnit.SECONDS)
-            .addInterceptor(AuthInterceptor(tokenProvider, onUnauthorized))
-            .addInterceptor(HttpLoggingInterceptor().apply {
-                level = HttpLoggingInterceptor.Level.BASIC
-            })
+            .addInterceptor(AuthInterceptor(tokenProvider, refreshTokenProvider, onTokensRefreshed, onUnauthorized))
+            .apply {
+                if (BuildConfig.DEBUG) {
+                    addInterceptor(HttpLoggingInterceptor().apply {
+                        level = HttpLoggingInterceptor.Level.BASIC
+                        redactHeader("Authorization")
+                        redactHeader("X-Vault-Token")
+                    })
+                }
+            }
             .build()
     }
 

@@ -27,7 +27,7 @@ export const VaultPinModal: React.FC<VaultPinModalProps> = ({
       const newPin = pin + digit;
       setPin(newPin);
       setError(null);
-      if (newPin.length >= 4) {
+      if (newPin.length === 6) {
         verifyPin(newPin);
       }
     }
@@ -47,7 +47,7 @@ export const VaultPinModal: React.FC<VaultPinModalProps> = ({
       setPin('');
       onClose();
     } catch (err: any) {
-      setError(err.message || 'Nesprávný PIN kód');
+      setError(err.message || t('documents.vault_wrong_pin'));
       setPin('');
     } finally {
       setIsVerifying(false);
@@ -68,7 +68,7 @@ export const VaultPinModal: React.FC<VaultPinModalProps> = ({
                 {t('documents.vault_modal_title')}
               </h3>
               <p className="text-[11px] text-zinc-400">
-                Ochrana citlivých smluv a dokladů
+                {t('documents.vault_modal_subtitle')}
               </p>
             </div>
           </div>
@@ -88,7 +88,7 @@ export const VaultPinModal: React.FC<VaultPinModalProps> = ({
 
           {/* Dots representation of PIN */}
           <div className="flex items-center gap-3 mb-4">
-            {[0, 1, 2, 3].map((idx) => (
+            {[0, 1, 2, 3, 4, 5].map((idx) => (
               <div
                 key={idx}
                 className={`w-4 h-4 rounded-full border-2 transition-all ${
@@ -126,7 +126,7 @@ export const VaultPinModal: React.FC<VaultPinModalProps> = ({
               onClick={() => setPin('')}
               className="py-3 text-xs font-semibold text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors"
             >
-              Smazat
+              {t('documents.vault_modal_clear')}
             </button>
             <button
               type="button"
@@ -148,7 +148,7 @@ export const VaultPinModal: React.FC<VaultPinModalProps> = ({
 
         <div className="pt-2 text-center text-[10px] text-zinc-400 flex items-center justify-center gap-1">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-          <span>Výchozí rodinný PIN: 1234</span>
+          <span>{t('documents.vault_modal_footer')}</span>
         </div>
       </div>
     </div>,

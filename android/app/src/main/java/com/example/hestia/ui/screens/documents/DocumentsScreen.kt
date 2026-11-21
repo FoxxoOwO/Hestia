@@ -1,5 +1,6 @@
 package com.example.hestia.ui.screens.documents
 
+import androidx.lifecycle.viewmodel.compose.viewModel
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -38,16 +39,14 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun DocumentsScreen(repository: HestiaRepository) {
+    val vm: DocumentsViewModel = viewModel(factory = DocumentsViewModelFactory(repository))
+    val uiState by vm.uiState.collectAsState()
+
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    var documents by remember { mutableStateOf<List<DocumentItem>>(emptyList()) }
-    var stats by remember { mutableStateOf<DocumentStats?>(null) }
-    var loading by remember { mutableStateOf(true) }
-    var error by remember { mutableStateOf<String?>(null) }
+
+    // Čistě UI stav
     var message by remember { mutableStateOf<String?>(null) }
-    var search by remember { mutableStateOf("") }
-    var category by remember { mutableStateOf<String?>(null) }
-    var statusFilter by remember { mutableStateOf<String?>(null) }
     var showForm by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<DocumentItem?>(null) }
     var deleteTarget by remember { mutableStateOf<DocumentItem?>(null) }
@@ -55,26 +54,9 @@ fun DocumentsScreen(repository: HestiaRepository) {
     var vaultTarget by remember { mutableStateOf<DocumentItem?>(null) }
     var showPinSetup by remember { mutableStateOf(false) }
     var pendingFile by remember { mutableStateOf<Pair<ByteArray, String>?>(null) }
-    var vaultUnlocked by remember { mutableStateOf(false) }
 
-    suspend fun load() {
-        loading = true
-        repository.getDocuments(
-            category = category,
-            query = search.ifBlank { null },
-            status = statusFilter,
-            vaultUnlocked = vaultUnlocked
-        )
-            .onSuccess { documents = it; error = null }
-            .onFailure { error = it.friendly() }
-        repository.getDocumentStats().onSuccess { stats = it }
-        loading = false
-    }
+    LaunchedEffect(Unit) { vm.load() }
 
-    LaunchedEffect(category, statusFilter, vaultUnlocked, search) {
-        if (search.isNotBlank()) kotlinx.coroutines.delay(350)
-        load()
-    }
 
     suspend fun openFile(path: String) {
         val base = repository.serverUrl().trimEnd('/')
@@ -82,7 +64,7 @@ fun DocumentsScreen(repository: HestiaRepository) {
         else "/uploads/" + path.trimStart('/')
         val url = if (normalized.startsWith("http")) normalized else base + normalized
         runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
-            .onFailure { error = "Nelze otevřít soubor – chybí aplikace pro tento typ" }
+            .onFailure { vm.setErrorMessage("Nelze otevřít soubor – chybí aplikace pro tento typ") }
     }
 
     fun upload(bytes: ByteArray, name: String, mime: String, meta: DocumentUploadResult?) {
@@ -93,10 +75,10 @@ fun DocumentsScreen(repository: HestiaRepository) {
                         uploadPreview = result
                     } else {
                         message = "Dokument nahrán"
-                        load()
+                        vm.load()
                     }
                 }
-                .onFailure { error = it.friendly() }
+                .onFailure { vm.setError(it) }
         }
     }
 
@@ -107,7 +89,7 @@ fun DocumentsScreen(repository: HestiaRepository) {
                     runCatching { context.contentResolver.openInputStream(uri)?.use { it.readBytes() } }.getOrNull()
                 }
                 if (bytes == null) {
-                    error = "Soubor nelze přečíst"
+                    vm.setErrorMessage("Soubor nelze přečíst")
                 } else {
                     val name = uri.lastPathSegment?.substringAfterLast('/') ?: "dokument.pdf"
                     val mime = context.contentResolver.getType(uri) ?: "application/octet-stream"
@@ -120,19 +102,19 @@ fun DocumentsScreen(repository: HestiaRepository) {
 
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
-            HestiaField(search, { search = it }, "Hledat dokument")
+            HestiaField(uiState.search, { vm.setSearch(it) }, "Hledat dokument")
             Spacer(Modifier.height(6.dp))
-            ChipSelector(Labels.documentCategories, category, { category = it.ifBlank { null } }, includeAll = true)
+            ChipSelector(Labels.documentCategories, uiState.category, { vm.setCategory(it.ifBlank { null }) }, includeAll = true)
             Spacer(Modifier.height(4.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 FilterChip(
-                    selected = statusFilter == "expiring_soon",
-                    onClick = { statusFilter = if (statusFilter == "expiring_soon") null else "expiring_soon" },
+                    selected = uiState.statusFilter == "expiring_soon",
+                    onClick = { vm.setStatusFilter(if (uiState.statusFilter == "expiring_soon") null else "expiring_soon") },
                     label = { Text("Brzy expiruje", fontSize = 10.sp) }
                 )
                 FilterChip(
-                    selected = statusFilter == "expired",
-                    onClick = { statusFilter = if (statusFilter == "expired") null else "expired" },
+                    selected = uiState.statusFilter == "expired",
+                    onClick = { vm.setStatusFilter(if (uiState.statusFilter == "expired") null else "expired") },
                     label = { Text("Expirované", fontSize = 10.sp) }
                 )
                 Spacer(Modifier.weight(1f))
@@ -142,7 +124,7 @@ fun DocumentsScreen(repository: HestiaRepository) {
             }
         }
 
-        stats?.let { s ->
+        uiState.stats?.let { s ->
             Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 StatCard("Celkem", s.total_documents.toString(), Icons.Default.Description, StatusBlue, Modifier.weight(1f))
                 StatCard("Brzy", s.expiring_soon_count.toString(), Icons.Default.Schedule, StatusYellow, Modifier.weight(1f))
@@ -164,16 +146,16 @@ fun DocumentsScreen(repository: HestiaRepository) {
                 }
             }
         }
-        ErrorBox(error, onRetry = { scope.launch { load() } })
+        ErrorBox(uiState.error, onRetry = { scope.launch { vm.load() } })
 
-        if (loading) LoadingBox() else LazyColumn(
+        if (uiState.loading) LoadingBox() else LazyColumn(
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
             modifier = Modifier.fillMaxSize()
         ) {
-            if (documents.isEmpty()) {
+            if (uiState.documents.isEmpty()) {
                 item { EmptyState(Icons.Default.FolderOpen, "Žádné dokumenty", "Nahrajte fakturu, smlouvu nebo záruční list.") }
             }
-            items(documents, key = { it.id }) { doc ->
+            items(uiState.documents, key = { it.id }) { doc ->
                 DocumentCard(
                     doc = doc,
                     onOpen = {
@@ -234,8 +216,8 @@ fun DocumentsScreen(repository: HestiaRepository) {
                             is_vault_protected = vault, tags = meta?.tags,
                             summary = meta?.summary
                         )
-                    ).onSuccess { uploadPreview = null; message = "Dokument uložen"; load() }
-                        .onFailure { error = it.friendly() }
+                    ).onSuccess { uploadPreview = null; message = "Dokument uložen"; vm.load() }
+                        .onFailure { vm.setError(it) }
                 }
             }
         ) {
@@ -278,8 +260,8 @@ fun DocumentsScreen(repository: HestiaRepository) {
                             summary = create.summary
                         )
                     )
-                    res.onSuccess { showForm = false; editing = null; load() }
-                        .onFailure { error = it.friendly() }
+                    res.onSuccess { showForm = false; editing = null; vm.load() }
+                        .onFailure { vm.setError(it) }
                 }
             }
         )
@@ -291,18 +273,18 @@ fun DocumentsScreen(repository: HestiaRepository) {
             title = "Trezor",
             onDismiss = { vaultTarget = null },
             confirmText = "Odemknout",
-            confirmEnabled = pin.length >= 4,
+            confirmEnabled = pin.length == 6,
             onConfirm = {
                 scope.launch {
                     repository.verifyVaultPin(pin).onSuccess { r ->
                         if (r.success) {
-                            vaultUnlocked = true
+                            vm.setVaultUnlocked(true)
                             openFile(doc.file_path)
                             vaultTarget = null
                         } else {
-                            error = r.message.ifBlank { "Nesprávný PIN" }
+                            vm.setErrorMessage(r.message.ifBlank { "Nesprávný PIN" })
                         }
-                    }.onFailure { error = it.friendly() }
+                    }.onFailure { vm.setError(it) }
                 }
             }
         ) {
@@ -316,12 +298,12 @@ fun DocumentsScreen(repository: HestiaRepository) {
         DialogScaffold(
             title = "Nastavit PIN trezoru",
             onDismiss = { showPinSetup = false },
-            confirmEnabled = newPin.length >= 4,
+            confirmEnabled = newPin.length == 6,
             onConfirm = {
                 scope.launch {
                     repository.setVaultPin(oldPin.ifBlank { null }, newPin)
                         .onSuccess { showPinSetup = false; message = "PIN nastaven" }
-                        .onFailure { error = it.friendly() }
+                        .onFailure { vm.setError(it) }
                 }
             }
         ) {
@@ -335,7 +317,7 @@ fun DocumentsScreen(repository: HestiaRepository) {
         ConfirmDialog(
             title = "Smazat dokument",
             message = "Smazat „${doc.title}“?",
-            onConfirm = { scope.launch { repository.deleteDocument(doc.id).onSuccess { load() } } },
+            onConfirm = { scope.launch { repository.deleteDocument(doc.id).onSuccess { vm.load() } } },
             onDismiss = { deleteTarget = null }
         )
     }

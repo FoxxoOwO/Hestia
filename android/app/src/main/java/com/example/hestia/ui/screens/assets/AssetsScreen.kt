@@ -1,5 +1,6 @@
 package com.example.hestia.ui.screens.assets
 
+import androidx.lifecycle.viewmodel.compose.viewModel
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -35,15 +36,13 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun AssetsScreen(repository: HestiaRepository) {
+    val vm: AssetsViewModel = viewModel(factory = AssetsViewModelFactory(repository))
+    val uiState by vm.uiState.collectAsState()
+
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var assets by remember { mutableStateOf<List<Asset>>(emptyList()) }
-    var stats by remember { mutableStateOf<AssetStats?>(null) }
-    var loading by remember { mutableStateOf(true) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var search by remember { mutableStateOf("") }
-    var category by remember { mutableStateOf("") }
-    var warrantyOnly by remember { mutableStateOf(false) }
+
+    // Čistě UI stav
     var dialog by remember { mutableStateOf<String?>(null) }
     var editing by remember { mutableStateOf<Asset?>(null) }
     var detail by remember { mutableStateOf<Asset?>(null) }
@@ -51,18 +50,8 @@ fun AssetsScreen(repository: HestiaRepository) {
     var uploadTarget by remember { mutableStateOf<Asset?>(null) }
     var uploadType by remember { mutableStateOf("invoice") }
 
-    suspend fun load() {
-        loading = true
-        repository.getAssets(
-            category = category.ifBlank { null },
-            query = search.ifBlank { null },
-            warrantyStatus = if (warrantyOnly) "expiring_soon" else null
-        ).onSuccess { assets = it; error = null }.onFailure { error = it.friendly() }
-        repository.getAssetStats().onSuccess { stats = it }
-        loading = false
-    }
+    LaunchedEffect(Unit) { vm.load() }
 
-    LaunchedEffect(search, category, warrantyOnly) { kotlinx.coroutines.delay(300); load() }
 
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         val asset = uploadTarget
@@ -74,8 +63,8 @@ fun AssetsScreen(repository: HestiaRepository) {
                 val name = uri.lastPathSegment?.substringAfterLast('/') ?: "file.pdf"
                 val mime = context.contentResolver.getType(uri) ?: "application/pdf"
                 repository.uploadAssetFile(asset.id, bytes, name, mime, uploadType)
-                    .onSuccess { load() }
-                    .onFailure { error = it.friendly() }
+                    .onSuccess { vm.load() }
+                    .onFailure { vm.setError(it) }
             }
         }
         uploadTarget = null
@@ -83,12 +72,12 @@ fun AssetsScreen(repository: HestiaRepository) {
 
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
-            HestiaField(search, { search = it }, "Hledat spotřebič")
+            HestiaField(uiState.search, { vm.setSearch(it) }, "Hledat spotřebič")
             Spacer(Modifier.height(6.dp))
-            ChipSelector(Labels.assetCategories, category, { category = it }, includeAll = true)
-            ToggleRow("Jen se zárukou končící", warrantyOnly, { warrantyOnly = it })
+            ChipSelector(Labels.assetCategories, uiState.category, { vm.setCategory(it) }, includeAll = true)
+            ToggleRow("Jen se zárukou končící", uiState.warrantyOnly, { vm.setWarrantyOnly(it) })
         }
-        stats?.let { s ->
+        uiState.stats?.let { s ->
             Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 StatCard("Položek", s.total_assets.toString(), Icons.Default.DevicesOther, HestiaOrange, Modifier.weight(1f))
                 StatCard("Hodnota", Fmt.money(s.total_value), Icons.Default.Payments, StatusBlue, Modifier.weight(1f))
@@ -100,16 +89,16 @@ fun AssetsScreen(repository: HestiaRepository) {
                 StatCard("Po záruce", s.expired_warranties.toString(), Icons.Default.GppBad, StatusRed, Modifier.weight(1f))
             }
         }
-        ErrorBox(error, onRetry = { scope.launch { load() } })
-        if (loading) {
+        ErrorBox(uiState.error, onRetry = { scope.launch { vm.load() } })
+        if (uiState.loading) {
             LoadingBox()
         } else {
             Box(Modifier.fillMaxSize()) {
                 LazyColumn(contentPadding = PaddingValues(12.dp)) {
-                    if (assets.isEmpty()) {
+                    if (uiState.assets.isEmpty()) {
                         item { EmptyState(Icons.Default.DevicesOther, "Žádné spotřebiče", "Zapište si záruky, servis a manuály na jednom místě.") }
                     }
-                    items(assets, key = { it.id }) { a ->
+                    items(uiState.assets, key = { it.id }) { a ->
                         AssetCard(
                             asset = a,
                             onOpen = { detail = a },
@@ -126,7 +115,7 @@ fun AssetsScreen(repository: HestiaRepository) {
                                                 Uri.parse(base + path)
                                             )
                                         )
-                                    }.onFailure { error = "Nelze otevřít soubor" }
+                                    }.onFailure { vm.setErrorMessage("Nelze otevřít soubor") }
                                 }
                             }
                         )
@@ -197,7 +186,7 @@ fun AssetsScreen(repository: HestiaRepository) {
             onSave = { create, update ->
                 scope.launch {
                     val res = editing?.let { repository.updateAsset(it.id, update) } ?: repository.createAsset(create)
-                    res.onSuccess { dialog = null; editing = null; load() }.onFailure { error = it.friendly() }
+                    res.onSuccess { dialog = null; editing = null; vm.load() }.onFailure { vm.setError(it) }
                 }
             }
         )
@@ -207,7 +196,7 @@ fun AssetsScreen(repository: HestiaRepository) {
         ConfirmDialog(
             title = "Smazat položku",
             message = "Smazat „${a.name}“?",
-            onConfirm = { scope.launch { repository.deleteAsset(a.id).onSuccess { load() } } },
+            onConfirm = { scope.launch { repository.deleteAsset(a.id).onSuccess { vm.load() } } },
             onDismiss = { deleteTarget = null }
         )
     }

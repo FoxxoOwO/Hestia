@@ -11,6 +11,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -63,6 +65,17 @@ fun MainNavigation() {
     }
 }
 
+private val allScreens = drawerModuleScreens + listOf(Screen.Settings, Screen.Login, Screen.ServerConfig)
+
+private val BackStackSaver = listSaver<MutableList<Screen>, String>(
+    save = { stack -> stack.map { it.route } },
+    restore = { routes ->
+        routes.mapNotNull { route -> allScreens.firstOrNull { it.route == route } }
+            .ifEmpty { listOf(Screen.Dashboard) }
+            .toMutableList()
+    }
+)
+
 @Composable
 fun NativeComposeNavigation(
     repository: HestiaRepository,
@@ -71,7 +84,18 @@ fun NativeComposeNavigation(
     val isLoggedIn by repository.preferences.isLoggedInFlow.collectAsState(initial = false)
     val currentUser by repository.preferences.currentUserFlow.collectAsState(initial = null)
 
-    var currentScreen by remember { mutableStateOf<Screen>(Screen.Dashboard) }
+    val backStack = rememberSaveable(saver = BackStackSaver) { mutableStateListOf(Screen.Dashboard) }
+    val currentScreen = backStack.last()
+
+    fun openScreen(screen: Screen) {
+        backStack.clear()
+        backStack.add(screen)
+    }
+
+    fun navigateBack() {
+        if (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
+    }
+
     var authSubScreen by remember { mutableStateOf<Screen>(Screen.Login) }
     var showSwitchUserDialog by remember { mutableStateOf(false) }
 
@@ -97,7 +121,7 @@ fun NativeComposeNavigation(
 
             else -> LoginScreen(
                 repository = repository,
-                onLoginSuccess = { currentScreen = Screen.Dashboard },
+                onLoginSuccess = { openScreen(Screen.Dashboard) },
                 onNavigateServerConfig = { authSubScreen = Screen.ServerConfig }
             )
         }
@@ -108,7 +132,7 @@ fun NativeComposeNavigation(
         if (drawerState.isOpen) {
             coroutineScope.launch { drawerState.close() }
         } else {
-            currentScreen = Screen.Dashboard
+            navigateBack()
         }
     }
 
@@ -230,7 +254,7 @@ fun NativeComposeNavigation(
                             },
                             selected = currentScreen == screen,
                             onClick = {
-                                currentScreen = screen
+                                openScreen(screen)
                                 coroutineScope.launch { drawerState.close() }
                             },
                             colors = NavigationDrawerItemDefaults.colors(
@@ -265,7 +289,7 @@ fun NativeComposeNavigation(
                         },
                         selected = currentScreen == Screen.Settings,
                         onClick = {
-                            currentScreen = Screen.Settings
+                            openScreen(Screen.Settings)
                             coroutineScope.launch { drawerState.close() }
                         },
                         colors = NavigationDrawerItemDefaults.colors(
@@ -287,7 +311,7 @@ fun NativeComposeNavigation(
                     title = currentScreen.title,
                     currentUser = currentUser,
                     onMenuClick = { coroutineScope.launch { drawerState.open() } },
-                    onSettingsClick = { currentScreen = Screen.Settings },
+                    onSettingsClick = { openScreen(Screen.Settings) },
                     onUserClick = { showSwitchUserDialog = true }
                 )
             },
@@ -301,7 +325,7 @@ fun NativeComposeNavigation(
                     Screen.Dashboard -> DashboardScreen(
                         repository = repository,
                         currentUser = currentUser,
-                        onNavigate = { currentScreen = it }
+                        onNavigate = { openScreen(it) }
                     )
                     Screen.Recipes -> RecipesScreen(repository = repository)
                     Screen.MealPlanner -> MealPlannerScreen(repository = repository)
@@ -321,7 +345,7 @@ fun NativeComposeNavigation(
                         onLogout = {
                             coroutineScope.launch {
                                 repository.logout()
-                                currentScreen = Screen.Dashboard
+                                openScreen(Screen.Dashboard)
                                 authSubScreen = Screen.Login
                             }
                         },
@@ -330,7 +354,7 @@ fun NativeComposeNavigation(
                     )
                     Screen.ServerConfig -> ServerConfigScreen(
                         repository = repository,
-                        onConfigured = { currentScreen = Screen.Settings }
+                        onConfigured = { openScreen(Screen.Settings) }
                     )
                     Screen.Login -> Box(Modifier.fillMaxSize()) {
                         CircularProgressIndicator(Modifier.align(androidx.compose.ui.Alignment.Center))

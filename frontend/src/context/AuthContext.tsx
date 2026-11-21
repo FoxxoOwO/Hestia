@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '../types';
+import { clearVaultToken } from '../services/api';
 
 interface AuthContextType {
   user: User | null;
-  token: string | null;
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
@@ -14,45 +14,37 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem('hestia_token'));
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const fetchProfile = async (authToken: string): Promise<boolean> => {
+  const fetchProfile = async (): Promise<boolean> => {
     try {
-      const res = await fetch('/api/v1/auth/me', {
-        headers: { Authorization: `Bearer ${authToken}` },
-      });
+      const res = await fetch('/api/v1/auth/me', { credentials: 'include' });
       if (res.ok) {
-        const data = await res.json();
-        setUser(data);
+        setUser(await res.json());
         return true;
-      } else {
-        setToken(null);
-        setUser(null);
-        localStorage.removeItem('hestia_token');
-        return false;
       }
-    } catch {
-      setToken(null);
+      // Access token mohl vypršet – zkusíme refresh ( Jednou, viz apiFetch ).
+      const refresh = await fetch('/api/v1/auth/refresh', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (refresh.ok) {
+        const retry = await fetch('/api/v1/auth/me', { credentials: 'include' });
+        if (retry.ok) {
+          setUser(await retry.json());
+          return true;
+        }
+      }
       setUser(null);
-      localStorage.removeItem('hestia_token');
+      return false;
+    } catch {
+      setUser(null);
       return false;
     }
   };
 
   useEffect(() => {
-    const initAuth = async () => {
-      const savedToken = localStorage.getItem('hestia_token');
-      if (savedToken) {
-        await fetchProfile(savedToken);
-      } else {
-        setToken(null);
-        setUser(null);
-      }
-      setIsLoading(false);
-    };
-
-    initAuth();
+    fetchProfile().finally(() => setIsLoading(false));
   }, []);
 
   const login = async (username: string, password: string): Promise<boolean> => {
@@ -60,13 +52,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const res = await fetch('/api/v1/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ username, password }),
       });
       if (res.ok) {
         const data = await res.json();
-        setToken(data.access_token);
         setUser(data.user);
-        localStorage.setItem('hestia_token', data.access_token);
         return true;
       }
       return false;
@@ -77,20 +68,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
-    setToken(null);
+    fetch('/api/v1/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
     setUser(null);
-    localStorage.removeItem('hestia_token');
+    clearVaultToken();
   };
 
   const refreshUser = async () => {
-    const currentToken = token || localStorage.getItem('hestia_token');
-    if (currentToken) {
-      await fetchProfile(currentToken);
-    }
+    await fetchProfile();
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isLoading, refreshUser }}>
+    <AuthContext.Provider value={{ user, login, logout, isLoading, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

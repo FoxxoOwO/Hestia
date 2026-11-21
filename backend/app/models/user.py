@@ -1,5 +1,5 @@
 import datetime
-from sqlalchemy import Column, Integer, String, Boolean, DateTime
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, text
 from app.database import Base
 
 class User(Base):
@@ -15,5 +15,9 @@ class User(Base):
     preferred_language = Column(String, default="cs")  # cs, en
     preferred_theme = Column(String, default="system")  # system, light, dark
     is_active = Column(Boolean, default=True)
+    # U nového admina nastaveno na True – uživatel musí změnit heslo při prvním přihlášení.
+    must_change_password = Column(Boolean, default=False, nullable=False, server_default=text("0"))
+    # Změna hesla inkrementuje verzi a tím zneplatní všechny existující tokeny.
+    token_version = Column(Integer, default=0, nullable=False, server_default=text("0"))
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)

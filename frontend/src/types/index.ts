@@ -21,6 +21,7 @@ export interface User {
   preferred_language: 'cs' | 'en';
   preferred_theme: 'system' | 'light' | 'dark';
   is_active: boolean;
+  must_change_password?: boolean;
   created_at: string;
 }
 

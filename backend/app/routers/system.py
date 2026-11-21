@@ -95,6 +95,16 @@ def export_database_data(
     Exports all household data as a downloadable JSON file.
     """
     data = export_all_data(db, user=current_user)
+    log_activity(
+        db=db,
+        user=current_user,
+        module="system",
+        action_type="export",
+        title="Export všech dat",
+        description=f"{current_user.display_name} exportoval(a) kompletní data domácnosti do JSON.",
+        entity_type="Backup",
+    )
+    db.commit()
     json_bytes = json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"hestia_export_{timestamp}.json"

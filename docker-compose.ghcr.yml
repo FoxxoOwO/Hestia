@@ -29,6 +29,9 @@ services:
       - SECRET_KEY=${SECRET_KEY:?SECRET_KEY není nastaven. Spustit: echo "SECRET_KEY=$(python -c 'import secrets; print(secrets.token_urlsafe(48))')" > .env}
       # Volitelný klíč pro AI funkce Google Gemini (OCR účtenek, recepty z webu, kytky atd.)
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      # Heslo prvního administrátora (povinné při čisté databázi, min. 12 znaků)
+      - INITIAL_ADMIN_PASSWORD=${INITIAL_ADMIN_PASSWORD:-}
+      - COOKIE_SECURE=${COOKIE_SECURE:-false}
       # Cesta k interní databázi a souborům
       - DATABASE_URL=sqlite:////app/data/hestia.db
       - UPLOAD_DIR=/app/uploads

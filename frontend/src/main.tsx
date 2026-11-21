@@ -2,6 +2,11 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
+import './styles/themes-classic.css';
+import './styles/themes-glass.css';
+import './styles/themes-expressive.css';
+import './styles/themes-retro.css';
+import './styles/themes-minimal.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

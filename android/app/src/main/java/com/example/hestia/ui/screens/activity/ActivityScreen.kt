@@ -1,5 +1,6 @@
 package com.example.hestia.ui.screens.activity
 
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -31,38 +32,25 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun ActivityScreen(repository: HestiaRepository) {
+    val vm: ActivityViewModel = viewModel(factory = ActivityViewModelFactory(repository))
+    val uiState by vm.uiState.collectAsState()
+
     val scope = rememberCoroutineScope()
-    var items by remember { mutableStateOf<List<ActivityLog>>(emptyList()) }
-    var stats by remember { mutableStateOf<ActivityStats?>(null) }
-    var loading by remember { mutableStateOf(true) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var module by remember { mutableStateOf("") }
-    var search by remember { mutableStateOf("") }
-    var total by remember { mutableStateOf(0) }
+
+    // Čistě UI stav
     var showClear by remember { mutableStateOf(false) }
     var clearDays by remember { mutableStateOf("30") }
 
-    suspend fun load(limit: Int = 100) {
-        loading = true
-        repository.getActivities(limit = limit, module = module.ifBlank { null }, search = search.ifBlank { null })
-            .onSuccess { items = it.items; total = it.total; error = null }
-            .onFailure { error = it.friendly() }
-        repository.getActivityStats().onSuccess { stats = it }
-        loading = false
-    }
+    LaunchedEffect(Unit) { vm.load() }
 
-    LaunchedEffect(module, search) {
-        if (search.isNotBlank()) kotlinx.coroutines.delay(300)
-        load()
-    }
 
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
-            HestiaField(search, { search = it }, "Hledat v historii")
+            HestiaField(uiState.search, { vm.setSearch(it) }, "Hledat v historii")
             Spacer(Modifier.height(6.dp))
-            ChipSelector(Labels.activityModules, module, { module = it }, includeAll = true)
+            ChipSelector(Labels.activityModules, uiState.module, { vm.setModule(it) }, includeAll = true)
         }
-        stats?.let { s ->
+        uiState.stats?.let { s ->
             Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 StatCard("Celkem", s.total_activities.toString(), Icons.Default.History, HestiaOrange, Modifier.weight(1f))
                 StatCard("Dnes", s.activities_today.toString(), Icons.Default.Today, StatusBlue, Modifier.weight(1f))
@@ -75,23 +63,23 @@ fun ActivityScreen(repository: HestiaRepository) {
                 Modifier.fillMaxWidth().padding(horizontal = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("$total záznamů", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("${uiState.total} záznamů", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.weight(1f))
                 TextButton(onClick = { showClear = true }) { Text("Vyčistit historii", fontSize = 11.sp, color = StatusRed) }
             }
         }
-        ErrorBox(error, onRetry = { scope.launch { load() } })
-        if (loading) {
+        ErrorBox(uiState.error, onRetry = { scope.launch { vm.load() } })
+        if (uiState.loading) {
             LoadingBox()
         } else {
             LazyColumn(contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)) {
-                if (items.isEmpty()) {
+                if (uiState.items.isEmpty()) {
                     item { EmptyState(Icons.Default.History, "Žádná aktivita", "Jakmile začnete používat Hestii, objeví se tu historie.") }
                 }
-                items(items, key = { it.id }) { log -> ActivityRow(log) }
-                if (items.size < total) {
+                items(uiState.items, key = { it.id }) { log -> ActivityRow(log) }
+                if (uiState.items.size < uiState.total) {
                     item {
-                        TextButton(onClick = { scope.launch { load(items.size + 100) } }, modifier = Modifier.fillMaxWidth()) {
+                        TextButton(onClick = { scope.launch { vm.load(uiState.items.size + 100) } }, modifier = Modifier.fillMaxWidth()) {
                             Text("Načíst další")
                         }
                     }
@@ -108,7 +96,7 @@ fun ActivityScreen(repository: HestiaRepository) {
             confirmText = "Vyčistit",
             onConfirm = {
                 scope.launch {
-                    repository.clearActivities(clearDays.toIntOrNull()).onSuccess { showClear = false; load() }
+                    repository.clearActivities(clearDays.toIntOrNull()).onSuccess { showClear = false; vm.load() }
                 }
             }
         ) {

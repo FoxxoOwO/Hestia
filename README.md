@@ -4,6 +4,19 @@
 
 ---
 
+## Changelog
+
+### v1.7.0 – bezpečnostní a kvalitní release
+- **Autentifikace:** web přešel na httpOnly cookies + CSRF, 15minutové access tokeny, 7denní refresh tokeny a `token_version` (změna hesla okamžitě zneplatní staré tokeny). Android tokeny tiše obnovuje.
+- **Trezor:** odstraněn výchozí PIN `1234`; nový 6místný PIN nastavuje správce. Přístup k dokumentům řízen serverem vydaným tokenem, soubory trezoru nejsou veřejně dostupné.
+- **Backend:** odstraněno výchozí `admin/hestia123` (heslo z `INITIAL_ADMIN_PASSWORD`), ochrana proti SSRF, rate limit pro AI, audit exportů, CSP a security headers.
+- **Android:** HTTPS místo cleartextu, `allowBackup=false`, odstraněná riziková oprávnění, ViewModely na 11 obrazovkách, back stack.
+- **Kód:** rozdělení monolitů (`api.ts`, `Models.kt`, `index.css`, `SettingsPage`), kompletní i18n klíčů, 51 testů, CI gates.
+
+> **Poznámka pro existující instalace:** po upgradu se uživatelé znova přihlásí a správce musí nastavit nový PIN trezoru v **Nastavení → Bezpečnost**.
+
+---
+
 ## Klíčové vlastnosti
 
 - **Víceuživatelský systém (Multi-user)**: Každý člen domácnosti má svůj profil, roli (správce/člen), barvu avatara a osobní nastavení.
@@ -210,7 +223,14 @@ Aplikace ihned běží na `http://localhost:8000`.
    ```bash
    cp .env.example .env
    ```
-2. V souboru `.env` nastavte `SECRET_KEY` (povinné, vygenerujte `python -c "import secrets; print(secrets.token_urlsafe(48))"`) a volitelně `GEMINI_API_KEY` (získat lze zdarma na [Google AI Studio](https://aistudio.google.com/)).
+2. V souboru `.env` nastavte:
+   - `SECRET_KEY` – povinné, vygenerujte `python -c "import secrets; print(secrets.token_urlsafe(48))"`
+   - `INITIAL_ADMIN_PASSWORD` – povinné **při čisté databázi**, min. 12 znaků. Aplikace už nevytváří účet s výchozím heslem; po prvním přihlášení vás systém vyzve ke změně hesla v **Nastavení → Bezpečnost**.
+   - `GEMINI_API_KEY` – volitelné (získat lze zdarma na [Google AI Studio](https://aistudio.google.com/)).
+
+> **Bezpečnostní změny (audit 2026-11):** Digitální trezor už nemá výchozí PIN `1234`. PIN má 6 číslic a nastavuje ho správce v **Nastavení → Bezpečnost**. Po zadání PINu server vydá krátkodobý token (15 min); soubory trezoru nejsou dostupné přes veřejný `/uploads`. Android klient vyžaduje HTTPS (cleartext HTTP je povolen jen pro emulátor `10.0.2.2` a loopback) a zálohování aplikace je vypnuté.
+
+**Autentifikace:** Web používá httpOnly cookies (15minutový přístupový token + 7denní refresh token) s CSRF ochranou – token už není v `localStorage`. Native klient nadále používá Bearer token a umí jej tiše obnovit. Změna hesla okamžitě zneplatní všechny staré tokeny (`token_version`). Při provozu za HTTPS nastavte `COOKIE_SECURE=true`.
 3. Spusťte kontejnery:
    ```bash
    docker compose up -d

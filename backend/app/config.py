@@ -31,7 +31,13 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     SECRET_KEY: str = ""
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15  # krátký přístupový token, obnovuje se přes refresh
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    # V produkci za HTTPS nastavte COOKIE_SECURE=true v .env.
+    COOKIE_SECURE: bool = os.getenv("COOKIE_SECURE", "false").lower() in ("1", "true", "yes")
+    # Heslo pro prvního administrátora. Povinné při úplně prázdné databázi –
+    # seeder bez něj odmítne vytvořit účet (fail-closed).
+    INITIAL_ADMIN_PASSWORD: str = os.getenv("INITIAL_ADMIN_PASSWORD", "")
     
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./hestia.db")
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")

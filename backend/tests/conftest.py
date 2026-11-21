@@ -26,6 +26,7 @@ os.environ["UPLOAD_DIR"] = str(_TMP / "uploads")
 os.environ["FRONTEND_DIST_DIR"] = str(_DIST)
 os.environ["SECRET_KEY"] = secrets.token_urlsafe(48)
 os.environ["GEMINI_API_KEY"] = ""  # testy nikdy nesmí volat Gemini
+os.environ["INITIAL_ADMIN_PASSWORD"] = "TestAdminPassw0rd!2026"
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
@@ -35,7 +36,7 @@ from app.database import SessionLocal  # noqa: E402
 
 API = "/api/v1"
 ADMIN_USER = "admin"
-ADMIN_PASSWORD = "hestia123"  # výchozí účet ze seed_initial_data
+ADMIN_PASSWORD = os.environ["INITIAL_ADMIN_PASSWORD"]  # účet ze seed_initial_data
 
 
 @pytest.fixture(scope="session")

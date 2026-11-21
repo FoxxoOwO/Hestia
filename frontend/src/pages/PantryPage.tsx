@@ -251,10 +251,10 @@ export const PantryPage: React.FC = () => {
                 <button
                   onClick={() => handleAddMissingToShopping(match)}
                   className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 hover:bg-amber-200 transition"
-                  title="Přidat chybějící suroviny do nákupního seznamu"
+                  title={t('pantry.add_to_shopping_title')}
                 >
                   <ShoppingCart className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Do nákupu</span>
+                  <span className="hidden sm:inline">{t('pantry.to_shopping')}</span>
                 </button>
               </div>
             ))}
@@ -416,7 +416,7 @@ export const PantryPage: React.FC = () => {
                   required
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
-                  placeholder="např. Máslo, Mléko, Cibule..."
+                  placeholder={t('pantry.item_placeholder')}
                   className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 text-sm"
                 />
               </div>
@@ -432,12 +432,12 @@ export const PantryPage: React.FC = () => {
                     className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 text-sm"
                   >
                     <option value="fridge">Lednice</option>
-                    <option value="freezer">Mrazák</option>
-                    <option value="pantry">Spíž</option>
+                    <option value="freezer">{t('pantry.cat_freezer')}</option>
+                    <option value="pantry">{t('pantry.cat_pantry')}</option>
                     <option value="produce">Ovoce a zelenina</option>
-                    <option value="spices">Koření</option>
-                    <option value="bakery">Pečivo</option>
-                    <option value="other">Ostatní</option>
+                    <option value="spices">{t('pantry.cat_spices')}</option>
+                    <option value="bakery">{t('pantry.cat_bakery')}</option>
+                    <option value="other">{t('pantry.cat_other')}</option>
                   </select>
                 </div>
                 <div>
@@ -486,7 +486,7 @@ export const PantryPage: React.FC = () => {
                   type="text"
                   value={formNote}
                   onChange={(e) => setFormNote(e.target.value)}
-                  placeholder="např. otevřeno v pondělí"
+                  placeholder={t('pantry.opened_note_placeholder')}
                   className="w-full px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 text-sm"
                 />
               </div>

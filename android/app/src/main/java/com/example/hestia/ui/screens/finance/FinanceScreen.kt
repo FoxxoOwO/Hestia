@@ -1,5 +1,6 @@
 package com.example.hestia.ui.screens.finance
 
+import androidx.lifecycle.viewmodel.compose.viewModel
 import android.net.Uri
 import android.util.Base64
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -37,22 +38,15 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun FinanceScreen(repository: HestiaRepository, currentUserId: Int?) {
+    val vm: FinanceViewModel = viewModel(factory = FinanceViewModelFactory(repository))
+    val uiState by vm.uiState.collectAsState()
+
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    var month by remember { mutableStateOf(Fmt.monthKey(Fmt.today())) }
     var tab by remember { mutableStateOf(0) }
-    var summary by remember { mutableStateOf<FinanceSummary?>(null) }
-    var transactions by remember { mutableStateOf<List<TransactionItem>>(emptyList()) }
-    var budgets by remember { mutableStateOf<List<CategoryBudget>>(emptyList()) }
-    var settlement by remember { mutableStateOf<DebtSettlementResponse?>(null) }
-    var subscriptions by remember { mutableStateOf<List<Subscription>>(emptyList()) }
-    var goals by remember { mutableStateOf<List<SavingsGoal>>(emptyList()) }
-    var profile by remember { mutableStateOf<UserFinanceProfile?>(null) }
-    var users by remember { mutableStateOf<List<User>>(emptyList()) }
-    var loading by remember { mutableStateOf(true) }
-    var error by remember { mutableStateOf<String?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
 
+    // Čistě UI stav
     var showTxForm by remember { mutableStateOf(false) }
     var editingTx by remember { mutableStateOf<TransactionItem?>(null) }
     var showBudgetForm by remember { mutableStateOf(false) }
@@ -65,25 +59,6 @@ fun FinanceScreen(repository: HestiaRepository, currentUserId: Int?) {
     var csvPreview by remember { mutableStateOf<CsvImportPreview?>(null) }
     var scanResult by remember { mutableStateOf<ReceiptScanResponse?>(null) }
 
-    suspend fun load() {
-        loading = true
-        repository.getFinanceSummary(month).onSuccess { summary = it }.onFailure { error = it.friendly() }
-        repository.getTransactions(month)
-            .onSuccess { transactions = it }
-            .onFailure { error = error ?: it.friendly() }
-        repository.getBudgets().onSuccess { budgets = it }.onFailure { error = error ?: it.friendly() }
-        repository.getDebtSettlements().onSuccess { settlement = it }
-        repository.getSubscriptions().onSuccess { subscriptions = it }
-        repository.getSavingsGoals().onSuccess { goals = it }
-        repository.getFinanceProfile().onSuccess { profile = it }
-        loading = false
-    }
-
-    LaunchedEffect(month) { load() }
-    LaunchedEffect(Unit) {
-        repository.getUsers().onSuccess { users = it }
-    }
-
     val csvLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         if (uri != null) {
             scope.launch {
@@ -92,10 +67,10 @@ fun FinanceScreen(repository: HestiaRepository, currentUserId: Int?) {
                         context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
                     }.getOrNull()
                 }
-                if (text == null) error = "CSV nelze přečíst"
+                if (text == null) vm.setErrorMessage("CSV nelze přečíst")
                 else repository.previewCsvImport(text)
                     .onSuccess { csvPreview = it }
-                    .onFailure { error = it.friendly() }
+                    .onFailure { vm.setError(it) }
             }
         }
     }
@@ -106,10 +81,10 @@ fun FinanceScreen(repository: HestiaRepository, currentUserId: Int?) {
                 val bytes = withContext(Dispatchers.IO) {
                     runCatching { context.contentResolver.openInputStream(uri)?.use { it.readBytes() } }.getOrNull()
                 }
-                if (bytes == null) error = "Obrázek nelze přečíst"
+                if (bytes == null) vm.setErrorMessage("Obrázek nelze přečíst")
                 else repository.scanReceipt(Base64.encodeToString(bytes, Base64.NO_WRAP))
                     .onSuccess { scanResult = it }
-                    .onFailure { error = it.friendly() }
+                    .onFailure { vm.setError(it) }
             }
         }
     }
@@ -119,16 +94,16 @@ fun FinanceScreen(repository: HestiaRepository, currentUserId: Int?) {
             Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = { month = Fmt.monthKeyShift(month, -1) }) { Icon(Icons.Default.ChevronLeft, "Předchozí") }
+            IconButton(onClick = { vm.setMonth(Fmt.monthKeyShift(uiState.month, -1)) }) { Icon(Icons.Default.ChevronLeft, "Předchozí") }
             Text(
-                Fmt.monthLabel(month),
+                Fmt.monthLabel(uiState.month),
                 fontWeight = FontWeight.Bold,
                 fontSize = 15.sp,
                 modifier = Modifier.weight(1f),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
-            IconButton(onClick = { month = Fmt.monthKeyShift(month, 1) }) { Icon(Icons.Default.ChevronRight, "Další") }
-            IconButton(onClick = { scope.launch { load() } }) { Icon(Icons.Default.Refresh, "Obnovit") }
+            IconButton(onClick = { vm.setMonth(Fmt.monthKeyShift(uiState.month, 1)) }) { Icon(Icons.Default.ChevronRight, "Další") }
+            IconButton(onClick = { scope.launch { vm.load(uiState.month) } }) { Icon(Icons.Default.Refresh, "Obnovit") }
         }
 
         ScrollableTabRow(selectedTabIndex = tab, edgePadding = 6.dp) {
@@ -150,16 +125,16 @@ fun FinanceScreen(repository: HestiaRepository, currentUserId: Int?) {
                 }
             }
         }
-        ErrorBox(error, onRetry = { scope.launch { load() } })
+        ErrorBox(uiState.error, onRetry = { scope.launch { vm.load(uiState.month) } })
 
-        if (loading) {
+        if (uiState.loading) {
             LoadingBox()
         } else {
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp)) {
                 when (tab) {
                     0 -> FinanceOverview(
-                        summary = summary,
-                        budgets = budgets,
+                        summary = uiState.summary,
+                        budgets = uiState.budgets,
                         onAddBudget = { showBudgetForm = true },
                         onExportCsv = { csvLauncher.launch("text/*") },
                         onScanReceipt = { receiptLauncher.launch("image/*") }
@@ -182,20 +157,20 @@ fun FinanceScreen(repository: HestiaRepository, currentUserId: Int?) {
                             ) { Icon(Icons.Default.PhotoCamera, null, modifier = Modifier.size(14.dp)) }
                         }
                         Spacer(Modifier.height(8.dp))
-                        if (transactions.isEmpty()) {
+                        if (uiState.transactions.isEmpty()) {
                             EmptyState(Icons.Default.ReceiptLong, "Žádné transakce", "Za tento měsíc nejsou žádné transakce.")
                         }
-                        transactions.forEach { tx ->
+                        uiState.transactions.forEach { tx ->
                             TransactionCard(
                                 tx = tx,
                                 onEdit = { editingTx = tx },
-                                onDelete = { scope.launch { repository.deleteTransaction(tx.id).onSuccess { load() } } }
+                                onDelete = { scope.launch { repository.deleteTransaction(tx.id).onSuccess { vm.load(uiState.month) } } }
                             )
                         }
                     }
 
                     2 -> {
-                        settlement?.balances?.forEach { b ->
+                        uiState.settlement?.balances?.forEach { b ->
                             Card(shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
                                 Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Column(Modifier.weight(1f)) {
@@ -217,10 +192,10 @@ fun FinanceScreen(repository: HestiaRepository, currentUserId: Int?) {
                         }
                         Spacer(Modifier.height(8.dp))
                         Text("Vyrovnání", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                        if (settlement?.settlements.isNullOrEmpty()) {
+                        if (uiState.settlement?.settlements.isNullOrEmpty()) {
                             Text("Vše vyrovnáno 🎉", fontSize = 12.sp, color = StatusGreen)
                         }
-                        settlement?.settlements?.forEach { s ->
+                        uiState.settlement?.settlements?.forEach { s ->
                             Card(shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
                                 Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Column(Modifier.weight(1f)) {
@@ -239,7 +214,7 @@ fun FinanceScreen(repository: HestiaRepository, currentUserId: Int?) {
                             Text("Předplatné", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                             TextButton(onClick = { showSubForm = true }) { Text("+ Přidat", fontSize = 11.sp) }
                         }
-                        subscriptions.forEach { sub ->
+                        uiState.subscriptions.forEach { sub ->
                             Card(shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
                                 Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Column(Modifier.weight(1f)) {
@@ -261,7 +236,7 @@ fun FinanceScreen(repository: HestiaRepository, currentUserId: Int?) {
                                         Icon(Icons.Default.Edit, null, modifier = Modifier.size(14.dp))
                                     }
                                     IconButton(onClick = {
-                                        scope.launch { repository.deleteSubscription(sub.id).onSuccess { load() } }
+                                        scope.launch { repository.deleteSubscription(sub.id).onSuccess { vm.load(uiState.month) } }
                                     }, modifier = Modifier.size(28.dp)) {
                                         Icon(Icons.Default.Delete, null, tint = StatusRed, modifier = Modifier.size(14.dp))
                                     }
@@ -275,7 +250,7 @@ fun FinanceScreen(repository: HestiaRepository, currentUserId: Int?) {
                             Text("Spořicí cíle", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                             TextButton(onClick = { showGoalForm = true }) { Text("+ Přidat", fontSize = 11.sp) }
                         }
-                        goals.forEach { g ->
+                        uiState.goals.forEach { g ->
                             Card(shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                                 Column(Modifier.padding(10.dp)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -296,7 +271,7 @@ fun FinanceScreen(repository: HestiaRepository, currentUserId: Int?) {
                                         TextButton(onClick = { depositGoal = g }) { Text("Vložit", fontSize = 11.sp) }
                                         TextButton(onClick = { editingGoal = g }) { Text("Upravit", fontSize = 11.sp) }
                                         TextButton(onClick = {
-                                            scope.launch { repository.deleteSavingsGoal(g.id).onSuccess { load() } }
+                                            scope.launch { repository.deleteSavingsGoal(g.id).onSuccess { vm.load(uiState.month) } }
                                         }) { Text("Smazat", fontSize = 11.sp, color = StatusRed) }
                                     }
                                 }
@@ -306,8 +281,8 @@ fun FinanceScreen(repository: HestiaRepository, currentUserId: Int?) {
 
                     else -> {
                         Text("Můj platební profil", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                        var bank by remember(profile) { mutableStateOf(profile?.bank_account ?: "") }
-                        var iban by remember(profile) { mutableStateOf(profile?.iban ?: "") }
+                        var bank by remember(uiState.profile) { mutableStateOf(uiState.profile?.bank_account ?: "") }
+                        var iban by remember(uiState.profile) { mutableStateOf(uiState.profile?.iban ?: "") }
                         Spacer(Modifier.height(8.dp))
                         HestiaField(bank, { bank = it }, "Číslo účtu")
                         Spacer(Modifier.height(8.dp))
@@ -318,8 +293,8 @@ fun FinanceScreen(repository: HestiaRepository, currentUserId: Int?) {
                                 scope.launch {
                                     repository.updateFinanceProfile(
                                         UserFinanceProfileUpdate(bank.ifBlank { null }, iban.ifBlank { null })
-                                    ).onSuccess { profile = it; message = "Profil uložen" }
-                                        .onFailure { error = it.friendly() }
+                                    ).onSuccess { vm.setProfile(it); message = "Profil uložen" }
+                                        .onFailure { vm.setError(it) }
                                 }
                             },
                             shape = RoundedCornerShape(10.dp)
@@ -334,9 +309,9 @@ fun FinanceScreen(repository: HestiaRepository, currentUserId: Int?) {
     if (showTxForm || editingTx != null) {
         TransactionFormDialog(
             initial = editingTx,
-            users = users,
+            users = uiState.users,
             currentUserId = currentUserId,
-            defaultDate = if (month == Fmt.monthKey(Fmt.today())) Fmt.today() else "$month-01",
+            defaultDate = if (uiState.month == Fmt.monthKey(Fmt.today())) Fmt.today() else "${uiState.month}-01",
             onDismiss = { showTxForm = false; editingTx = null },
             onSave = { body ->
                 scope.launch {
@@ -351,8 +326,8 @@ fun FinanceScreen(repository: HestiaRepository, currentUserId: Int?) {
                             receipt_url = body.receipt_url, notes = body.notes
                         )
                     )
-                    res.onSuccess { showTxForm = false; editingTx = null; load() }
-                        .onFailure { error = it.friendly() }
+                    res.onSuccess { showTxForm = false; editingTx = null; vm.load(uiState.month) }
+                        .onFailure { vm.setError(it) }
                 }
             }
         )
@@ -368,7 +343,7 @@ fun FinanceScreen(repository: HestiaRepository, currentUserId: Int?) {
             onConfirm = {
                 scope.launch {
                     repository.createBudget(CategoryBudgetCreate(category = category, monthly_limit = limit.toDouble()))
-                        .onSuccess { showBudgetForm = false; load() }.onFailure { error = it.friendly() }
+                        .onSuccess { showBudgetForm = false; vm.load(uiState.month) }.onFailure { vm.setError(it) }
                 }
             }
         ) {
@@ -404,8 +379,8 @@ fun FinanceScreen(repository: HestiaRepository, currentUserId: Int?) {
                             next_billing_date = nextDate, category = category, payer_id = payerId
                         )
                     )
-                    res.onSuccess { showSubForm = false; editingSub = null; load() }
-                        .onFailure { error = it.friendly() }
+                    res.onSuccess { showSubForm = false; editingSub = null; vm.load(uiState.month) }
+                        .onFailure { vm.setError(it) }
                 }
             }
         ) {
@@ -419,7 +394,7 @@ fun FinanceScreen(repository: HestiaRepository, currentUserId: Int?) {
             Spacer(Modifier.height(8.dp))
             HestiaDropdown("Kategorie", Labels.financeCategories, category, { category = it })
             Spacer(Modifier.height(8.dp))
-            UserDropdown(users, payerId, { payerId = it })
+            UserDropdown(uiState.users, payerId, { payerId = it })
         }
     }
 
@@ -447,8 +422,8 @@ fun FinanceScreen(repository: HestiaRepository, currentUserId: Int?) {
                             current_amount = current.toDoubleOrNull() ?: 0.0, target_date = targetDate
                         )
                     )
-                    res.onSuccess { showGoalForm = false; editingGoal = null; load() }
-                        .onFailure { error = it.friendly() }
+                    res.onSuccess { showGoalForm = false; editingGoal = null; vm.load(uiState.month) }
+                        .onFailure { vm.setError(it) }
                 }
             }
         ) {
@@ -471,7 +446,7 @@ fun FinanceScreen(repository: HestiaRepository, currentUserId: Int?) {
             onConfirm = {
                 scope.launch {
                     repository.addSavingsDeposit(g.id, amount.toDouble())
-                        .onSuccess { depositGoal = null; load() }.onFailure { error = it.friendly() }
+                        .onSuccess { depositGoal = null; vm.load(uiState.month) }.onFailure { vm.setError(it) }
                 }
             }
         ) {
@@ -490,8 +465,8 @@ fun FinanceScreen(repository: HestiaRepository, currentUserId: Int?) {
             onConfirm = {
                 scope.launch {
                     repository.settleDebt(s.from_user_id, s.to_user_id, amount.toDouble(), note.ifBlank { null })
-                        .onSuccess { settleDialog = null; message = "Dluh vyrovnán"; load() }
-                        .onFailure { error = it.friendly() }
+                        .onSuccess { settleDialog = null; message = "Dluh vyrovnán"; vm.load(uiState.month) }
+                        .onFailure { vm.setError(it) }
                 }
             }
         ) {
@@ -529,8 +504,8 @@ fun FinanceScreen(repository: HestiaRepository, currentUserId: Int?) {
                 TextButton(onClick = {
                     scope.launch {
                         repository.confirmCsvImport(preview.rows, currentUserId ?: 1, true)
-                            .onSuccess { message = "Importováno ${preview.total_count} transakcí"; csvPreview = null; load() }
-                            .onFailure { error = it.friendly() }
+                            .onSuccess { message = "Importováno ${preview.total_count} transakcí"; csvPreview = null; vm.load(uiState.month) }
+                            .onFailure { vm.setError(it) }
                     }
                 }) { Text("Importovat") }
             },
@@ -555,8 +530,8 @@ fun FinanceScreen(repository: HestiaRepository, currentUserId: Int?) {
                             title = title, amount = amount.toDouble(), date = date,
                             category = category, payer_id = currentUserId ?: 1, notes = r.items_summary
                         )
-                    ).onSuccess { scanResult = null; message = "Transakce vytvořena"; load() }
-                        .onFailure { error = it.friendly() }
+                    ).onSuccess { scanResult = null; message = "Transakce vytvořena"; vm.load(uiState.month) }
+                        .onFailure { vm.setError(it) }
                 }
             }
         ) {
